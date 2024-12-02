@@ -31,7 +31,7 @@ jobs:
         run: |
           curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest" -o release.json
           RELEASE_NAME=$(jq -r '.name' release.json)
-          RELEASE_NOTES=$(jq -r '.body' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
+          RELEASE_NOTES=$(jq -r '.body' release.json)
           ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json)
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
@@ -40,6 +40,15 @@ jobs:
       # Step 5: Send Asset Links to Telegram
       - name: Send Asset Links to Telegram
         run: |
+
+          # Format commit messages for Telegram
+          telegram_commit_messages=$(echo "$RELEASE_NAME" | sed 's/%0A/\n/g' | while read -r line; do
+          message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
+          message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/github\.com\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
+          echo "$message"
+          done)
+          telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
+          
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
@@ -52,7 +61,7 @@ jobs:
           # Send the message to Telegram with the release details and download links for the assets
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -H "Content-Type: application/json" \
-          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
+          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $telegram_commit_messages\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
 
       # Step 6: Send Asset Links to Discord and Mention User
       - name: Send Asset Links to Discord and Mention User
