@@ -1,4 +1,4 @@
-name: Telegram Release Notifier with Files
+name: Telegram and Discord Release Notifier with Files
 
 on:
   release:
@@ -7,14 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  notify_telegram:
+  notify:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # Step 2: Set up Python for Telegram bot
+      # Step 2: Set up Python for Telegram and Discord bots
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -65,4 +65,22 @@ jobs:
             curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
                  -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
                  -F "document=@$FILE"
+          done
+
+      # Step 8: Send a message with release notes to Discord
+      - name: Send Message to Discord
+        run: |
+          DISCORD_MESSAGE="New Release: **$RELEASE_NAME**\n\nRelease Notes:\n$RELEASE_NOTES"
+          curl -H "Content-Type: application/json" \
+               -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+               -d "{\"content\": \"$DISCORD_MESSAGE\"}"
+
+      # Step 9: Send downloaded assets to Discord
+      - name: Send Assets to Discord
+        run: |
+          for FILE in assets/*
+          do
+            echo "Sending $FILE to Discord..."
+            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+                 -F "file=@$FILE"
           done
