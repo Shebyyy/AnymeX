@@ -63,10 +63,11 @@ jobs:
           done < assets.txt
 
           # Remove line breaks from release notes
-          CLEANED_RELEASE_NOTES=$(echo "$RELEASE_NOTES" | tr -d '\n')
+          RELEASE_NOTES=$(echo "$RELEASE_NOTES" | tr -d '\n')
 
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
-          **Release Notes:** ${CLEANED_RELEASE_NOTES}
+          **Release Notes:** 
+         $RELEASE_NOTES
           **Assets:**"
           MESSAGE="$HEADER
           $ASSET_LINKS"
