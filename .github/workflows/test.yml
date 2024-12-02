@@ -67,7 +67,7 @@ jobs:
 
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
           **Release Notes:** 
-         $RELEASE_NOTES
+          $RELEASE_NOTES
           **Assets:**"
           MESSAGE="$HEADER
           $ASSET_LINKS"
