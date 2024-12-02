@@ -50,7 +50,9 @@ jobs:
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
-            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL\">click here</a>"
+            # Ensure URLs are properly encoded for HTML
+            ENCODED_URL=$(echo "$ASSET_URL" | jq -sRr @uri)
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ENCODED_URL\">click here</a>"
           done < assets.txt
           
           MESSAGE="🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
