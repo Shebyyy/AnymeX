@@ -25,7 +25,7 @@ jobs:
       - name: Get Release Info
         id: release_info
         run: |
-          curl -s "https://api.github.com/repos/Shebyyy/AnymeX/releases/latest" -o release.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest" -o release.json
           RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
           RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
           ASSET_URLS=$(jq -r '.assets[]?.browser_download_url // empty' release.json)
