@@ -53,7 +53,8 @@ jobs:
       # Telegram - Send Release Notes
       - name: Send Release Notes to Telegram
         run: |
-          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES}"
+          ROLE_MENTION="<b>@role</b>"  # Add the actual role username if needed, or leave this empty if no mention
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${ROLE_MENTION}\n${RELEASE_NOTES}"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
@@ -77,8 +78,19 @@ jobs:
         run: |
           CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed 's/\\n//g')
           echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
+          
+          # Mention the role based on environment
+          if [[ "${RELEASE_NAME}" == *alpha ]]; then
+            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_ALPHA }}>"  # Use the actual Role ID for alpha channel
+          elif [[ "${RELEASE_NAME}" == *beta ]]; then
+            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_BETA }}>"  # Use the actual Role ID for beta channel
+          else
+            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_DEFAULT }}>"  # Use the default role ID
+          fi
+
           HEADER="## 🚀 New Release: ${RELEASE_NAME}
           
+          ${ROLE_MENTION}
           ${CLEANED_RELEASE_NOTES}"
           PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
