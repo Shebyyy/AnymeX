@@ -31,23 +31,21 @@ jobs:
         id: release_info
         run: |
           curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest" -o release.json
-    
           RELEASE_NAME=$(jq -r '.name' release.json)
           RELEASE_NOTES=$(jq -r '.body' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
           ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json | paste -sd "," -)
-    
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
           echo "ASSET_URLS=${ASSET_URLS}" >> $GITHUB_ENV
-
 
       # Step 5: Download assets
       - name: Download Release Assets
         run: |
           mkdir -p assets
-          for ASSET_URL in $(echo $ASSET_URLS | tr "\n" " ")
+          for ASSET_URL in $(echo "$ASSET_URLS" | tr "," "\n")
           do
-            curl -L -o assets/$(basename $ASSET_URL) $ASSET_URL || echo "Failed to download $ASSET_URL"
+            echo "Downloading $ASSET_URL..."
+            curl -L -o "assets/$(basename "$ASSET_URL")" "$ASSET_URL" || echo "Failed to download $ASSET_URL"
           done
 
       # Step 6: Send a message with release notes to Telegram
@@ -55,15 +53,16 @@ jobs:
         run: |
           MESSAGE="New Release: $RELEASE_NAME\n\nRelease Notes: $RELEASE_NOTES"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-               -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-               -d text="$MESSAGE"
+               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+               -d "text=$MESSAGE"
 
       # Step 7: Send downloaded assets to Telegram
       - name: Send Assets to Telegram
         run: |
           for FILE in assets/*
           do
-            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_CHAT_ID }}/sendDocument" \
-                 -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-                 -F document=@"$FILE"
+            echo "Sending $FILE to Telegram..."
+            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+                 -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+                 -F "document=@$FILE"
           done
