@@ -50,7 +50,8 @@ jobs:
             # Send the message to Telegram
             curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: <b>$RELEASE_NAME</b><br>Release Notes: $telegram_commit_messages<br>$ASSET_LINKS\", \"parse_mode\": \"HTML\"}"
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: <b>$RELEASE_NAME</b>
+            <br>Release Notes: $message<br>$ASSET_LINKS\", \"parse_mode\": \"HTML\"}"
 
       - name: Send Asset Links to Discord
         run: |
