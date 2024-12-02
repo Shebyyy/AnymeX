@@ -58,14 +58,14 @@ jobs:
       - name: Send Release Notes to Discord
         run: |
         
-          # Clean the release notes: remove unnecessary newlines, handle special lines (## and *), and remove leading spaces
           CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed ':a;N;$!ba;s/\n/ /g' | sed 's/\\n/ /g' | \
-          # Ensure that '##' is at the start of a new line, without spaces
+          # Ensure that '##' is at the start of a new line without any leading spaces
           sed 's/^[[:space:]]*##/##/' | \
+          # Ensure that '##' headers start on a new line by inserting a newline before them if necessary
           sed 's/[[:space:]]*##[^\n]*/\n\1/' | \
-          # Remove leading spaces from '*' bullet points
+          # Clean any leading spaces from '*' bullet points
           sed 's/^[[:space:]]*\*/\*/' | \
-          # Remove all leading spaces from other lines
+          # Remove leading spaces from all lines
           sed 's/^[[:space:]]*//g')
           
           echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
