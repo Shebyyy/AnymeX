@@ -37,7 +37,7 @@ jobs:
       # Telegram - Send Release Notes
       - name: Send Release Notes to Telegram
         run: |
-          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES}"
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES}"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
