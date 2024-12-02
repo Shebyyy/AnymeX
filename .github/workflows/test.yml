@@ -61,25 +61,34 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS
             **[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
+
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
-          **Release Notes:**
-          ${RELEASE_NOTES}
+          **Release Notes:** ${RELEASE_NOTES}
           **Assets:**"
           MESSAGE="$HEADER"
+
+          # Debug log to verify MESSAGE content
+          echo "Final Discord Header: $HEADER"
+          echo "Assets Links: $ASSET_LINKS"
+
+          # Process ASSET_LINKS in chunks
           while IFS= read -r LINE; do
             if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
+              # Send current message
               PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
               curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
                 -H "Content-Type: application/json" \
                 -d "$PAYLOAD"
-          
+
+              # Start a new message with the current line
               MESSAGE="$LINE"
             else
               MESSAGE="$MESSAGE
-          $LINE"
+              $LINE"
             fi
           done <<< "$ASSET_LINKS"
-          
+
+          # Send remaining message
           if [ -n "$MESSAGE" ]; then
             PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
             curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
