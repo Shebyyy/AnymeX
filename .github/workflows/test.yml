@@ -40,42 +40,37 @@ jobs:
       # Step 5: Send Asset Links to Telegram
       - name: Send Asset Links to Telegram
         run: |
-
-          # Format commit messages for Telegram
+          # Format release notes for Telegram with HTML tags
           telegram_commit_messages=$(echo "$RELEASE_NOTES" | sed 's/%0A/\n/g' | while read -r line; do
-          message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
-          message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/github\.com\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
-          echo "$message"
+            message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
+            message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/github\.com\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
+            echo "$message"
           done)
           telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
-          
+
+          # Format asset links for Telegram with clickable links
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
-            # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
             FILE_NAME=$(basename "$ASSET_URL" | cut -d. -f1)
-            
-            # Append the asset link in the format requested
-            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL\">click here</a>"
           done < assets.txt
 
-          # Send the message to Telegram with the release details and download links for the assets
+          # Send the message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -H "Content-Type: application/json" \
-          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $telegram_commit_messages\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
+          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: <b>$RELEASE_NAME</b><br>Release Notes: $telegram_commit_messages<br>$ASSET_LINKS\", \"parse_mode\": \"HTML\"}"
 
-      # Step 6: Send Asset Links to Discord and Mention User
-      - name: Send Asset Links to Discord and Mention User
+      # Step 6: Send Asset Links to Discord
+      - name: Send Asset Links to Discord
         run: |
+          # Format asset links for Discord with markdown
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
-            # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
             FILE_NAME=$(basename "$ASSET_URL" | cut -d. -f1)
-            
-            # Append the asset link in the format requested
-            ASSET_LINKS="$ASSET_LINKS\n$FILE_NAME: [click here to download]($ASSET_URL)"
+            ASSET_LINKS="$ASSET_LINKS\n**$FILE_NAME**: [click here to download]($ASSET_URL)"
           done < assets.txt
 
-          # Send the message to Discord with the release details and download links for the assets
+          # Send the message to Discord with Markdown formatting
           curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
            -H "Content-Type: application/json" \
-           -d "{\"content\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\"}"
+           -d "{\"content\": \"**New Release**: $RELEASE_NAME\n**Release Notes**:\n$RELEASE_NOTES\n**Assets**:\n$ASSET_LINKS\"}"
