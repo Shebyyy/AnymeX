@@ -41,15 +41,15 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL\">click here</a>"
           done < assets.txt
 
+          # Ensure that newlines are replaced with HTML-safe format for Telegram
+          RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed ':a;N;$!ba;s/\n/\\n/g')
+
           MESSAGE=$(cat <<EOF
-🚀 <b>New Release: ${RELEASE_NAME}</b>
-
-<b>Release Notes:</b>
-${RELEASE_NOTES}
-
-<b>Assets:</b>
-${ASSET_LINKS}
-EOF
+            🚀 <b>New Release: ${RELEASE_NAME}</b>
+            <b>Release Notes:</b>${RELEASE_NOTES}
+            <b>Assets:</b>
+            ${ASSET_LINKS}
+            EOF
           )
 
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
@@ -65,8 +65,8 @@ EOF
           done < assets.txt
 
           HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\n**Release Notes:**\n${RELEASE_NOTES}\n\n**Assets:**"
-
           MESSAGE="$HEADER"
+
           while IFS= read -r LINE; do
             if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
               PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
