@@ -61,30 +61,27 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS
             **[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
-
-          # Remove line breaks from release notes
           RELEASE_NOTES=$(echo "$RELEASE_NOTES" | tr -d '\n')
-
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
-          **Release Notes:** 
-          $RELEASE_NOTES
+          **Release Notes:**
+          ${RELEASE_NOTES}
           **Assets:**"
-          MESSAGE="$HEADER
-          $ASSET_LINKS"
-
+          MESSAGE="$HEADER"
           while IFS= read -r LINE; do
             if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
               PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
               curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
                 -H "Content-Type: application/json" \
                 -d "$PAYLOAD"
+          
               MESSAGE="$LINE"
             else
               MESSAGE="$MESSAGE
           $LINE"
             fi
           done <<< "$ASSET_LINKS"
-     
+          
+          if [ -n "$MESSAGE" ]; then
             PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
             curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
               -H "Content-Type: application/json" \
