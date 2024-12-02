@@ -81,11 +81,11 @@ jobs:
           
           # Mention the role based on environment
           if [[ "${RELEASE_NAME}" == *alpha ]]; then
-            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_ALPHA }}>"  # Use the actual Role ID for alpha channel
+            ROLE_MENTION="<@&1313089691523878942>"  # Use the actual Role ID for alpha channel
           elif [[ "${RELEASE_NAME}" == *beta ]]; then
-            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_BETA }}>"  # Use the actual Role ID for beta channel
+            ROLE_MENTION="<@&1313087262539518033>"  # Use the actual Role ID for beta channel
           else
-            ROLE_MENTION="<@&${{ secrets.DISCORD_ROLE_ID_DEFAULT }}>"  # Use the default role ID
+            ROLE_MENTION="<@&${{ 1234567 }}>"  # Use the default role ID
           fi
 
           HEADER="## 🚀 New Release: ${RELEASE_NAME}
