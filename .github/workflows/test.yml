@@ -88,9 +88,9 @@ jobs:
             ROLE_MENTION="<@&${{ 1234567 }}>"  # Use the default role ID
           fi
 
+          ${ROLE_MENTION}
           HEADER="## 🚀 New Release: ${RELEASE_NAME}
           
-          ${ROLE_MENTION}
           ${CLEANED_RELEASE_NOTES}"
           PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
