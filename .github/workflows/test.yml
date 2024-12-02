@@ -1,9 +1,8 @@
-name: Telegram and Discord Release Notifier with Files
+name: Release Notifier for Telegram and Discord
 
 on:
   release:
-    types:
-      - published
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -11,76 +10,76 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout the repository
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v2
 
-      # Step 2: Set up Python for Telegram and Discord bots
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
-      # Step 3: Install required dependencies
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests jq
 
-      # Step 4: Get release details (download URL, assets)
+      # Step 4: Fetch release information
       - name: Get Release Info
         id: release_info
         run: |
           curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest" -o release.json
           RELEASE_NAME=$(jq -r '.name' release.json)
           RELEASE_NOTES=$(jq -r '.body' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
-          ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json | paste -sd "," -)
+          ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json)
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
-          echo "ASSET_URLS=${ASSET_URLS}" >> $GITHUB_ENV
+          echo "${ASSET_URLS}" > assets.txt
 
-      # Step 5: Download assets
+      # Step 5: Download release assets
       - name: Download Release Assets
         run: |
           mkdir -p assets
-          for ASSET_URL in $(echo "$ASSET_URLS" | tr "," "\n")
-          do
+          while read -r ASSET_URL; do
             echo "Downloading $ASSET_URL..."
-            curl -L -o "assets/$(basename "$ASSET_URL")" "$ASSET_URL" || echo "Failed to download $ASSET_URL"
-          done
+            curl -L -o "assets/$(basename $ASSET_URL)" $ASSET_URL || echo "Failed to download $ASSET_URL"
+          done < assets.txt
 
-      # Step 6: Send a message with release notes to Telegram
-      - name: Send Message to Telegram
+      # Step 6: Send message to Telegram
+      - name: Notify Telegram
         run: |
-          MESSAGE="New Release: $RELEASE_NAME Release Notes: $RELEASE_NOTES"
+          MESSAGE="New Release: $RELEASE_NAME\n\nRelease Notes: $RELEASE_NOTES"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-               -d "text=$MESSAGE"
+               -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+               -d text="$MESSAGE"
 
-      # Step 7: Send downloaded assets to Telegram
+      # Step 7: Send assets to Telegram
       - name: Send Assets to Telegram
         run: |
-          for FILE in assets/*
-          do
+          for FILE in assets/*; do
             echo "Sending $FILE to Telegram..."
             curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-                 -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-                 -F "document=@$FILE"
+                 -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                 -F document=@"$FILE" || echo "Failed to send $FILE to Telegram."
           done
 
-      # Step 8: Send a message with release notes to Discord
-      - name: Send Message to Discord
+      # Step 8: Notify Discord with release notes and mention user
+      - name: Notify Discord
         run: |
-          DISCORD_MESSAGE="New Release: **$RELEASE_NAME** Release Notes:$RELEASE_NOTES"
+          # Replace USER_ID with the actual user ID you want to mention
           curl -H "Content-Type: application/json" \
-               -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-               -d "{\"content\": \"$DISCORD_MESSAGE\"}"
+               -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+               -d "{\"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES\"}"
 
-      # Step 9: Send downloaded assets to Discord
+      # Step 9: Send assets to Discord with 5-second delay and mention user
       - name: Send Assets to Discord
         run: |
-          for FILE in assets/*
-          do
+          for FILE in assets/*; do
             echo "Sending $FILE to Discord..."
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+                 -F "payload_json={\"content\":\"Uploading file: $(basename "$FILE") @here\"}" \
                  -F "file=@$FILE"
+            echo "Waiting for 5 seconds to prevent rate limiting..."
+            sleep 5
           done
