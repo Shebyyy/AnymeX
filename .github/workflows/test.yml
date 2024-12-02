@@ -50,9 +50,7 @@ jobs:
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
-            # Ensure URLs are properly encoded for HTML
-            ENCODED_URL=$(echo "$ASSET_URL" | jq -sRr @uri)
-            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ENCODED_URL\">click here</a>"
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL"\">click here</a>"
           done < assets.txt
           
           # Debugging: Print the final message being sent to Telegram
