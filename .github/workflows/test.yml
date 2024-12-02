@@ -67,10 +67,14 @@ jobs:
       # Step 8: Notify Discord with release notes and mention user
       - name: Notify Discord
         run: |
+          # Escape the newlines and other special characters in RELEASE_NOTES
+          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed ':a;N;$!ba;s/\n/\\n/g')
+    
           # Replace USER_ID with the actual user ID you want to mention
           curl -H "Content-Type: application/json" \
-               -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-               -d "{\"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES\"}"
+           -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+           -d "{\"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES_ESCAPED\"}"
+
 
       # Step 9: Send assets to Discord with 5-second delay and mention user
       - name: Send Assets to Discord
