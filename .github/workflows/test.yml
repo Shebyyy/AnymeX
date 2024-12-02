@@ -81,11 +81,12 @@ jobs:
 
            while IFS= read -r LINE; do
           if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
-          MESSAGE=$(echo "$MESSAGE" | tr -d '\n')  # Remove newlines
+          MESSAGE=$(echo "$MESSAGE" | sed ':a;N;$!ba;s/\n//g')  # Remove newlines using sed
+          LINE=$(echo "$LINE" | sed ':a;N;$!ba;s/\n//g')  # Remove newlines using sed
           PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
           curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD"
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD"
           MESSAGE="$LINE"
           else
           MESSAGE="$MESSAGE
