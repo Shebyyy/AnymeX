@@ -31,12 +31,15 @@ jobs:
         id: release_info
         run: |
           curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest" -o release.json
+    
           RELEASE_NAME=$(jq -r '.name' release.json)
           RELEASE_NOTES=$(jq -r '.body' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
-          ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json)
+          ASSET_URLS=$(jq -r '.assets[].browser_download_url' release.json | paste -sd "," -)
+    
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
           echo "ASSET_URLS=${ASSET_URLS}" >> $GITHUB_ENV
+
 
       # Step 5: Download assets
       - name: Download Release Assets
