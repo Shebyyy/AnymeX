@@ -54,35 +54,20 @@ jobs:
                -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
                -d text="$MESSAGE"
 
-      # Step 7: Send assets to Telegram
-      - name: Send Assets to Telegram
+      - name: Send Asset Links to Discord and Mention User
         run: |
           for FILE in assets/*; do
-            echo "Sending $FILE to Telegram..."
-            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-                 -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-                 -F document=@"$FILE" || echo "Failed to send $FILE to Telegram."
-          done
-
-          # Escape the newlines and other special characters in RELEASE_NOTES
-            RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed ':a;N;$!ba;s/\n/\\n/g')
-
-          # Replace the webhook URL with the actual URL
-          
-          # Send the message to Discord
-            curl -H "Content-Type: application/json" \
-             -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-             -d "{\"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES_ESCAPED\"}"
-
-
-
-      # Step 9: Send assets to Discord with 5-second delay and mention user
-      - name: Send Assets to Discord
-        run: |
-          for FILE in assets/*; do
-            echo "Sending $FILE to Discord..."
+          # Get the base file name (e.g., 'file1.zip')
+          FILE_NAME=$(basename "$FILE")
+      
+          # Construct the URL to access the file (replace with actual URL)
+          ASSET_URL="https://example.com/path/to/your/asset/$FILE_NAME"
+      
+          # Send the message to Discord with the release details and download link for the asset
             curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-                 -F "file=@$FILE"
-            echo "Waiting for 5 seconds to prevent rate limiting..."
-            sleep 5
-          done
+           -H "Content-Type: application/json" \
+           -d "{
+                 \"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES_ESCAPED\\n\\nAsset: [Download $FILE_NAME]($ASSET_URL)\"
+               }"
+            done
+
