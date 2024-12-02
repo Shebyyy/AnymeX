@@ -63,7 +63,7 @@ jobs:
             FILE_NAME=$(basename "$ASSET_URL" | cut -d. -f1)
             
             # Append the asset link in the format requested
-            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+            ASSET_LINKS="$ASSET_LINKS\n$FILE_NAME: [click here to download]($ASSET_URL)"
           done < assets.txt
 
           # Send the message to Discord with the release details and download links for the assets
