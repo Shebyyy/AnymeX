@@ -55,7 +55,12 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ENCODED_URL\">click here</a>"
           done < assets.txt
           
+          # Debugging: Print the final message being sent to Telegram
+          echo "Sending the following message to Telegram: 🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
+
           MESSAGE="🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
+          
+          # Send the final message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
