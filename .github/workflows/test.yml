@@ -72,7 +72,7 @@ jobs:
     
           # Replace USER_ID with the actual user ID you want to mention
           curl -H "Content-Type: application/json" \
-           -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+           -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
            -d "{\"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES_ESCAPED\"}"
 
 
