@@ -58,13 +58,10 @@ jobs:
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
-            ASSET_LINKS="$ASSET_LINKS
-            **[$FILE_NAME]($ASSET_URL)**"
+            ASSET_LINKS="$ASSET_LINKS\n**[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
 
-          HEADER="**🚀 New Release: ${RELEASE_NAME}**
-          **Release Notes:** ${RELEASE_NOTES}
-          **Assets:**"
+          HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\n**Release Notes:** ${RELEASE_NOTES}\n\n**Assets:**"
           MESSAGE="$HEADER"
 
           # Debug log to verify MESSAGE content
@@ -83,8 +80,7 @@ jobs:
               # Start a new message with the current line
               MESSAGE="$LINE"
             else
-              MESSAGE="$MESSAGE
-              $LINE"
+              MESSAGE="$MESSAGE\n$LINE"
             fi
           done <<< "$ASSET_LINKS"
 
