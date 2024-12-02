@@ -79,17 +79,20 @@ jobs:
           **Assets:**"
           MESSAGE="$HEADER"
 
-          while IFS= read -r LINE; do
-            if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
-              PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
-              curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-                -H "Content-Type: application/json" \
-                -d "$PAYLOAD"
-              MESSAGE="$LINE"
-            else
-              MESSAGE="$MESSAGE
+           while IFS= read -r LINE; do
+          if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
+          MESSAGE=$(echo "$MESSAGE" | tr -d '\n')  # Remove newlines
+          PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+          MESSAGE="$LINE"
+          else
+          MESSAGE="$MESSAGE
           $LINE"
-            fi
+          fi
+          done
+
           done <<< "$ASSET_LINKS"
 
           if [ -n "$MESSAGE" ]; then
