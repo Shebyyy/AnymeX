@@ -82,7 +82,6 @@ jobs:
           for FILE in assets/*; do
             echo "Sending $FILE to Discord..."
             curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-                 -F "payload_json={\"content\":\"Uploading file: $(basename "$FILE") @here\"}" \
                  -F "file=@$FILE"
             echo "Waiting for 5 seconds to prevent rate limiting..."
             sleep 5
