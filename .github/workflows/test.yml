@@ -88,7 +88,7 @@ jobs:
               MESSAGE="$LINE"
             else
               MESSAGE="$MESSAGE
-              $LINE"
+          $LINE"
             fi
           done <<< "$ASSET_LINKS"
 
