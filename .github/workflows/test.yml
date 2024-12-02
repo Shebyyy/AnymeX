@@ -3,6 +3,9 @@ name: Release Notifier for Telegram and Discord
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
