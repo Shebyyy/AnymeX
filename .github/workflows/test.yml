@@ -46,28 +46,43 @@ jobs:
             curl -L -o "assets/$(basename $ASSET_URL)" $ASSET_URL || echo "Failed to download $ASSET_URL"
           done < assets.txt
 
-      # Step 6: Send message to Telegram
-      - name: Notify Telegram
-        run: |
-          MESSAGE="New Release: $RELEASE_NAME\n\nRelease Notes: $RELEASE_NOTES"
+          - name: Send Asset Links to Telegram
+            run: |
+            ASSET_LINKS=""
+            for FILE in assets/*; do
+            # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
+            FILE_NAME=$(basename "$FILE" | cut -d. -f1)
+      
+            # Construct the URL to access the file (replace with actual URL)
+            ASSET_URL="https://example.com/path/to/your/asset/$FILE_NAME"
+      
+            # Append the asset link in the format requested
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+            done
+
+          # Send the message to Telegram with the release details and download links for the assets
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-               -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-               -d text="$MESSAGE"
+           -H "Content-Type: application/json" \
+           -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES_ESCAPED$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
+
 
       - name: Send Asset Links to Discord and Mention User
         run: |
+          ASSET_LINKS=""
           for FILE in assets/*; do
-          # Get the base file name (e.g., 'file1.zip')
-          FILE_NAME=$(basename "$FILE")
+          # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
+          FILE_NAME=$(basename "$FILE" | cut -d. -f1)
       
           # Construct the URL to access the file (replace with actual URL)
           ASSET_URL="https://example.com/path/to/your/asset/$FILE_NAME"
       
-          # Send the message to Discord with the release details and download link for the asset
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+          # Append the asset link in the format requested
+          ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+          done
+
+          # Send the message to Discord with the release details and download links for the assets
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
            -H "Content-Type: application/json" \
-           -d "{
-                 \"content\": \"@here New Release: $RELEASE_NAME\\n\\nRelease Notes:\\n$RELEASE_NOTES_ESCAPED\\n\\nAsset: [Download $FILE_NAME]($ASSET_URL)\"
-               }"
-            done
+           -d "{\"content\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES_ESCAPED\\n$ASSET_LINKS\"}"
+
 
