@@ -61,7 +61,6 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS
             **[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
-          RELEASE_NOTES=$(echo "$RELEASE_NOTES" | tr -d '\n')
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
           **Release Notes:**
           ${RELEASE_NOTES}
