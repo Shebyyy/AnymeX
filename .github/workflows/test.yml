@@ -36,51 +36,55 @@ jobs:
           echo "${RELEASE_NOTES}" > notes.txt
           echo "${ASSET_URLS}" > assets.txt
 
-      - name: Send Notification to Telegram
+      - name: Send Release Notes to Telegram
         run: |
+          # Prepare release notes and escape necessary characters
           RELEASE_NOTES=$(cat notes.txt | sed ':a;N;$!ba;s/\n/\\n/g')
           RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g')
 
+          # Send Release Notes message to Telegram
+          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES_ESCAPED}"
+
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+
+      - name: Send Release Notes to Discord
+        run: |
+          # Send Release Notes message to Discord
+          HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\n**Release Notes:**\n${RELEASE_NOTES}"
+          PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+      - name: Send Assets to Telegram
+        run: |
+          # Prepare asset links for Telegram
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
             ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL\">click here</a>"
           done < assets.txt
 
-          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES_ESCAPED}\n\n<b>Assets:</b>\n${ASSET_LINKS}"
+          # Send Assets message to Telegram
+          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>\n${ASSET_LINKS}"
 
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
-            
-      - name: Send Notification to Discord
+
+      - name: Send Assets to Discord
         run: |
+          # Prepare asset links for Discord
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
-            ASSET_LINKS="$ASSET_LINKS
-            **[$FILE_NAME]($ASSET_URL)**"
+            ASSET_LINKS="$ASSET_LINKS\n**[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
-          HEADER="**🚀 New Release: ${RELEASE_NAME}**
-          **Release Notes:**
-          ${RELEASE_NOTES}
-          **Assets:**"
-          MESSAGE="$HEADER"
-          while IFS= read -r LINE; do
-            if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
-              PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
-              curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-                -H "Content-Type: application/json" \
-                -d "$PAYLOAD"
-              MESSAGE="$LINE"
-            else
-              MESSAGE="$MESSAGE
-          $LINE"
-            fi
-          done <<< "$ASSET_LINKS"
-          if [ -n "$MESSAGE" ]; then
-            PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD"
-          fi
+
+          # Send Assets message to Discord
+          PAYLOAD=$(jq -n --arg content "$ASSET_LINKS" '{ content: $content }')
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
