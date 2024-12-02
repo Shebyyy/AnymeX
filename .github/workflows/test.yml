@@ -61,7 +61,7 @@ jobs:
           CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed 's/\\n//g')
           
           echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
-          HEADER="**🚀 New Release: ${RELEASE_NAME}**
+          HEADER="##🚀 New Release: ${RELEASE_NAME}
           **Release Notes:**
           ${CLEANED_RELEASE_NOTES}"
           PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
