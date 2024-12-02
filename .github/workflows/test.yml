@@ -61,7 +61,7 @@ jobs:
           # Send the message to Telegram with the release details and download links for the assets
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -H "Content-Type: application/json" \
-          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $telegram_commit_messages\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
+          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $telegram_commit_messages\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
 
       # Step 6: Send Asset Links to Discord and Mention User
       - name: Send Asset Links to Discord and Mention User
