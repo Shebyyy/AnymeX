@@ -9,23 +9,19 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests jq
 
-      # Step 4: Fetch release information
       - name: Get Release Info
         id: release_info
         run: |
@@ -37,13 +33,14 @@ jobs:
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
           echo "${ASSET_URLS}" > assets.txt
 
-      # Step 5: Send Asset Links to Telegram
       - name: Send Asset Links to Telegram
         run: |
-          # Format release notes for Telegram with HTML tags
+          # Format commit messages for Telegram with clickable commit links
           telegram_commit_messages=$(echo "$RELEASE_NOTES" | sed 's/%0A/\n/g' | while read -r line; do
             message=$(echo "$line" | sed -E 's/● (.*) ~(.*) \[֍\]\((.*)\)/● \1 ~\2 <a href="\3">֍<\/a>/')
             message=$(echo "$message" | sed -E 's/\[#([0-9]+)\]\((https:\/\/github\.com\/[^)]+)\)/<a href="\2">#\1<\/a>/g')
+            # Add commit hash as a clickable link to the commit URL
+            message=$(echo "$message" | sed -E 's/\[([a-f0-9]{7})\]\((https:\/\/github\.com\/[^)]+)\/commit\/([a-f0-9]{7})\)/<a href="https:\/\/github.com\/\2\/commit\/\3">\1<\/a>/g')
             echo "$message"
           done)
           telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
@@ -60,9 +57,15 @@ jobs:
           -H "Content-Type: application/json" \
           -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: <b>$RELEASE_NAME</b><br>Release Notes: $telegram_commit_messages<br>$ASSET_LINKS\", \"parse_mode\": \"HTML\"}"
 
-      # Step 6: Send Asset Links to Discord
       - name: Send Asset Links to Discord
         run: |
+          # Format commit messages for Discord with clickable commit links
+          formatted_commit_messages=$(echo "$RELEASE_NOTES" | sed 's/%0A/\n/g' | while read -r line; do
+            # Add commit hash as a clickable link to the commit URL
+            line=$(echo "$line" | sed -E 's/\[([a-f0-9]{7})\]\((https:\/\/github\.com\/[^)]+)\/commit\/([a-f0-9]{7})\)/[commit \1](https:\/\/github.com\/\2\/commit\/\3)/g')
+            echo "$line"
+          done)
+
           # Format asset links for Discord with markdown
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
@@ -73,4 +76,4 @@ jobs:
           # Send the message to Discord with Markdown formatting
           curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
            -H "Content-Type: application/json" \
-           -d "{\"content\": \"**New Release**: $RELEASE_NAME\n**Release Notes**:\n$RELEASE_NOTES\n**Assets**:\n$ASSET_LINKS\"}"
+           -d "{\"content\": \"**New Release**: $RELEASE_NAME\n**Release Notes**:\n$formatted_commit_messages\n**Assets**:\n$ASSET_LINKS\"}"
