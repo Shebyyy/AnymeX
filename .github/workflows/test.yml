@@ -24,6 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests jq
+
       - name: Get Release Info
         id: release_info
         run: |
@@ -34,7 +35,17 @@ jobs:
           echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
           echo "${ASSET_URLS}" > assets.txt
-      - name: Send Notification to Telegram
+
+      # Telegram - Send Release Notes
+      - name: Send Release Notes to Telegram
+        run: |
+          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES}"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+
+      # Telegram - Send Assets
+      - name: Send Assets to Telegram
         run: |
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
@@ -42,42 +53,32 @@ jobs:
             ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: <a href=\"$ASSET_URL\">click here</a>"
           done < assets.txt
           
-          MESSAGE="🚀 <b>New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${RELEASE_NOTES}\n\n<b>Assets:</b>${ASSET_LINKS}"
-          
+          MESSAGE="🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
-      - name: Send Notification to Discord
+
+      # Discord - Send Release Notes
+      - name: Send Release Notes to Discord
+        run: |
+          HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\n**Release Notes:**\n${RELEASE_NOTES}\n\n"
+          PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+      # Discord - Send Assets
+      - name: Send Assets to Discord
         run: |
           ASSET_LINKS=""
           while IFS= read -r ASSET_URL; do
             FILE_NAME=$(basename "$ASSET_URL")
             ASSET_LINKS="$ASSET_LINKS\n**[$FILE_NAME]($ASSET_URL)**"
           done < assets.txt
-          HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\n**Release Notes:**\n${RELEASE_NOTES}\n\n**Assets:**"
-          if [ ${#HEADER} -gt 1800 ]; then
-            PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD"
-            HEADER=""
-          fi
-          CHUNK_SIZE=$((2000 - ${#HEADER} - 2))
-          MESSAGE="$HEADER"
-          while IFS= read -r LINE; do
-            if [ $((${#MESSAGE} + ${#LINE} + 2)) -gt 2000 ]; then
-              PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
-              curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-                -H "Content-Type: application/json" \
-                -d "$PAYLOAD"
-              MESSAGE="$LINE"
-            else
-              MESSAGE="$MESSAGE\n$LINE"
-            fi
-          done <<< "$ASSET_LINKS"
-          if [ -n "$MESSAGE" ]; then
-            PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
-            curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
-              -H "Content-Type: application/json" \
-              -d "$PAYLOAD"
-              fi
+          
+          MESSAGE="**Assets for Release: ${RELEASE_NAME}**\n\n**Assets:**${ASSET_LINKS}"
+          
+          PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
