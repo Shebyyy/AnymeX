@@ -72,15 +72,19 @@ jobs:
           MESSAGE="$HEADER
           $ASSET_LINKS"
 
-          if [ ${#MESSAGE} -gt 2000 ]; then
-            CHUNKS=$(echo "$MESSAGE" | fold -s -w 2000)
-            for CHUNK in $CHUNKS; do
-              PAYLOAD=$(jq -n --arg content "$CHUNK" '{ content: $content }')
+          while IFS= read -r LINE; do
+            if [ $((${#MESSAGE} + ${#LINE} + 1)) -gt 2000 ]; then
+              PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
               curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
                 -H "Content-Type: application/json" \
                 -d "$PAYLOAD"
-            done
-          else
+              MESSAGE="$LINE"
+            else
+              MESSAGE="$MESSAGE
+          $LINE"
+            fi
+          done <<< "$ASSET_LINKS"
+     
             PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
             curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
               -H "Content-Type: application/json" \
