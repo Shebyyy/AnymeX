@@ -3,7 +3,11 @@ name: Release Notifier for Telegram and Discord
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - main  # or the branch you want to trigger on
   workflow_dispatch:
+
 
 jobs:
   notify:
@@ -44,13 +48,17 @@ jobs:
           # Ensure that newlines are replaced with HTML-safe format for Telegram
           RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          MESSAGE=$(cat <<EOF
-            🚀 <b>New Release: ${RELEASE_NAME}</b>
-            <b>Release Notes:</b>${RELEASE_NOTES}
-            <b>Assets:</b>
-            ${ASSET_LINKS}
-            EOF
+          MESSAGE=$(cat <<-EOF
+          🚀 <b>New Release: ${RELEASE_NAME}</b>
+
+          <b>Release Notes:</b>
+          ${RELEASE_NOTES_ESCAPED}
+
+          <b>Assets:</b>
+          ${ASSET_LINKS}
+          EOF
           )
+
 
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
