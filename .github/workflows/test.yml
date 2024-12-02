@@ -37,42 +37,36 @@ jobs:
           echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
           echo "${ASSET_URLS}" > assets.txt
 
+      # Step 5: Send Asset Links to Telegram
       - name: Send Asset Links to Telegram
         run: |
           ASSET_LINKS=""
-          for FILE in assets/*; do
-          # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
-          FILE_NAME=$(basename "$FILE" | cut -d. -f1)      
-          # Construct the URL to access the file (replace with actual URL)
-          ASSET_URL="https://example.com/path/to/your/asset/$FILE_NAME"
-      
-          # Append the asset link in the format requested
-          ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
-          done
+          while IFS= read -r ASSET_URL; do
+            # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
+            FILE_NAME=$(basename "$ASSET_URL" | cut -d. -f1)
+            
+            # Append the asset link in the format requested
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+          done < assets.txt
 
           # Send the message to Telegram with the release details and download links for the assets
-           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -H "Content-Type: application/json" \
-           -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES_ESCAPED$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
+          -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\", \"parse_mode\": \"Markdown\"}"
 
-
+      # Step 6: Send Asset Links to Discord and Mention User
       - name: Send Asset Links to Discord and Mention User
         run: |
           ASSET_LINKS=""
-          for FILE in assets/*; do
-          # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
-          FILE_NAME=$(basename "$FILE" | cut -d. -f1)
-      
-          # Construct the URL to access the file (replace with actual URL)
-          ASSET_URL="https://example.com/path/to/your/asset/$FILE_NAME"
-      
-          # Append the asset link in the format requested
-          ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
-          done
+          while IFS= read -r ASSET_URL; do
+            # Get the base file name without the extension (e.g., 'file1' instead of 'file1.zip')
+            FILE_NAME=$(basename "$ASSET_URL" | cut -d. -f1)
+            
+            # Append the asset link in the format requested
+            ASSET_LINKS="$ASSET_LINKS\nDownload $FILE_NAME: [click here to download]($ASSET_URL)"
+          done < assets.txt
 
           # Send the message to Discord with the release details and download links for the assets
           curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
            -H "Content-Type: application/json" \
-           -d "{\"content\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES_ESCAPED\\n$ASSET_LINKS\"}"
-
-
+           -d "{\"content\": \"New Release: $RELEASE_NAME\\nRelease Notes: $RELEASE_NOTES\\n$ASSET_LINKS\"}"
