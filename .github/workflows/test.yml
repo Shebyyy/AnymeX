@@ -57,7 +57,7 @@ jobs:
       # Discord - Send Release Notes
       - name: Send Release Notes to Discord
         run: |
-          CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed ':a;N;$!ba;s/\n/ /g' | sed 's/\\n/ /g' | sed 's/##/## /g')
+          CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed ':a;N;$!ba;s/\n/ /g' | sed 's/\\n/ /g' | sed 's/##/## /g' | sed 's/^[[:space:]]*//g')
 
           echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
           HEADER="**🚀 New Release: ${RELEASE_NAME}**
