@@ -38,7 +38,6 @@ jobs:
             # Add commit hash as a clickable link to the commit URL
             message=$(echo "$RELEASE_NOTES" | sed -E 's/\[([a-f0-9]{7})\]\((https:\/\/github\.com\/[^)]+)\/commit\/([a-f0-9]{7})\)/<a href="https:\/\/github.com\/\2\/commit\/\3">\1<\/a>/g')
             echo "$message"
-            done)
             telegram_commit_messages="<blockquote>${telegram_commit_messages}</blockquote>"
 
             # Format asset links for Telegram with clickable links
