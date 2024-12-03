@@ -50,11 +50,15 @@ jobs:
           # Output the generated changelog
           cat CHANGELOG.md
 
-      - name: Download and Move Changelog
+      - name: Download Changelog Artifact
+        uses: actions/download-artifact@v3
+        with:
+         name: Changelog
+
+      - name: Move Changelog to Output Directory
         run: |
          mkdir -p output
-         mv Changelog/CHANGELOG.md output/Changelog.md
-         shell: bash
+         mv CHANGELOG.md output/Changelog.md
     
       - name: Update Release with Changelog
         uses: ncipollo/release-action@v1
