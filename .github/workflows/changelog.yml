@@ -1,0 +1,65 @@
+name: Build and Release AnymeX
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate Changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          #!/bin/bash
+          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -vE '(-alpha|-beta|-rc)' | head -n 2 | tail -n 1)
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          if [ -z "$PREVIOUS_TAG" ]; then
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          # Initialize changelog with the current tag as the version
+          echo "## $CURRENT_TAG" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          # Function to add section if commits exist
+          add_section() {
+            local section_title="$1"
+            local grep_pattern="$2"
+            local commits=$(git log $PREVIOUS_TAG..$CURRENT_TAG --grep="$grep_pattern" --pretty=format:'* [`%h`](https://github.com/RyanYuuki/AnymeX/commit/%h): %s')
+            
+            if [ ! -z "$commits" ]; then
+              echo "## $section_title" >> CHANGELOG.md
+              echo "$commits" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+            fi
+          }
+          # Add sections dynamically
+          add_section "🎉 New Features" "^feat:"
+          add_section "🛠️ Bug Fixes & Improvements" "^fix:"
+          add_section "🔧 Refactors" "^refactor:"
+          add_section "🎨 Style Changes" "^style:"
+          add_section "🚀 Performance Improvements" "^perf:"
+          add_section "🧹 Chores & Documentation" "^(chore|docs):"
+          # Output the generated changelog
+          cat CHANGELOG.md
+      # Step 1: Upload Changelog.md as Artifact
+      - name: Upload Changelog.md as Artifact
+        id: upload-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Changelog
+          path: Changelog.md  # Path to your Changelog.md
+
+      - name: Update Release with Changelog
+        uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "CHANGELOG.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
