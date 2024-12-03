@@ -1,11 +1,12 @@
-name: Build and Release AnymeX
+name: changelog
 
 on:
-  push:
-    tags:
-      - "v*"
-  workflow_dispatch:
-
+  workflow_run:
+    workflows:
+      - "Build and Release AnymeX" # Name of the triggering workflow
+    types:
+      - completed
+  workflow_dispatch: # Allow manual triggering of this workflow
 
 jobs:
   generate-changelog:
@@ -49,14 +50,7 @@ jobs:
           add_section "🧹 Chores & Documentation" "^(chore|docs):"
           # Output the generated changelog
           cat CHANGELOG.md
-      # Step 1: Upload Changelog.md as Artifact
-      - name: Upload Changelog.md as Artifact
-        id: upload-artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Changelog
-          path: Changelog.md  # Path to your Changelog.md
-
+   
       - name: Update Release with Changelog
         uses: ncipollo/release-action@v1
         with:
