@@ -70,6 +70,23 @@ jobs:
         with:
           distribution: "adopt"
           java-version: "17"
+           
+      - name: Download Changelog Artifact
+        id: download-artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: Changelog
+
+      # Step 3: Unzip and move the downloaded artifact (if necessary)
+      - name: Unzip and Move Artifact
+        run: |
+          # Create output folder if it does not exist
+          mkdir -p output
+          # Unzip the artifact
+          unzip Changelog.zip -d output
+          # Optionally, move or rename the file if needed
+          mv Changelog.md output/Changelog.md
+          
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -92,22 +109,6 @@ jobs:
 
       - name: Rename Universal APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/AnymeX-Android-universal.apk
-
-      - name: Download Changelog Artifact
-        id: download-artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: Changelog
-
-      # Step 3: Unzip and move the downloaded artifact (if necessary)
-      - name: Unzip and Move Artifact
-        run: |
-          # Create output folder if it does not exist
-          mkdir -p output
-          # Unzip the artifact
-          unzip Changelog.zip -d output
-          # Optionally, move or rename the file if needed
-          mv Changelog.md output/Changelog.md
 
       - name: Release Android APKs
         uses: ncipollo/release-action@v1
