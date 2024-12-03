@@ -57,19 +57,6 @@ jobs:
         with:
           name: Changelog
           path: Changelog.md  # Path to your Changelog.md
-
-      - name: Update Release with Changelog
-        uses: ncipollo/release-action@v1
-        with:
-          bodyFile: "CHANGELOG.md"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-        
-      - name: Download Changelog Artifact
-        id: download-artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: Changelog
           
   build-android:
     runs-on: ubuntu-latest
