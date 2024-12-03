@@ -1,12 +1,12 @@
-name: Release Notifier for Telegram and Discord
+name: Notify Release
 
 on:
-  release:
-    types: [published]
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Build and Release AnymeX" # Name of the triggering workflow
+    types:
+      - completed
+  workflow_dispatch: # Allow manual triggering of this workflow
 
 jobs:
   notify:
