@@ -50,6 +50,14 @@ jobs:
           # Output the generated changelog
           cat CHANGELOG.md
 
+      - name: Upload Changelog Artifact
+        uses: actions/upload-artifact@v4
+        with:
+         name: Anymex
+         retention-days: 5
+         compression-level: 9
+         path: "CHANGELOG.md"
+
       - name: Download Changelog Artifact
         uses: actions/download-artifact@v3
         with:
