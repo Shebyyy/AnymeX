@@ -50,24 +50,32 @@ jobs:
           # Output the generated changelog
           cat CHANGELOG.md
 
-      - name: Upload Changelog Artifact
+      # Step 1: Upload the Changelog.md artifact from a specific location
+      - name: Upload Changelog.md as Artifact
+        id: upload-artifact
         uses: actions/upload-artifact@v4
         with:
-         name: Anymex
-         retention-days: 5
-         compression-level: 9
-         path: "CHANGELOG.md"
+          name: Changelog
+          path: CHANGELOG.md  # Update the path to where your Changelog.md is located
 
-      - name: Download Artifact
+      # Step 2: Download the artifact
+      - name: Download Changelog Artifact
+        id: download-artifact
         uses: actions/download-artifact@v3
         with:
-         name: AnymeX
+          name: Changelog
 
+      # Step 3: Unzip and move the downloaded artifact (if necessary)
       - name: Unzip and Move Artifact
         run: |
-         mkdir -p output
-         unzip AnymeX.zip -d output
-         mv Changelog.md output/Changelog.md
+          # Create output folder if it does not exist
+          mkdir -p output
+        
+          # Unzip the artifact
+          unzip Changelog.zip -d output
+        
+          # Optionally, move or rename the file if needed
+          mv Changelog.md output/Changelog.md
 
   build-android:
     runs-on: ubuntu-latest
