@@ -70,23 +70,6 @@ jobs:
         with:
           distribution: "adopt"
           java-version: "17"
-           
-      - name: Download Changelog Artifact
-        id: download-artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: Changelog
-
-      # Step 3: Unzip and move the downloaded artifact (if necessary)
-      - name: Unzip and Move Artifact
-        run: |
-          # Create output folder if it does not exist
-          mkdir -p output
-          # Unzip the artifact
-          unzip Changelog.zip -d output
-          # Optionally, move or rename the file if needed
-          mv Changelog.md output/Changelog.md
-          
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -114,7 +97,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/app/outputs/flutter-apk/AnymeX-Android-*.apk"
-          bodyFile: "output/Changelog.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
@@ -144,11 +126,11 @@ jobs:
           cd ..
           zip -r AnymeX-iOS-${{ github.ref_name }}.ipa Payload
           mv AnymeX-iOS-${{ github.ref_name }}.ipa ../../../
+          
       - name: Release iOS IPA
         uses: ncipollo/release-action@v1
         with:
           artifacts: "AnymeX-iOS-*.ipa"
-          bodyFile: "output/Changelog.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
@@ -194,7 +176,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "AnymeX-Linux.zip"
-          bodyFile: "output/Changelog.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
@@ -241,7 +222,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/windows/x64/runner/Release/AnymeX-Windows.zip,output/AnymeX-Setup.exe"
-          bodyFile: "output/Changelog.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
@@ -283,7 +263,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/macos/Release/AnymeX.dmg"
-          bodyFile: "output/Changelog.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
