@@ -105,7 +105,7 @@ jobs:
           done < assets.txt
           
           MESSAGE="**Assets for Release: ${RELEASE_NAME}**
-          **Assets:**${ASSET_LINKS}"
+          ${ASSET_LINKS}"
           
           PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
