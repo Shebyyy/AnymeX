@@ -40,8 +40,12 @@ jobs:
             # Fetch the commit message for each commit ID
             COMMIT_MSG=$(curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/commits/$COMMIT_ID" | jq -r '.commit.message')
             COMMIT_LINK="https://github.com/RyanYuuki/AnymeX/commit/$COMMIT_ID"
+            
+            # Encode HTML special characters for Telegram
+            ENCODED_COMMIT_MSG=$(echo "$COMMIT_MSG" | python3 -c "import html; import urllib.parse; print(urllib.parse.quote(input()))")
+
             # Create HTML link for the commit
-            COMMIT_LINKS="$COMMIT_LINKS\n<a href=\"$COMMIT_LINK\">$COMMIT_ID</a> : $COMMIT_MSG"
+            COMMIT_LINKS="$COMMIT_LINKS\n<a href=\"$COMMIT_LINK\">$COMMIT_ID</a> : $ENCODED_COMMIT_MSG"
           done
 
           ASSET_URLS=$(jq -r '.assets[]?.browser_download_url // empty' release.json)
@@ -72,9 +76,11 @@ jobs:
           # Remove commit IDs and commit links from the release notes
           CLEANED_RELEASE_NOTES=$(echo "$RELEASE_NOTES" | sed -E 's/\b[0-9a-f]{7,40}\b//g' | sed 's/https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/[0-9a-f]{7,40}//g')
 
-          # Send the cleaned release notes to Telegram
-          ROLE_MENTION="<b>@role</b>"  # Add the actual role username if needed, or leave this empty if no mention
-          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${ROLE_MENTION}\n${CLEANED_RELEASE_NOTES}"
+          # URL encode the message
+          ENCODED_RELEASE_NOTES=$(echo "$CLEANED_RELEASE_NOTES" | python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.stdin.read()))")
+
+          # Send the cleaned and encoded release notes to Telegram
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${ENCODED_RELEASE_NOTES}"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
@@ -82,7 +88,10 @@ jobs:
       # Telegram - Send Commit Info to Telegram
       - name: Send Commit Info to Telegram
         run: |
-          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Commit Information:</b>\n${COMMIT_LINKS}"
+          # URL encode the commit links message
+          ENCODED_COMMIT_LINKS=$(echo "$COMMIT_LINKS" | python3 -c "import urllib.parse; import sys; print(urllib.parse.quote(sys.stdin.read()))")
+
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Commit Information:</b>\n${ENCODED_COMMIT_LINKS}"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
