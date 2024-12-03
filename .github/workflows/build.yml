@@ -58,22 +58,16 @@ jobs:
          compression-level: 9
          path: "CHANGELOG.md"
 
-      - name: Download Changelog Artifact
+      - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-         name: Changelog
+         name: AnymeX
 
-      - name: Move Changelog to Output Directory
+      - name: Unzip and Move Artifact
         run: |
          mkdir -p output
-         mv CHANGELOG.md output/Changelog.md
-    
-      - name: Update Release with Changelog
-        uses: ncipollo/release-action@v1
-        with:
-          bodyFile: "CHANGELOG.md"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
+         unzip AnymeX.zip -d output
+         mv Changelog.md output/Changelog.md
 
   build-android:
     runs-on: ubuntu-latest
