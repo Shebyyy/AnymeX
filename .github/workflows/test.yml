@@ -88,8 +88,9 @@ jobs:
             ROLE_MENTION="<@&1234567>"  # Use the default role ID
           fi
 
-          ${ROLE_MENTION}
-          HEADER="## 🚀 New Release: ${RELEASE_NAME}
+          
+          HEADER="${ROLE_MENTION}
+          ## 🚀 New Release: ${RELEASE_NAME}
           
           ${CLEANED_RELEASE_NOTES}"
           PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
