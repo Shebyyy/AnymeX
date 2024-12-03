@@ -40,7 +40,8 @@ jobs:
             # Fetch the commit message for each commit ID
             COMMIT_MSG=$(curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/commits/$COMMIT_ID" | jq -r '.commit.message')
             COMMIT_LINK="https://github.com/RyanYuuki/AnymeX/commit/$COMMIT_ID"
-            COMMIT_LINKS="$COMMIT_LINKS\n<a href=\"$COMMIT_LINK\">Click here to visit $COMMIT_ID</a>: $COMMIT_MSG"
+            # Create HTML link for the commit
+            COMMIT_LINKS="$COMMIT_LINKS\n<a href=\"$COMMIT_LINK\">$COMMIT_ID</a> : $COMMIT_MSG"
           done
 
           ASSET_URLS=$(jq -r '.assets[]?.browser_download_url // empty' release.json)
