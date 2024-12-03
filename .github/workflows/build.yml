@@ -1,274 +1,264 @@
-name: Build and Release AnymeX
+name: Notify Release
 
 on:
-  push:
-    tags:
-      - "v*"
-  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Build and Release AnymeX" # Name of the triggering workflow
+    types:
+      - completed
+  workflow_dispatch: # Allow manual triggering of this workflow
 
 jobs:
-  build-android:
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          distribution: "adopt"
-          java-version: "17"
+          python-version: '3.x'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
+      - name: Install jq (if needed)
+        run: sudo apt-get install -y jq    
 
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Android with Split ABI
-        run: flutter build apk --split-per-abi
-
-      - name: Rename APKs
+      - name: Install dependencies
         run: |
-          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/AnymeX-Android-armeabi-v7a.apk
-          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/AnymeX-Android-arm64.apk
-          mv build/app/outputs/flutter-apk/app-x86_64-release.apk build/app/outputs/flutter-apk/AnymeX-Android-x86_64.apk
+          python -m pip install --upgrade pip
+          pip install requests jq    
 
-      - name: Build Universal APK
-        run: flutter build apk --release
-
-      - name: Rename Universal APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/AnymeX-Android-universal.apk
-
-      - name: Release Android APKs
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/app/outputs/flutter-apk/AnymeX-Android-*.apk"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build iOS
+      - name: Fetch Repository Tags
+        id: fetch_tags
         run: |
-          flutter build ios --release --no-codesign
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cd Payload
-          ln -s ../Runner.app
-          cd ..
-          zip -r AnymeX-iOS-${{ github.ref_name }}.ipa Payload
-          mv AnymeX-iOS-${{ github.ref_name }}.ipa ../../../
+          # Fetch all tags from the GitHub API
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
+          # Extract tag names and sort them
+          TAGS=$(jq -r '.[].name' tags.json | sort -V)
+          LATEST_TAG=$(echo "$TAGS" | tail -n 1)
 
-      - name: Release iOS IPA
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "AnymeX-iOS-*.ipa"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
+          echo "Latest Tag: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
 
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Install Dependencies
+      - name: Use the Latest Tag
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cmake clang mpv libgtk-3-dev libblkid-dev liblzma-dev pkg-config libmpv-dev webkit2gtk-4.1 dpkg-dev
+          echo "The latest tag is: ${{ env.LATEST_TAG }}"
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
-
-      - name: Replace pubspec.yaml with Desktop Version
-        run: cp pubspec_desktop.yaml pubspec.yaml
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Replace video file extensions for desktops
+      - name: Get Release Info
+        id: release_info
         run: |
-          mv lib/pages/Desktop/video_controls.darts lib/pages/Desktop/video_controls.dart  
-          mv lib/pages/Desktop/watch_page.darts lib/pages/Desktop/watch_page.dart
-
-      - name: Replace main.dart with Desktop Version
-        run: mv lib/main.darts lib/main.dart
-
-      - name: Build Linux
-        run: flutter build linux --release
-
-      - name: Zip Linux Artifacts
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
+          RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
+          ASSET_URLS=$(jq -r '.assets[]?.browser_download_url // empty' release.json)
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
+          echo "${ASSET_URLS}" > assets.txt
+      # Determine webhook based on release name
+      - name: Determine Webhook
+        id: determine_webhook
         run: |
-          cd build/linux/x64/release
-          cp ../../../../linuxLibs/* bundle/lib/
-          zip -r ../../../../AnymeX-Linux.zip .
-
-      - name: Release Linux Build
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "AnymeX-Linux.zip"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
-
-      - name: Replace pubspec.yaml with Desktop Version
-        run: Copy-Item -Path pubspec_desktop.yaml -Destination pubspec.yaml -Force
-
-      - name: Replace main.dart with Desktop Version
-        run: Move-Item -Path lib\main.darts -Destination lib\main.dart -Force
-
-      - name: Replace video file extensions for desktops
-        run: |
-          Move-Item -Path lib\pages\Desktop\video_controls.darts -Destination lib\pages\Desktop\video_controls.dart -Force
-          Move-Item -Path lib\pages\Desktop\watch_page.darts -Destination lib\pages\Desktop\watch_page.dart -Force
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Create ZIP file for Windows Build
-        run: |
-          cd build/windows/x64/runner/Release
-          Compress-Archive -Path * -DestinationPath AnymeX-Windows.zip
-
-      - name: Setup Inno Setup
-        run: choco install innosetup -y
-
-      - name: Build Installer with Inno Setup
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" inno.iss
-
-      - name: Release Windows Builds
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/windows/x64/runner/Release/AnymeX-Windows.zip,output/AnymeX-Setup.exe"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.22.3"
-
-      - name: Replace pubspec.yaml with Desktop Version
-        run: cp pubspec_macos.yaml pubspec.yaml
-
-      - name: Replace main.dart with Desktop Version
-        run: mv lib/main.darts lib/main.dart
-
-      - name: Replace video file extensions for desktops
-        run: |
-          mv lib/pages/Desktop/video_controls.darts lib/pages/Desktop/video_controls.dart  
-          mv lib/pages/Desktop/watch_page.darts lib/pages/Desktop/watch_page.dart
-          mv lib/auth/auth_provider_macos.dart lib/auth/auth_provider.dart
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build macOS
-        run: flutter build macos --release
-
-      - name: Create DMG file for macOS Build
-        run: |
-          mkdir -p build/macos/Release
-          hdiutil create -volname "AnymeX" -srcfolder build/macos/Build/Products/Release/AnymeX.app -ov -format UDZO build/macos/Release/AnymeX.dmg
-
-      - name: Release macOS Builds
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/macos/Release/AnymeX.dmg"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  generate-changelog:
-    runs-on: ubuntu-latest
-    needs: [build-android, build-ios, build-macos, build-linux, build-windows]
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Generate Changelog
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          #!/bin/bash
-          PREVIOUS_TAG=$(git tag --sort=-v:refname | grep -vE '(-alpha|-beta|-rc)' | head -n 2 | tail -n 1)
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          if [ -z "$PREVIOUS_TAG" ]; then
-            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          if [[ "${RELEASE_NAME}" == *alpha ]]; then
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_ALPHA }}" >> $GITHUB_ENV
+            echo "Targeted to Alpha channel"
+          elif [[ "${RELEASE_NAME}" == *beta ]]; then
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_BETA }}" >> $GITHUB_ENV
+            echo "Targeted to Beta channel"
+          else
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK }}" >> $GITHUB_ENV
+            echo "Targeted to Default channel"
           fi
+      # Telegram - Send Release Notes
+      - name: Send Release Notes to Telegram
+        run: |
+          ROLE_MENTION="<b>@role</b>"  # Add the actual role username if needed, or leave this empty if no mention
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${ROLE_MENTION}\n${RELEASE_NOTES}"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+      
+      # Telegram - Send Assets
+      - name: Send Assets to Telegram
+        run: |
+          ASSET_LINKS=""
+          while IFS= read -r ASSET_URL; do
+            FILE_NAME=$(basename "$ASSET_URL")
+            ASSET_LINKS="$ASSET_LINKS\n[Download $FILE_NAME:]($ASSET_URL)"
+          done < assets.txt
+          
+          MESSAGE="🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+      
+      # Discord - Send Release Notes
+      - name: Send Release Notes to Discord
+        run: |
+          CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed 's/\\n//g')
+          echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
+          
+          # Mention the role based on environment
+          if [[ "${RELEASE_NAME}" == *alpha ]]; then
+            ROLE_MENTION="<@&1313089691523878942>"  # Use the actual Role ID for alpha channel
+          elif [[ "${RELEASE_NAME}" == *beta ]]; then
+            ROLE_MENTION="<@&1313087262539518033>"  # Use the actual Role ID for beta channel
+          else
+            ROLE_MENTION="<@&1234567>"  # Use the default role ID
+          fi
+          
+          HEADER="${ROLE_MENTION}
+          ## 🚀 New Release: ${RELEASE_NAME}
+          
+          ${CLEANED_RELEASE_NOTES}"
+          PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
+          cname: Notify Release
 
-          # Initialize changelog with the current tag as the version
-          echo "## $CURRENT_TAG" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
+on:
+  workflow_run:
+    workflows:
+      - "Build and Release AnymeX" # Name of the triggering workflow
+    types:
+      - completed
+  workflow_dispatch: # Allow manual triggering of this workflow
 
-          # Function to add section if commits exist
-          add_section() {
-            local section_title="$1"
-            local grep_pattern="$2"
-            local commits=$(git log $PREVIOUS_TAG..$CURRENT_TAG --grep="$grep_pattern" --pretty=format:'* [`%h`](https://github.com/RyanYuuki/AnymeX/commit/%h): %s')
-            
-            if [ ! -z "$commits" ]; then
-              echo "## $section_title" >> CHANGELOG.md
-              echo "$commits" >> CHANGELOG.md
-              echo "" >> CHANGELOG.md
-            fi
-          }
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-          # Add sections dynamically
-          add_section "🎉 New Features" "^feat:"
-          add_section "🛠️ Bug Fixes & Improvements" "^fix:"
-          add_section "🔧 Refactors" "^refactor:"
-          add_section "🎨 Style Changes" "^style:"
-          add_section "🚀 Performance Improvements" "^perf:"
-          add_section "🧹 Chores & Documentation" "^(chore|docs):"
-
-          # Output the generated changelog
-          cat CHANGELOG.md
-      - name: Update Release with Changelog
-        uses: ncipollo/release-action@v1
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          bodyFile: "CHANGELOG.md"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
+          python-version: '3.x'
+
+      - name: Install jq (if needed)
+        run: sudo apt-get install -y jq    
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests jq    
+
+      - name: Fetch Repository Tags
+        id: fetch_tags
+        run: |
+          # Fetch all tags from the GitHub API
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
+          # Extract tag names and sort them
+          TAGS=$(jq -r '.[].name' tags.json | sort -V)
+          LATEST_TAG=$(echo "$TAGS" | tail -n 1)
+
+          echo "Latest Tag: $LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+      - name: Use the Latest Tag
+        run: |
+          echo "The latest tag is: ${{ env.LATEST_TAG }}"
+
+      - name: Get Release Info
+        id: release_info
+        run: |
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
+          RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json | sed ':a;N;$!ba;s/\n/\\n/g')
+          ASSET_URLS=$(jq -r '.assets[]?.browser_download_url // empty' release.json)
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES=${RELEASE_NOTES}" >> $GITHUB_ENV
+          echo "${ASSET_URLS}" > assets.txt
+      # Determine webhook based on release name
+      - name: Determine Webhook
+        id: determine_webhook
+        run: |
+          if [[ "${RELEASE_NAME}" == *alpha ]]; then
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_ALPHA }}" >> $GITHUB_ENV
+            echo "Targeted to Alpha channel"
+          elif [[ "${RELEASE_NAME}" == *beta ]]; then
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_BETA }}" >> $GITHUB_ENV
+            echo "Targeted to Beta channel"
+          else
+            echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK }}" >> $GITHUB_ENV
+            echo "Targeted to Default channel"
+          fi
+      # Telegram - Send Release Notes
+      - name: Send Release Notes to Telegram
+        run: |
+          ROLE_MENTION="<b>@role</b>"  # Add the actual role username if needed, or leave this empty if no mention
+          MESSAGE="🚀 <b>## New Release: ${RELEASE_NAME}</b>\n\n<b>Release Notes:</b>\n${ROLE_MENTION}\n${RELEASE_NOTES}"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+      
+      # Telegram - Send Assets
+      - name: Send Assets to Telegram
+        run: |
+          ASSET_LINKS=""
+          while IFS= read -r ASSET_URL; do
+            FILE_NAME=$(basename "$ASSET_URL")
+            ASSET_LINKS="$ASSET_LINKS\n[Download $FILE_NAME:]($ASSET_URL)"
+          done < assets.txt
+          
+          MESSAGE="🚀 <b>Assets for Release: ${RELEASE_NAME}</b>\n\n<b>Assets:</b>${ASSET_LINKS}"
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\"}"
+      
+      # Discord - Send Release Notes
+      - name: Send Release Notes to Discord
+        run: |
+          CLEANED_RELEASE_NOTES=$(echo "${RELEASE_NOTES}" | sed 's/\\n//g')
+          echo "Cleaned Release Notes: $CLEANED_RELEASE_NOTES"
+          
+          # Mention the role based on environment
+          if [[ "${RELEASE_NAME}" == *alpha ]]; then
+            ROLE_MENTION="<@&1313089691523878942>"  # Use the actual Role ID for alpha channel
+          elif [[ "${RELEASE_NAME}" == *beta ]]; then
+            ROLE_MENTION="<@&1313087262539518033>"  # Use the actual Role ID for beta channel
+          else
+            ROLE_MENTION="<@&1234567>"  # Use the default role ID
+          fi
+          
+          HEADER="${ROLE_MENTION}
+          ## 🚀 New Release: ${RELEASE_NAME}
+          
+          ${CLEANED_RELEASE_NOTES}"
+          PAYLOAD=$(jq -n --arg content "$HEADER" '{ content: $content }')
+          curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+      # Discord - Send Assets
+      - name: Send Assets to Discord
+        run: |
+          ASSET_LINKS=""
+          while IFS= read -r ASSET_URL; do
+            FILE_NAME=$(basename "$ASSET_URL")
+            ASSET_LINKS="$ASSET_LINKS
+            **[$FILE_NAME]($ASSET_URL)**"
+          done < assets.txt
+          
+          MESSAGE="## Assets for Release: ${RELEASE_NAME} ${ASSET_LINKS}"
+          
+          PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
+          curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+url -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+      # Discord - Send Assets
+      - name: Send Assets to Discord
+        run: |
+          ASSET_LINKS=""
+          while IFS= read -r ASSET_URL; do
+            FILE_NAME=$(basename "$ASSET_URL")
+            ASSET_LINKS="$ASSET_LINKS
+            **[$FILE_NAME]($ASSET_URL)**"
+          done < assets.txt
+          
+          MESSAGE="## Assets for Release: ${RELEASE_NAME} ${ASSET_LINKS}"
+          
+          PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
+          curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
