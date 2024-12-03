@@ -53,13 +53,8 @@ jobs:
       - name: Download and Move Changelog
         run: |
          mkdir -p output
-         artifact_name="Changelog"
-         actions_download_dir=$(mktemp -d)
-         echo "Downloading artifact: $artifact_name..."
-         curl -sSL -o "$actions_download_dir/$artifact_name.zip" \
-         "$ACTIONS_RUNTIME_URL/_apis/pipelines/workflows/$GITHUB_RUN_ID/artifacts/$artifact_name?api-version=6.0-preview"
-         unzip "$actions_download_dir/$artifact_name.zip" -d .
-         mv CHANGELOG.md output/Changelog.md
+         mv Changelog/CHANGELOG.md output/Changelog.md
+         shell: bash
     
       - name: Update Release with Changelog
         uses: ncipollo/release-action@v1
