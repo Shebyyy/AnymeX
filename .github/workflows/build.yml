@@ -50,15 +50,21 @@ jobs:
           # Output the generated changelog
           cat CHANGELOG.md
 
-      # Step 1: Upload the Changelog.md artifact from a specific location
+      # Step 1: Upload Changelog.md as Artifact
       - name: Upload Changelog.md as Artifact
         id: upload-artifact
         uses: actions/upload-artifact@v4
         with:
           name: Changelog
-          path: CHANGELOG.md  # Update the path to where your Changelog.md is located
+          path: Changelog.md  # Path to your Changelog.md
 
-      # Step 2: Download the artifact
+      - name: Update Release with Changelog
+        uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "CHANGELOG.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
+        
       - name: Download Changelog Artifact
         id: download-artifact
         uses: actions/download-artifact@v3
@@ -70,12 +76,11 @@ jobs:
         run: |
           # Create output folder if it does not exist
           mkdir -p output
-        
           # Unzip the artifact
           unzip Changelog.zip -d output
-        
           # Optionally, move or rename the file if needed
-          mv Changelog.md output/Changelog.md
+          mv output/Changelog.md output/Changelog.md
+
 
   build-android:
     runs-on: ubuntu-latest
