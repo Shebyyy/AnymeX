@@ -145,15 +145,15 @@ jobs:
         run: |
           MESSAGE="🎉 *${{ env.LATEST_TAG }} Released* 🎉
           
-            🔹 ${{ env.apk_arm64_message }} : **APK (arm64)**
-            🔹 ${{ env.apk_armeabi_message }} : **APK (armeabi-v7a)**
-            🔹 ${{ env.apk_universal_message }} : **APK (universal)**
-            🔹 ${{ env.apk_x86_64_message }} : **APK (x86 & x64)**
-            🔹 ${{ env.windows_message }} : **Windows Zip**
-            🔹 ${{ env.setup_message }} : **Windows EXE**
-            🔹 ${{ env.linux_message }} : **Linux**
-            🔹 ${{ env.ios_message }} : **iOS**
-            🔹 ${{ env.macos_message }} : **macOS**"
+            🔹 ${{ env.apk_arm64_message }} | **APK (arm64)**
+            🔹 ${{ env.apk_armeabi_message }} | **APK (armeabi-v7a)**
+            🔹 ${{ env.apk_universal_message }} | **APK (universal)**
+            🔹 ${{ env.apk_x86_64_message }} | **APK (x86 & x64)**
+            🔹 ${{ env.windows_message }} | **Windows Zip**
+            🔹 ${{ env.setup_message }} | **Windows EXE**
+            🔹 ${{ env.linux_message }} | **Linux**
+            🔹 ${{ env.ios_message }} | **iOS**
+            🔹 ${{ env.macos_message }} | **macOS**"
 
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
@@ -192,15 +192,15 @@ jobs:
       - name: Send Assets to Discord
         run: |
           MESSAGE="## ${{ env.LATEST_TAG }} Released
-            🔹 ${{ env.apk_arm64_message }} : **APK (arm64)**
-            🔹 ${{ env.apk_armeabi_message }} : **APK (armeabi-v7a)**
-            🔹 ${{ env.apk_universal_message }} : **APK (universal)**
-            🔹 ${{ env.apk_x86_64_message }} : **APK (x86 & x64)**
-            🔹 ${{ env.windows_message }} : **Windows Zip**
-            🔹 ${{ env.setup_message }} : **Windows EXE**
-            🔹 ${{ env.linux_message }} : **Linux**
-            🔹 ${{ env.ios_message }} : **iOS**
-            🔹 ${{ env.macos_message }} : **macOS**"
+            🔹 ${{ env.apk_arm64_message }} | **APK (arm64)**
+            🔹 ${{ env.apk_armeabi_message }} | **APK (armeabi-v7a)**
+            🔹 ${{ env.apk_universal_message }} | **APK (universal)**
+            🔹 ${{ env.apk_x86_64_message }} | **APK (x86 & x64)**
+            🔹 ${{ env.windows_message }} | **Windows Zip**
+            🔹 ${{ env.setup_message }} | **Windows EXE**
+            🔹 ${{ env.linux_message }} | **Linux**
+            🔹 ${{ env.ios_message }} | **iOS**
+            🔹 ${{ env.macos_message }} | **macOS**"
 
           PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
