@@ -169,6 +169,7 @@ jobs:
         
           # Replace ): with )
           discord_commit=$(echo "$RELEASE_NOTES" | sed -E 's/\): [^:]+:/) :/g')
+          discord_commit=$(echo "$discord_commit" | sed 's/^* /> /g')
           
           # Mention the role based on environment
           if [[ "${RELEASE_NAME}" == *alpha ]]; then
