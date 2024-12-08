@@ -139,7 +139,7 @@ jobs:
               "message_thread_id": "${{ env.TELEGRAM_THREAD_ID }}",
               "text": "'"$MESSAGE"'",
               "parse_mode": "Markdown"
-              "disableWebPagePreview": false
+              "disableWebPagePreview": true
             }'
 
       - name: Send Assets to Telegram
