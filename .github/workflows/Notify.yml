@@ -155,6 +155,7 @@ jobs:
           done
     
       - name: Send Release Notes to Telegram
+        if: false
         run: |
           # Assuming RELEASE_NOTES contains your original content
           tel_commit="${RELEASE_NOTES}"
