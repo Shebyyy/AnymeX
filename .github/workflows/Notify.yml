@@ -74,23 +74,23 @@ jobs:
             FILE_NAME=$(basename "$ASSET_URL")
             # Categorize and set variables
             if [[ "$FILE_NAME" == *"-arm64.apk" ]]; then
-              echo "apk_arm64_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "apk_arm64_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"-armeabi-v7a.apk" ]]; then
-              echo "apk_armeabi_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "apk_armeabi_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"-universal.apk" ]]; then
-              echo "apk_universal_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "apk_universal_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"-x86_64.apk" ]]; then
-              echo "apk_x86_64_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "apk_x86_64_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *.ipa ]]; then
-              echo "ios_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "ios_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Linux.zip" ]]; then
-              echo "linux_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "linux_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Setup.exe" ]]; then
-              echo "setup_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "setup_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Windows.zip" ]]; then
-              echo "windows_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "windows_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *".dmg" ]]; then
-              echo "macos_message=$SIZE_HR | [Download]($ASSET_URL)" >> $GITHUB_ENV
+              echo "macos_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             fi
           done
           
@@ -107,9 +107,9 @@ jobs:
         id: determine_topic
         run: |
           if [[ "${RELEASE_NAME}" == *alpha ]]; then
-            echo "TELEGRAM_THREAD_ID=17602" >> $GITHUB_ENV
+            echo "TELEGRAM_THREAD_ID=737" >> $GITHUB_ENV
           else
-            echo "TELEGRAM_THREAD_ID=17665" >> $GITHUB_ENV
+            echo "TELEGRAM_THREAD_ID=737" >> $GITHUB_ENV
           fi
           
       - name: Send Release Notes to Telegram
@@ -146,21 +146,13 @@ jobs:
           MESSAGE="🎉 *${{ env.LATEST_TAG }} Released* 🎉
           
             🔹 ${{ env.apk_arm64_message }} : **APK (arm64)**
-            
             🔹 ${{ env.apk_armeabi_message }} : **APK (armeabi-v7a)**
-            
             🔹 ${{ env.apk_universal_message }} : **APK (universal)**
-            
             🔹 ${{ env.apk_x86_64_message }} : **APK (x86 & x64)**
-            
             🔹 ${{ env.windows_message }} : **Windows Zip**
-            
             🔹 ${{ env.setup_message }} : **Windows EXE**
-            
             🔹 ${{ env.linux_message }} : **Linux**
-            
             🔹 ${{ env.ios_message }} : **iOS**
-            
             🔹 ${{ env.macos_message }} : **macOS**"
 
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
@@ -201,21 +193,13 @@ jobs:
         run: |
           MESSAGE="## ${{ env.LATEST_TAG }} Released
             🔹 ${{ env.apk_arm64_message }} : **APK (arm64)**
-            
             🔹 ${{ env.apk_armeabi_message }} : **APK (armeabi-v7a)**
-            
             🔹 ${{ env.apk_universal_message }} : **APK (universal)**
-            
             🔹 ${{ env.apk_x86_64_message }} : **APK (x86 & x64)**
-            
             🔹 ${{ env.windows_message }} : **Windows Zip**
-            
             🔹 ${{ env.setup_message }} : **Windows EXE**
-            
             🔹 ${{ env.linux_message }} : **Linux**
-            
             🔹 ${{ env.ios_message }} : **iOS**
-            
             🔹 ${{ env.macos_message }} : **macOS**"
 
           PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
