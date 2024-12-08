@@ -111,7 +111,49 @@ jobs:
           else
             echo "TELEGRAM_THREAD_ID=737" >> $GITHUB_ENV
           fi
-          
+
+
+
+      - name: Send Release Notes to Telegram
+        run: |
+          # Assuming RELEASE_NOTES contains your original content
+          tel_commit="${RELEASE_NOTES}"
+
+          # Replace ### with **
+          tel_commit=$(echo "$tel_commit" | sed 's/^### /**/g')
+
+          # Replace * with 🔹 (excluding headings)
+          tel_commit=$(echo "$tel_commit" | sed 's/^* /🔹 /g')
+
+          # Replace ): with )
+          tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
+
+          # Define categories
+          categories=("🎉 New Features" "🛠️ Bug Fixes & Improvements" "🔧 Refactors" "🎨 Style Changes" "🚀 Performance Improvements" "🧹 Chores & Documentation")
+
+          # Split the text into sections and send each one separately
+          for category in "${categories[@]}"; do
+          # Extract the section for the current category
+          section=$(echo "$tel_commit" | sed -n "/$category/,/^$/p" | sed 's/^ *//g')  # Remove leading spaces
+
+          # Check if the section is not empty
+          if [ ! -z "$section" ]; then
+          # Prepare the message
+          MESSAGE="**🚀 New Release: ${RELEASE_NAME}**\n\nRelease Notes:\n$section"
+
+          # Send message to Telegram (each section separately)
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+           -H "Content-Type: application/json" \
+          -d '{
+           "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
+           "message_thread_id": "${{ env.TELEGRAM_THREAD_ID }}",
+           "text": "'"$MESSAGE"'",
+           "parse_mode": "Markdown",
+           "disable_web_page_preview": true
+           }' -v
+          fi
+          done
+    
       - name: Send Release Notes to Telegram
         run: |
           # Assuming RELEASE_NOTES contains your original content
