@@ -121,22 +121,26 @@ jobs:
           # Replace ): with )
           tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
 
-          # Count total lines and split if necessary
-          total_lines=$(echo "$tel_commit" | wc -l)
-          max_length=4000
-          if [[ ${#tel_commit} -gt $max_length ]]; then
-          trimmed_commit=$(echo "$tel_commit" | head -n 30)  # Limit to first 100 lines for example
-          remaining_lines=$((total_lines - 30))
+          # Define a regex pattern for commit IDs (e.g., 7-character alphanumeric IDs)
+           commit_count=$(echo "$tel_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)
+
+           # Check if the message exceeds the Telegram character limit
+            max_length=4000
+            if [[ ${#tel_commit} -gt $max_length ]]; then
+          # Limit to the first 4000 characters and count remaining commits
+            trimmed_commit=$(echo "$tel_commit" | head -c $max_length)
+            remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
+            MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
-          MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
-          
-          Release Notes:
-          
-          $trimmed_commit
-          📌 ** Note: There are $remaining_lines more commits.** 
-          [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          tel_commit="$trimmed_commit $remaining_message"
-          else
+            Release Notes: 
+            
+            $trimmed_commit"
+            
+            📌 *Note: 
+            There are $remaining_commits more commits.* 
+            [View Full changelog Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+            tel_commit="$trimmed_commit$remaining_message"
+            else
           
           # Display or use the modified text
           echo "$tel_commit"
