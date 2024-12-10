@@ -32,7 +32,7 @@ jobs:
       - name: Fetch Repository Tags
         id: fetch_tags
         run: |
-          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
+          curl -s "https://api.github.com/repos/Shebyyy/AnymeX/tags" -o tags.json
           TAGS=$(jq -r '.[].name' tags.json | sort -V)
           LATEST_TAG=$(echo "$TAGS" | tail -n 1)
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
@@ -112,7 +112,22 @@ jobs:
             echo "TELEGRAM_THREAD_ID=737" >> $GITHUB_ENV
           fi
 
-
+      - name: Check Release Notes Length for Telegram
+        id: check_telegram_length
+        run: |
+          MAX_LENGTH=4096
+          if [ ${#RELEASE_NOTES} -gt $MAX_LENGTH ]; then
+            echo "notes_too_long=true" >> $GITHUB_ENV
+            FULL_RELEASE_URL=$(curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"description\":\"Release Notes\",\"public\":true,\"files\":{\"release_notes.txt\":{\"content\":\"${RELEASE_NOTES}\"}}}" \
+              https://api.github.com/gists | jq -r '.html_url')
+            echo "TELEGRAM_MESSAGE=\"The release notes are too long. Please read them here: $FULL_RELEASE_URL\"" >> $GITHUB_ENV
+          else
+            echo "notes_too_long=false" >> $GITHUB_ENV
+            echo "TELEGRAM_MESSAGE=\"**🚀 New Release: $RELEASE_NAME**\n\n$RELEASE_NOTES\"" >> $GITHUB_ENV
+          fi
 
       - name: Send Release Notes to Telegram
         run: |  
@@ -159,7 +174,6 @@ jobs:
 
     
       - name: Send Release Notes to Telegram
-        if: false
         run: |
           # Assuming RELEASE_NOTES contains your original content
           tel_commit="${RELEASE_NOTES}"
@@ -175,10 +189,25 @@ jobs:
 
           # Display or use the modified text
           echo "$tel_commit"
+
+          # Check if the message exceeds the Telegram limit (4096 characters)
+          MAX_LENGTH=4096
+          if [ ${#tel_commit} -gt $MAX_LENGTH ]; then
+            # Trim the message and add a link to the full release notes
+            SHORT_MESSAGE="${tel_commit:0:$MAX_LENGTH}"
+            MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
+            
+            Release Notes (partially shown due to size limit):
+            
+            $SHORT_MESSAGE
+            [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          else
+            # Send the entire message if it's within the size limit
           MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
           Release Notes: $tel_commit"
-        
+          fi
+          
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
              -H "Content-Type: application/json" \
           -d '{
