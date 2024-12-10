@@ -113,7 +113,6 @@ jobs:
     
       - name: Send Release Notes to Telegram
         run: |
-          # Assuming RELEASE_NOTES contains your original content
         
           # Replace ### with **
           tel_commit=$(echo "$RELEASE_NOTES" | sed 's/^### /**/g')
@@ -125,7 +124,7 @@ jobs:
           echo "$tel_commit"
            # Check if the message exceeds 4000 characters
           MIN_LENGTH=4000
-          if [ $tel_commit -gt $MIN_LENGTH ]; then
+          if [ ${#tel_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
           MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
@@ -181,7 +180,7 @@ jobs:
           echo "$discord_commit"
            # Check if the message exceeds 3500 characters
           MIN_LENGTH=3500
-          if [ $discord_commit -gt $MIN_LENGTH ]; then
+          if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
           discord_MESSAGE="Release Notes (partially shown due to size limit):
