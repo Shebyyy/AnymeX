@@ -126,9 +126,9 @@ jobs:
           echo "$tel_commit"
            # Check if the message exceeds 4000 characters
           MIN_LENGTH=4000
-          if [ ${#tel_commit} -gt $MIN_LENGTH ]; then
+          if [ $tel_commit -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
-          SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
+          SHORT_MESSAGE="{$tel_commit:0:$MIN_LENGTH}"
           MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
           Release Notes (partially shown due to size limit):
           
@@ -182,9 +182,9 @@ jobs:
           echo "$discord_commit"
            # Check if the message exceeds 1900 characters
           MIN_LENGTH=3500
-          if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
+          if [ $discord_commit -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
-          SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
+          SHORT_MESSAGE="{$discord_commit:0:$MIN_LENGTH}"
           discord_MESSAGE="Release Notes (partially shown due to size limit):
           
           $SHORT_MESSAGE
