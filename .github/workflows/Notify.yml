@@ -132,7 +132,7 @@ jobs:
           
           $SHORT_MESSAGE
           
-          [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          [View Full changelog Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           else
           MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
@@ -187,7 +187,7 @@ jobs:
           
           $SHORT_MESSAGE
           
-          [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          [View Full changelog Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           else
           discord_MESSAGE="Release Notes: $discord_commit"
           fi
