@@ -32,7 +32,7 @@ jobs:
       - name: Fetch Repository Tags
         id: fetch_tags
         run: |
-          curl -s "https://api.github.com/repos/Shebyyy/AnymeX/tags" -o tags.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
           TAGS=$(jq -r '.[].name' tags.json | sort -V)
           LATEST_TAG=$(echo "$TAGS" | tail -n 1)
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
@@ -51,7 +51,6 @@ jobs:
         
            # Write release notes as-is with newlines
             echo -e "RELEASE_NOTES<<EOF\n$RELEASE_NOTES\nEOF" >> $GITHUB_ENV
-
       - name: Get and Categorize Assets with Sizes
         id: categorize_assets
         run: |
@@ -111,67 +110,6 @@ jobs:
           else
             echo "TELEGRAM_THREAD_ID=737" >> $GITHUB_ENV
           fi
-
-      - name: Check Release Notes Length for Telegram
-        id: check_telegram_length
-        run: |
-          MAX_LENGTH=4096
-          if [ ${#RELEASE_NOTES} -gt $MAX_LENGTH ]; then
-            echo "notes_too_long=true" >> $GITHUB_ENV
-            FULL_RELEASE_URL=$(curl -s -X POST \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"description\":\"Release Notes\",\"public\":true,\"files\":{\"release_notes.txt\":{\"content\":\"${RELEASE_NOTES}\"}}}" \
-              https://api.github.com/gists | jq -r '.html_url')
-            echo "TELEGRAM_MESSAGE=\"The release notes are too long. Please read them here: $FULL_RELEASE_URL\"" >> $GITHUB_ENV
-          else
-            echo "notes_too_long=false" >> $GITHUB_ENV
-            echo "TELEGRAM_MESSAGE=\"**🚀 New Release: $RELEASE_NAME**\n\n$RELEASE_NOTES\"" >> $GITHUB_ENV
-          fi
-
-      - name: Send Release Notes to Telegram
-        run: |  
-          # Assuming RELEASE_NOTES contains your original content
-          tel_commit="${RELEASE_NOTES}"
-  
-          # Replace ### with **
-          tel_commit=$(echo "$tel_commit" | sed 's/^### /**/g')
-
-          # Replace * with 🔹 (excluding headings)
-          tel_commit=$(echo "$tel_commit" | sed 's/^* /🔹 /g')
-
-            # Replace ): with )
-           tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
-
-            # Define categories
-            categories=("🎉 New Features" "🛠️ Bug Fixes & Improvements" "🔧 Refactors" "🎨 Style Changes" "🚀 Performance Improvements" "🧹 Chores & Documentation")
-
-            # Prepare the general message header once
-            MESSAGE_HEADER="**🚀 New Release: ${RELEASE_NAME}**\n\nRelease Notes:"
-
-            # Send each category as a separate message
-            for category in "${categories[@]}"; do
-            # Extract the section for the current category
-            section=$(echo "$tel_commit" | sed -n "/$category/,/^$/p" | sed 's/^ *//g')  # Remove leading spaces
-
-            # Check if the section is not empty
-            if [ ! -z "$section" ]; then
-            # Prepare the message for this section
-            MESSAGE="${MESSAGE_HEADER}\n$section"
-
-            # Send message to Telegram (each section separately)
-            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-             -H "Content-Type: application/json" \
-            -d '{
-               "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
-               "message_thread_id": "${{ env.TELEGRAM_THREAD_ID }}",
-               "text": "'"$MESSAGE"'",
-               "parse_mode": "Markdown",
-               "disable_web_page_preview": true
-               }' -v
-            fi
-          done
-
     
       - name: Send Release Notes to Telegram
         run: |
@@ -180,34 +118,26 @@ jobs:
         
           # Replace ### with **
           tel_commit=$(echo "$tel_commit" | sed 's/^### /**/g')
-
           # Replace * with 🔹 (excluding headings)
           tel_commit=$(echo "$tel_commit" | sed 's/^* /🔹 /g')
-
           # Replace ): with )
           tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
-
           # Display or use the modified text
           echo "$tel_commit"
-
-          # Check if the message exceeds the Telegram limit (4096 characters)
-          MAX_LENGTH=4096
-          if [ ${#tel_commit} -gt $MAX_LENGTH ]; then
-            # Trim the message and add a link to the full release notes
-            SHORT_MESSAGE="${tel_commit:0:$MAX_LENGTH}"
-            MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
-            
-            Release Notes (partially shown due to size limit):
-            
-            $SHORT_MESSAGE
-            [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+           # Check if the message exceeds 10 characters
+          MIN_LENGTH=10
+          if [ ${#tel_commit} -gt $MIN_LENGTH ]; then
+          # Trim the message and add a link to the full release notes
+          SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
+          MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
+          Release Notes (partially shown due to size limit):
+          $SHORT_MESSAGE
+          [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           else
-            # Send the entire message if it's within the size limit
           MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
           Release Notes: $tel_commit"
           fi
-          
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
              -H "Content-Type: application/json" \
           -d '{
@@ -217,7 +147,6 @@ jobs:
            "parse_mode": "Markdown",
            "disable_web_page_preview": true
            }' -v
-
       - name: Send Assets to Telegram
         run: |
           MESSAGE="🎉 *${{ env.LATEST_TAG }} Released* 🎉
@@ -231,7 +160,6 @@ jobs:
             🔹 ${{ env.linux_message }} | **Linux**
             🔹 ${{ env.ios_message }} | **iOS**
             🔹 ${{ env.macos_message }} | **macOS**"
-
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d '{
@@ -266,7 +194,6 @@ jobs:
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
-
       - name: Send Assets to Discord
         run: |
           MESSAGE="## ${{ env.LATEST_TAG }} Released
@@ -279,7 +206,6 @@ jobs:
             🔹 ${{ env.linux_message }} | **Linux**
             🔹 ${{ env.ios_message }} | **iOS**
             🔹 ${{ env.macos_message }} | **macOS**"
-
           PAYLOAD=$(jq -n --arg content "$MESSAGE" '{ content: $content }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
