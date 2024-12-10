@@ -124,7 +124,7 @@ jobs:
           echo "$tel_commit"
            # Check if the message exceeds 4000 characters
           MIN_LENGTH=4000
-          if [ ${#tel_commit} -gt $MIN_LENGTH ]; then
+          if [ $tel_commit -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
           MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
