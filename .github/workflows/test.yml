@@ -1,35 +1,46 @@
-name: Fetch Changelog and Notify Telegram
+name: Fetch Release Notes and Notify Telegram
 
 on:
-  workflow_dispatch: # Trigger the workflow manually
+  workflow_dispatch: # Manual trigger
 
 jobs:
-  send-changelog:
+  send-release-notes:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout target repository
-        uses: actions/checkout@v3
-        with:
-          repository: RyanYuuki/AnymeX # Replace with the target repository
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract sections from changelog
-        id: extract_sections
+      - name: Fetch release notes from target repository
+        id: fetch_release_notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Extracting sections from CHANGELOG.md..."
-          if [ ! -f CHANGELOG.md ]; then
-            echo "CHANGELOG.md not found!"
+          TARGET_REPO="RyanYuuki/AnymeX" # Replace with target repo
+          RELEASE_API="https://api.github.com/repos/$TARGET_REPO/releases/latest"
+
+          echo "Fetching the latest release notes from $TARGET_REPO..."
+          RESPONSE=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" $RELEASE_API)
+          
+          # Extract release notes body
+          RELEASE_NOTES=$(echo "$RESPONSE" | jq -r '.body')
+          if [ -z "$RELEASE_NOTES" ]; then
+            echo "No release notes found."
             exit 1
           fi
+          echo "Release notes fetched successfully."
 
-          # Extract categorized sections
-          FEATURES=$(awk '/### 🎉 New Features/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
-          BUG_FIXES=$(awk '/### 🛠️ Bug Fixes & Improvements/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
-          REFACTORS=$(awk '/### 🔧 Refactors/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
-          STYLE_CHANGES=$(awk '/### 🎨 Style Changes/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
-          PERFORMANCE=$(awk '/### 🚀 Performance Improvements/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
-          CHORES=$(awk '/### 🧹 Chores & Documentation/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          # Save the release notes for further processing
+          echo "$RELEASE_NOTES" > release_notes.txt
+
+      - name: Extract sections from release notes
+        id: extract_sections
+        run: |
+          echo "Extracting sections from release notes..."
+
+          FEATURES=$(awk '/### 🎉 New Features/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
+          BUG_FIXES=$(awk '/### 🛠️ Bug Fixes & Improvements/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
+          REFACTORS=$(awk '/### 🔧 Refactors/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
+          STYLE_CHANGES=$(awk '/### 🎨 Style Changes/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
+          PERFORMANCE=$(awk '/### 🚀 Performance Improvements/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
+          CHORES=$(awk '/### 🧹 Chores & Documentation/{flag=1; next} /###/{flag=0} flag' release_notes.txt | sed '/^$/d')
 
           # Export as environment variables
           echo "FEATURES<<EOF" >> $GITHUB_ENV
@@ -56,12 +67,12 @@ jobs:
           echo "$CHORES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Send sections to Telegram
+      - name: Send release notes to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "Sending changelog sections to Telegram..."
+          echo "Sending release notes to Telegram..."
 
           send_section() {
             local TITLE=$1
