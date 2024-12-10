@@ -119,14 +119,14 @@ jobs:
           # Replace * with 🔹 (excluding headings)
           tel_commit=$(echo "$tel_commit" | sed 's/^* /🔹 /g')
           # Replace ): with )
-          tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
+          final_tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
           # Display or use the modified text
-          echo "$tel_commit"
+          echo "$final_tel_commit"
            # Check if the message exceeds 4000 characters
           MIN_LENGTH=4000
-          if [ $tel_commit -gt $MIN_LENGTH ]; then
+          if [ ${#final_tel_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
-          SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
+          SHORT_MESSAGE="${final_tel_commit:0:$MIN_LENGTH}"
           MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
           Release Notes (partially shown due to size limit):
           
