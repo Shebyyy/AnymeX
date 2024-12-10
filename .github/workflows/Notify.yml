@@ -127,10 +127,11 @@ jobs:
           if [[ ${#tel_commit} -gt $max_length ]]; then
           trimmed_commit=$(echo "$tel_commit" | head -n 30)  # Limit to first 100 lines for example
           remaining_lines=$((total_lines - 30))
-          remaining_message="📌 ** Note: There are $remaining_lines more commits.** 
+          
+          MESSAGE="📌 ** Note: There are $remaining_lines more commits.** 
           [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           tel_commit="$trimmed_commit $remaining_message"
-          fi
+          else
           
           # Display or use the modified text
           echo "$tel_commit"
