@@ -181,7 +181,7 @@ jobs:
            # Display or use the modified text
           echo "$discord_commit"
            # Check if the message exceeds 1900 characters
-          MIN_LENGTH=1900
+          MIN_LENGTH=5900
           if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
