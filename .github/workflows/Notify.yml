@@ -129,8 +129,10 @@ jobs:
           remaining_lines=$((total_lines - 30))
           
           MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
+          
           Release Notes:
-          $trimmed_commit"
+          
+          $trimmed_commit
           📌 ** Note: There are $remaining_lines more commits.** 
           [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           tel_commit="$trimmed_commit $remaining_message"
