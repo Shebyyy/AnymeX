@@ -1,0 +1,82 @@
+name: Fetch Changelog and Notify Telegram
+
+on:
+  workflow_dispatch: # Trigger the workflow manually
+
+jobs:
+  send-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target repository
+        uses: actions/checkout@v3
+        with:
+          repository: RyanYuuki/AnymeX # Replace with the target repository
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract sections from changelog
+        id: extract_sections
+        run: |
+          echo "Extracting sections from CHANGELOG.md..."
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found!"
+            exit 1
+          fi
+
+          # Extract categorized sections
+          FEATURES=$(awk '/### 🎉 New Features/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          BUG_FIXES=$(awk '/### 🛠️ Bug Fixes & Improvements/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          REFACTORS=$(awk '/### 🔧 Refactors/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          STYLE_CHANGES=$(awk '/### 🎨 Style Changes/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          PERFORMANCE=$(awk '/### 🚀 Performance Improvements/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+          CHORES=$(awk '/### 🧹 Chores & Documentation/{flag=1; next} /###/{flag=0} flag' CHANGELOG.md | sed '/^$/d')
+
+          # Export as environment variables
+          echo "FEATURES<<EOF" >> $GITHUB_ENV
+          echo "$FEATURES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "BUG_FIXES<<EOF" >> $GITHUB_ENV
+          echo "$BUG_FIXES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "REFACTORS<<EOF" >> $GITHUB_ENV
+          echo "$REFACTORS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "STYLE_CHANGES<<EOF" >> $GITHUB_ENV
+          echo "$STYLE_CHANGES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "PERFORMANCE<<EOF" >> $GITHUB_ENV
+          echo "$PERFORMANCE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "CHORES<<EOF" >> $GITHUB_ENV
+          echo "$CHORES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Send sections to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "Sending changelog sections to Telegram..."
+
+          send_section() {
+            local TITLE=$1
+            local CONTENT=$2
+            if [ -n "$CONTENT" ]; then
+              curl -s -X POST https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage \
+                -d chat_id="$TELEGRAM_CHAT_ID" \
+                -d text="*${TITLE}*\n${CONTENT}" \
+                -d parse_mode="Markdown"
+            fi
+          }
+
+          send_section "🎉 New Features" "${{ env.FEATURES }}"
+          send_section "🛠️ Bug Fixes & Improvements" "${{ env.BUG_FIXES }}"
+          send_section "🔧 Refactors" "${{ env.REFACTORS }}"
+          send_section "🎨 Style Changes" "${{ env.STYLE_CHANGES }}"
+          send_section "🚀 Performance Improvements" "${{ env.PERFORMANCE }}"
+          send_section "🧹 Chores & Documentation" "${{ env.CHORES }}"
