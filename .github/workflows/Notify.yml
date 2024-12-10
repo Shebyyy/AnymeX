@@ -124,8 +124,8 @@ jobs:
           tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
           # Display or use the modified text
           echo "$tel_commit"
-           # Check if the message exceeds 10 characters
-          MIN_LENGTH=10
+           # Check if the message exceeds 4000 characters
+          MIN_LENGTH=4000
           if [ ${#tel_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${tel_commit:0:$MIN_LENGTH}"
@@ -175,7 +175,23 @@ jobs:
           # Replace ): with )
           discord_commit=$(echo "$RELEASE_NOTES" | sed -E 's/\): [^:]+:/) :/g')
           discord_commit=$(echo "$discord_commit" | sed 's/^* /> /g')
+
+           # Display or use the modified text
+          echo "$discord_commit"
+           # Check if the message exceeds 1900 characters
+          MIN_LENGTH=1900
+          if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
+          # Trim the message and add a link to the full release notes
+          SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
+          discord_MESSAGE="###🚀 New Release: ${RELEASE_NAME}
+          Release Notes (partially shown due to size limit):
+          $discord_MESSAGE
+          [View Full Release Notes Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          else
+          discord_MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
+          Release Notes: $discord_commit"
+          fi
           # Mention the role based on environment
           if [[ "${RELEASE_NAME}" == *alpha ]]; then
             ROLE_MENTION="<@&1313089691523878942>"  # Use the actual Role ID for alpha channel
@@ -188,7 +204,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg content "${ROLE_MENTION}" \
             --arg title "🚀 New Release: $RELEASE_NAME" \
-            --arg description "$discord_commit" \
+            --arg description "$discord_MESSAGE" \
             --argjson color 5814783 \
             '{ content: $content, embeds: [{ title: $title, description: $description, color: $color }] }')
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
