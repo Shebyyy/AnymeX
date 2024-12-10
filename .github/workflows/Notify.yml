@@ -185,17 +185,13 @@ jobs:
           if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
           # Trim the message and add a link to the full release notes
           SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
-          discord_MESSAGE="###🚀 New Release: ${RELEASE_NAME}
+          discord_MESSAGE="Release Notes (partially shown due to size limit):
           
-          Release Notes (partially shown due to size limit):
-          
-          $discord_MESSAGE
+          $SHORT_MESSAGE
           
           [View Full Release Notes Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           else
-          discord_MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
-          
-          Release Notes: $discord_commit"
+          discord_MESSAGE="Release Notes: $discord_commit"
           fi
           # Mention the role based on environment
           if [[ "${RELEASE_NAME}" == *alpha ]]; then
