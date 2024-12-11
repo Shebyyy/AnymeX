@@ -193,9 +193,9 @@ jobs:
            commit_count=$(echo "$discord_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)
 
            # Check if the message exceeds the Discord character limit
-            max_length=3500
+            max_length=3000
             if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
-          # Limit to the first 3500 characters and count remaining commits
+          # Limit to the first 3000 characters and count remaining commits
             trimmed_commit=$(echo "$discord_commit" | head -c $max_length)
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
             MESSAGE="Release Notes: $trimmed_commit
