@@ -198,11 +198,7 @@ jobs:
           # Limit to the first 3500 characters and count remaining commits
             trimmed_commit=$(echo "$discord_commit" | head -c $max_length)
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
-            MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
-          
-            Release Notes: 
-            
-            $trimmed_commit
+            MESSAGE="Release Notes: $trimmed_commit
             
             📌 *Note: There are $remaining_commits more commits.* 
             [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
