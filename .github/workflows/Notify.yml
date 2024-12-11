@@ -125,9 +125,9 @@ jobs:
            commit_count=$(echo "$tel_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)
 
            # Check if the message exceeds the Telegram character limit
-            max_length=4000
+            max_length=3500
             if [[ ${#tel_commit} -gt $max_length ]]; then
-          # Limit to the first 4000 characters and count remaining commits
+          # Limit to the first 3500 characters and count remaining commits
             trimmed_commit=$(echo "$tel_commit" | tr -d '`' | head -c $max_length)
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
             MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
