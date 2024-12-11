@@ -115,11 +115,11 @@ jobs:
         run: |
         
           # Replace ### with **
-          tel_commit=$(echo "$RELEASE_NOTES" | sed 's/^### /**/g')
+          commit=$(echo "$RELEASE_NOTES" | sed 's/^### /**/g')
           # Replace * with 🔹 (excluding headings)
-          tel_commit=$(echo "$tel_commit" | sed 's/^* /🔹 /g')
+          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
           # Replace ): with )
-          tel_commit=$(echo "$tel_commit" | sed -E 's/\): [^:]+:/) :/g')
+          tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
 
           # Define a regex pattern for commit IDs (e.g., 7-character alphanumeric IDs)
            commit_count=$(echo "$tel_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)
@@ -136,9 +136,8 @@ jobs:
             
             $trimmed_commit
             
-            📌 *Note: 
-            There are $remaining_commits more commits.* 
-            [View Full changelog Here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+            📌 *Note: There are $remaining_commits more commits.* 
+            [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
             tel_commit="$trimmed_commit$remaining_message"
             else
           
@@ -188,18 +187,28 @@ jobs:
           discord_commit=$(echo "$discord_commit" | sed 's/^* /> /g')
 
            # Display or use the modified text
-          echo "$discord_commit"
-           # Check if the message exceeds 3500 characters
-          MIN_LENGTH=3500
-          if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
-          # Trim the message and add a link to the full release notes
-          SHORT_MESSAGE="${discord_commit:0:$MIN_LENGTH}"
-          discord_MESSAGE="Release Notes (partially shown due to size limit):
+            echo "$discord_commit"
+
+          # Define a regex pattern for commit IDs (e.g., 7-character alphanumeric IDs)
+           commit_count=$(echo "$discord_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)
+
+           # Check if the message exceeds the Discord character limit
+            max_length=3500
+            if [ ${#discord_commit} -gt $MIN_LENGTH ]; then
+          # Limit to the first 3500 characters and count remaining commits
+            trimmed_commit=$(echo "$discord_commit" | head -c $max_length)
+            remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
+            MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
-          $SHORT_MESSAGE
-          
-          [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          else
+            Release Notes: 
+            
+            $trimmed_commit
+            
+            📌 *Note: There are $remaining_commits more commits.* 
+            [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+            tel_commit="$trimmed_commit$remaining_message"
+            else
+
           discord_MESSAGE="Release Notes: $discord_commit"
           fi
           # Mention the role based on environment
