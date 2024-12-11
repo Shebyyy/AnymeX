@@ -128,7 +128,7 @@ jobs:
             max_length=4000
             if [[ ${#tel_commit} -gt $max_length ]]; then
           # Limit to the first 4000 characters and count remaining commits
-            trimmed_commit=$(echo "$tel_commit" | head -c $max_length)
+            trimmed_commit=$(echo "$tel_commit" | tr -d '`' | head -c $max_length)
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
             MESSAGE=" **🚀 New Release: ${RELEASE_NAME} **
           
@@ -198,13 +198,17 @@ jobs:
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
         
             # Construct the message with a note about remaining commits
-            discord_message="Release Notes: $trimmed_commit
+            discord_message="Release Notes: 
+            
+            $trimmed_commit
 
-            📌 *Note: There are $remaining_commits more commits.* 
+            📌 Note: There are $remaining_commits more commits.* 
             [View Full changelog here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           else
             # Use the full message if within the limit
-            discord_message="Release Notes: $discord_commit"
+            discord_message="Release Notes:
+            
+            $discord_commit"
           fi
 
           # Mention the role based on the release name
