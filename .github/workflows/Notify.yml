@@ -138,11 +138,9 @@ jobs:
           
             Release Notes: 
             
-            $trimmed_commit
-            
-            📌 *Note: There are $remaining_commits more commits.* 
+            $trimmed_commit 📌 Note: There are $remaining_commits more commits.
             [View Full changelog Here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-            tel_commit="$trimmed_commit$remaining_message"
+            tel_commit="$trimmed_commit $remaining_message"
             
             else
           
