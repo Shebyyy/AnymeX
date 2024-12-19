@@ -73,8 +73,18 @@ jobs:
             DISCORD_NOTES+="\n\n📌 Note: Full details are available [here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})."
           fi
 
-          echo "TELEGRAM_NOTES=$TELEGRAM_NOTES" >> $GITHUB_ENV
-          echo "DISCORD_NOTES=$DISCORD_NOTES" >> $GITHUB_ENV
+              # Safely write multiline values to GITHUB_ENV
+            {
+            echo "TELEGRAM_NOTES<<EOF"
+            echo "$TELEGRAM_NOTES"
+            echo "EOF"
+            } >> $GITHUB_ENV
+
+            {
+            echo "DISCORD_NOTES<<EOF"
+            echo "$DISCORD_NOTES"
+            echo "EOF"
+            } >> $GITHUB_ENV
 
       - name: Send Release Notes to Telegram
         run: |
