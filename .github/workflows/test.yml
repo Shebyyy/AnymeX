@@ -39,6 +39,9 @@ jobs:
           curl -s "https://api.github.com/repos/Shebyyy/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
           RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json)
           echo "RELEASE_NOTES=$RELEASE_NOTES" >> $GITHUB_ENV
+            
+            # Write release notes as-is with newlines
+            echo -e "RELEASE_NOTES<<EOF\n$RELEASE_NOTES\nEOF" >> $GITHUB_ENV
 
           # Define section headers
           SECTIONS=("🎉 New Features" "🛠️ Bug Fixes & Improvements" "🔧 Refactors" "🎨 Style Changes" "🚀 Performance Improvements" "🧹 Chores & Documentation")
@@ -73,18 +76,9 @@ jobs:
             DISCORD_NOTES+="\n\n📌 Note: Full details are available [here](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})."
           fi
 
-              # Safely write multiline values to GITHUB_ENV
-            {
-            echo "TELEGRAM_NOTES<<EOF"
-            echo "$TELEGRAM_NOTES"
-            echo "EOF"
-            } >> $GITHUB_ENV
-
-            {
-            echo "DISCORD_NOTES<<EOF"
-            echo "$DISCORD_NOTES"
-            echo "EOF"
-            } >> $GITHUB_ENV
+          # Export the processed notes
+          echo -e  "TELEGRAM_NOTES<<EOF\n$TELEGRAM_NOTES\nEOF" >> $GITHUB_ENV
+          echo -e  "DISCORD_NOTES<<EOF\n$DISCORD_NOTES\nEOF" >> $GITHUB_ENV
 
       - name: Send Release Notes to Telegram
         run: |
