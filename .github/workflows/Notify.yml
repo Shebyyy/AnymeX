@@ -127,7 +127,7 @@ jobs:
             remaining_commits=$((commit_count - $(echo "$trimmed_commit" | grep -oE '\b[0-9a-f]{7,}\b' | wc -l)))
         
             # Construct the message with a note about remaining commits
-            MESSAGE=""**🚀 New Release: ${RELEASE_NAME}**
+            MESSAGE="**🚀 New Release: ${RELEASE_NAME}**
             Release Notes:
             
             $trimmed_commit
