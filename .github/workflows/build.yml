@@ -119,7 +119,7 @@ jobs:
           [Desktop Entry]
           Name=AnymeX
           Exec=usr/bin/anymex
-          Icon=usr/share/icons/hicolor/256x256/apps/anymex.png
+          Icon=share/icons/hicolor/256x256/apps/anymex.png
           Type=Application
           Categories=Utility;
           EOF
