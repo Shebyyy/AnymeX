@@ -114,13 +114,13 @@ jobs:
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
           # Copy built files
           cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
-          cp assets/images/logo.png AppDir/anymex.png
+          cp assets/images/logo.png AppDir/usr/share/icons/hicolor/256x256/apps/anymex.png
           # Create desktop file in AppDir root
           cat <<EOF > AppDir/anymex.desktop
           [Desktop Entry]
           Name=AnymeX
           Exec=usr/bin/anymex
-          Icon=anymex.png
+          Icon=anymex
           Type=Application
           Categories=Utility;
           EOF
