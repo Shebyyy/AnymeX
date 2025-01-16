@@ -2,85 +2,11 @@ name: Build and Release AnymeX
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: "adopt"
-          java-version: "17"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.0"
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Android with Split ABI
-        run: flutter build apk --split-per-abi
-
-      - name: Rename APKs
-        run: |
-          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/AnymeX-Android-armeabi-v7a.apk
-          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/AnymeX-Android-arm64.apk
-          mv build/app/outputs/flutter-apk/app-x86_64-release.apk build/app/outputs/flutter-apk/AnymeX-Android-x86_64.apk
-      - name: Build Universal APK
-        run: flutter build apk --release
-
-      - name: Rename Universal APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/AnymeX-Android-universal.apk
-
-      - name: Release Android APKs
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/app/outputs/flutter-apk/AnymeX-Android-*.apk"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.0"
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build iOS
-        run: |
-          flutter build ios --release --no-codesign
-          cd build/ios/iphoneos
-          mkdir -p Payload
-          cd Payload
-          ln -s ../Runner.app
-          cd ..
-          zip -r AnymeX-iOS-${{ github.ref_name }}.ipa Payload
-          mv AnymeX-iOS-${{ github.ref_name }}.ipa ../../../
-      - name: Release iOS IPA
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "AnymeX-iOS-*.ipa"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -147,66 +73,6 @@ jobs:
           artifacts: |
             build/linux/x64/release/AnymeX-Linux.zip
             build/linux/x64/release/AnymeX-Linux.AppImage
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.0"
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build Windows
-        run: dart run inno_bundle:build --release
-
-      - name: Create ZIP file for Windows Build
-        run: |
-          cd build/windows/x64/runner/Release
-          Compress-Archive -Path * -DestinationPath AnymeX-Windows.zip
-      - name: Release Windows Builds
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: |
-            build/windows/x64/runner/Release/AnymeX-Windows.zip,
-            build/windows/x64/installer/Release/AnymeX-x86_64-2.8.6-Installer.exe
-          token: ${{ secrets.GITHUB_TOKEN }}
-          allowUpdates: true
-          tag: ${{ github.ref_name }}
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.24.0"
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build macOS
-        run: flutter build macos --release
-
-      - name: Create DMG file for macOS Build
-        run: |
-          mkdir -p build/macos/Release
-          hdiutil create -volname "AnymeX" -srcfolder build/macos/Build/Products/Release/AnymeX.app -ov -format UDZO build/macos/Release/AnymeX.dmg
-      - name: Release macOS Builds
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "build/macos/Release/AnymeX.dmg"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           tag: ${{ github.ref_name }}
