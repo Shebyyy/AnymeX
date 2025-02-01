@@ -1,9 +1,6 @@
 name: Build and Release AnymeX
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -27,6 +24,14 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+      - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+          echo "Latest tag: $TAG"
+          echo "::set-output name=tag::$TAG"
+
+
       - name: Build Android with Split ABI
         run: flutter build apk --split-per-abi
 
@@ -47,7 +52,7 @@ jobs:
           artifacts: "build/app/outputs/flutter-apk/AnymeX-Android-*.apk"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.latest-tag.outputs.tag }}
 
   build-ios:
     runs-on: macos-latest
@@ -80,7 +85,7 @@ jobs:
           artifacts: "AnymeX-iOS-*.ipa"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.latest-tag.outputs.tag }}
           
   build-linux:
     runs-on: ubuntu-latest
@@ -150,7 +155,7 @@ jobs:
             build/linux/x64/release/AnymeX-Linux.AppImage
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.latest-tag.outputs.tag }}
 
   build-windows:
     runs-on: windows-latest
@@ -182,7 +187,7 @@ jobs:
             build/windows/x64/installer/Release/AnymeX-x86_64-2.8.6-Installer.exe
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.latest-tag.outputs.tag }}
 
   build-macos:
     runs-on: macos-latest
@@ -211,4 +216,4 @@ jobs:
           artifacts: "build/macos/Release/AnymeX.dmg"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.latest-tag.outputs.tag }}
