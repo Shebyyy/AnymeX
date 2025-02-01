@@ -69,6 +69,15 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+        - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $TAG"
+          echo "LATEST_TAG=$TAG" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build iOS
         run: |
           flutter build ios --release --no-codesign
@@ -108,6 +117,15 @@ jobs:
 
       - name: Get Dependencies
         run: flutter pub get
+
+        - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $TAG"
+          echo "LATEST_TAG=$TAG" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Linux
         run: flutter build linux --release
@@ -172,6 +190,15 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
+        - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $TAG"
+          echo "LATEST_TAG=$TAG" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Windows
         run: dart run inno_bundle:build --release
 
@@ -203,6 +230,15 @@ jobs:
 
       - name: Get Dependencies
         run: flutter pub get
+
+        - name: Get Latest Tag
+        id: latest-tag
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
+          echo "Latest tag: $TAG"
+          echo "LATEST_TAG=$TAG" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build macOS
         run: flutter build macos --release
