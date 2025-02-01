@@ -27,11 +27,12 @@ jobs:
       - name: Get Latest Tag
         id: latest-tag
         run: |
-          TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+          TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
           echo "Latest tag: $TAG"
           echo "::set-output name=tag::$TAG"
-
-
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Build Android with Split ABI
         run: flutter build apk --split-per-abi
 
