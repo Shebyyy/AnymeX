@@ -118,7 +118,7 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-        - name: Get Latest Tag
+      - name: Get Latest Tag
         id: latest-tag
         run: |
           TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
@@ -190,7 +190,7 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-        - name: Get Latest Tag
+      - name: Get Latest Tag
         id: latest-tag
         run: |
           TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
@@ -231,7 +231,7 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-        - name: Get Latest Tag
+      - name: Get Latest Tag
         id: latest-tag
         run: |
           TAG=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
