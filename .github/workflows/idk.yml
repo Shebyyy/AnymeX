@@ -144,7 +144,11 @@ jobs:
           # Remove extra blank lines (or lines with only spaces), keeping only one
           formatted_notes=$(echo "$formatted_notes" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
           # Replace "): <text>" with ") : <text>" and format list items
-          formatted_notes=$(echo "$formatted_notes" | sed -E 's/\): [^:]+:/) :/g' | sed 's/^* /> /g')
+          
+          formatted_notes=$(echo "$formatted_notes" | \
+          sed -E 's/\): [^:]+:/)/g' | \
+          sed -E 's/^\* /> /g')
+
           
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
