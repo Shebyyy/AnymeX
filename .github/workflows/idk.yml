@@ -133,6 +133,7 @@ jobs:
 
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
           ${tel_commit}
+          
           [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           echo "Telegram Message: $MESSAGE"
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
