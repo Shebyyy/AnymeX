@@ -128,7 +128,8 @@ jobs:
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
 
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
-          ${tel_commit}\n\n[📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          ${tel_commit}
+          [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
 
           echo "Telegram Message: $MESSAGE"
 
@@ -139,9 +140,11 @@ jobs:
 
       - name: Send Release Notes to Discord
         run: |
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### /**/g; s/$/**/g')
+          
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
-            --arg description "${{ env.FORMATTED_NOTES }}
+            --arg description "${formatted_notes}
             [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
             --argjson color 5814783 \
             '{ "embeds": [{ "title": $title, "description": $description, "color": $color }] }')
