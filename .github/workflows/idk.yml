@@ -122,7 +122,7 @@ jobs:
         run: |
         
           # Replace ### with **Heading**
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g')
+          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^###[[:space:]]*(.*)$/\*\*\1\*\*/g')
 
           # Remove extra blank lines (or lines with only spaces), keeping only one
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
@@ -147,6 +147,7 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
             --arg description "${formatted_notes}
+            
             [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
             --argjson color 5814783 \
             '{ "embeds": [{ "title": $title, "description": $description, "color": $color }] }')
