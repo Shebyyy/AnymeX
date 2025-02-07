@@ -109,8 +109,8 @@ jobs:
               if [[ "$commit_counter" -gt 5 ]]; then
                 formatted_notes+="And $((commit_counter - 5)) more"
               fi
-              formatted_notes+="$line"
-              current_section="$line"
+              formatted_notes+="/n$line"
+              current_section="$line/n/n"
               commit_counter=0
               more_commits=false
             else
@@ -123,7 +123,7 @@ jobs:
           done <<< "$RELEASE_NOTES"
           
           if [[ "$commit_counter" -gt 5 ]]; then
-            formatted_notes+="And $((commit_counter - 5)) more\n\n"
+            formatted_notes+="/n $((commit_counter - 5)) more"
           fi
           
           echo "FORMATTED_NOTES=$formatted_notes" >> $GITHUB_ENV
