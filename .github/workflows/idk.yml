@@ -151,18 +151,29 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          RELEASE_NOTES=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/\*/\\*/g' | sed 's/_/\\_/g' | sed 's/\[/\\[/g' | sed 's/\]/\\]/g')
-          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\
-          #RELEASE_NOTES
-          [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          
+          # Escape MarkdownV2 special characters for Telegram
+          Tel_note=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/([_*[\]()~`>#+\-=|{}.!])/\\\1/g')
+
+          # Replace "### " with "**" for bold titles
+          Tel_note=$(echo "$Tel_note" | sed 's/^### /**/g' | sed 's/$/**/g')
+
+          # Replace "* " (list items) with "🔹 "
+          Tel_note=$(echo "$Tel_note" | sed 's/^\* /🔹 /g')
+
+          # Fix commit message format (replacing `):` with `) :` for better readability)
+          Tel_note=$(echo "$Tel_note" | sed -E 's/\): /) :/g')
+
+          # Construct the final message
+          MESSAGE="🚀 *New Release: ${{ env.LATEST_TAG }}*
+          $Tel_note"
+
           # Send the message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d '{
               "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
               "text": "'"$MESSAGE"'",
-              "parse_mode": "Markdown",
+              "parse_mode": "MarkdownV2",
               "disable_web_page_preview": true
             }'
 
