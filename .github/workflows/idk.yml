@@ -139,10 +139,19 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
-          ${{ env.FORMATTED_NOTES }}
-          Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          
+          # Replace ### with **
+          commit=$(echo "$formatted_notes" | sed 's/^### /**/g')
+          # Replace * with 🔹 (excluding headings)
+          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
+          # Replace "):" with ") :"
+          tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
+
+          # Construct the final message
+          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\n\n${tel_commit}\n\n[📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+
+          # Log the MESSAGE for debugging
+          echo "Telegram Message: $MESSAGE"
+
           # Send the message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
@@ -151,6 +160,8 @@ jobs:
               "text": "'"$MESSAGE"'",
               "parse_mode": "Markdown",
               "disable_web_page_preview": true
+            }'
+
             }'
       - name: Send Release Notes to Discord
         run: |
