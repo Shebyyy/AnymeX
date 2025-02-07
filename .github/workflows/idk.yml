@@ -107,26 +107,29 @@ jobs:
           while IFS= read -r line; do
             if [[ "$line" == "### "* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
-                formatted_notes+="And $((commit_counter - 5)) more"
+                formatted_notes+="And $((commit_counter - 5)) more\n\n"
               fi
-              formatted_notes+="/n$line"
-              current_section="$line/n/n"
+              formatted_notes+="\n$line\n"
+              current_section="$line"
               commit_counter=0
               more_commits=false
-            else
-              formatted_notes+="$line"
+            elif [[ "$line" == "*"* ]]; then
               commit_counter=$((commit_counter + 1))
-              if [[ "$commit_counter" -gt 5 ]]; then
+              if [[ "$commit_counter" -le 5 ]]; then
+                formatted_notes+="$line\n"
+              else
                 more_commits=true
               fi
             fi
           done <<< "$RELEASE_NOTES"
           
-          if [[ "$commit_counter" -gt 5 ]]; then
-            formatted_notes+="/n $((commit_counter - 5)) more"
+          if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
+            formatted_notes+="And $((commit_counter - 5)) more\n\n"
           fi
           
-          echo "FORMATTED_NOTES=$formatted_notes" >> $GITHUB_ENV
+          echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
+          echo -e "$formatted_notes" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Debug Release Notes
         run: |
