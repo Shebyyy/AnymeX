@@ -140,7 +140,7 @@ jobs:
 
       - name: Send Release Notes to Discord
         run: |
-          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### /**/g; s/$/**/g')
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/**\1**/g')
           
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
