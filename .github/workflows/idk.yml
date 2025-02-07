@@ -140,10 +140,10 @@ jobs:
 
       - name: Send Release Notes to Discord
         run: |
-          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/**\1**/g')
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g')
 
-          # Remove extra blank lines (if there are more than one, keep only one)
-          formatted_notes=$(echo "$formatted_notes" | awk 'NF { if (!blank) print; blank=0 } !NF { if (!blank) print; blank=1 }')
+          # Remove extra blank lines (or lines with only spaces), keeping only one
+          formatted_notes=$(echo "$formatted_notes" | awk 'NF || !seen++')
           
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
