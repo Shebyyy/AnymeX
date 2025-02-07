@@ -139,9 +139,9 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\
-          ${{ env.RELEASE_NAME }}
-          [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
+          ${{ env.FORMATTED_NOTES }}
+          Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           
           # Send the message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
