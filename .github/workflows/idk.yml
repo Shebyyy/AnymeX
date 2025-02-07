@@ -132,7 +132,7 @@ jobs:
           sed -E 's/^\* /🔹 /g')
 
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
-          ${tel_commit}
+          ${commit}
           
           [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           echo "Telegram Message: $MESSAGE"
