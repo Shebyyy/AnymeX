@@ -35,19 +35,15 @@ jobs:
           # Fetch tags from the GitHub repository
           curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
           TAGS=$(jq -r '.[].name' tags.json)
-
           declare -a TAGS_WITH_DATES=()
-
           for TAG in $TAGS; do
           # Fetch tag reference details
           TAG_DETAILS=$(curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/git/refs/tags/$TAG")
           OBJECT_URL=$(echo "$TAG_DETAILS" | jq -r '.object.url // empty')
-
           if [ -n "$OBJECT_URL" ]; then
           # Fetch object details for date
           OBJECT_DETAILS=$(curl -s "$OBJECT_URL")
           DATE=$(echo "$OBJECT_DETAILS" | jq -r '.tagger.date // .committer.date // empty')
-
           if [ -n "$DATE" ]; then
           # Append date and tag pair
           TAGS_WITH_DATES+=("$DATE $TAG")
@@ -58,25 +54,20 @@ jobs:
           echo "No object URL found for tag $TAG"
           fi
           done
-
           # Debugging: Print unsorted tags
           echo "Unsorted tags with dates:"
           printf "%s\n" "${TAGS_WITH_DATES[@]}"
-
           # Find the tag with the latest date (no sorting)
           LATEST_TAG=""
           LATEST_DATE=""
-
           for TAG_DATE in "${TAGS_WITH_DATES[@]}"; do
           TAG_DATE_TIME=$(echo "$TAG_DATE" | awk '{print $1}')
           TAG_NAME=$(echo "$TAG_DATE" | awk '{print $2}')
-
           if [[ -z "$LATEST_DATE" || "$TAG_DATE_TIME" > "$LATEST_DATE" ]]; then
           LATEST_DATE="$TAG_DATE_TIME"
           LATEST_TAG="$TAG_NAME"
           fi
           done
-
           # Output the latest tag found
           echo "The selected latest tag is: $LATEST_TAG"
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
@@ -95,7 +86,6 @@ jobs:
         
            # Write release notes as-is with newlines
             echo -e "RELEASE_NOTES<<EOF\n$RELEASE_NOTES\nEOF" >> $GITHUB_ENV
-
       - name: Format Release Notes
         id: format_notes
         run: |
@@ -130,14 +120,12 @@ jobs:
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
       - name: Debug Release Notes
         run: |
             echo "Raw release JSON:"
             cat release.json
             echo "Extracted release notes:"
             jq -r '.body' release.json
-
           
       - name: Determine Webhook
         id: determine_webhook
@@ -151,32 +139,20 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          # Escape MarkdownV2 special characters for Telegram
-          Tel_note=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/([_*[\]()~`>#+\-=|{}.!])/\\\1/g')
-
-          # Replace "### " with "**" for bold titles
-          Tel_note=$(echo "$Tel_note" | sed 's/^### /**/g' | sed 's/$/**/g')
-
-          # Replace "* " (list items) with "🔹 "
-          Tel_note=$(echo "$Tel_note" | sed 's/^\* /🔹 /g')
-
-          # Fix commit message format (replacing `):` with `) :` for better readability)
-          Tel_note=$(echo "$Tel_note" | sed -E 's/\): /) :/g')
-
-          # Construct the final message
-          MESSAGE="🚀 *New Release: ${{ env.LATEST_TAG }}*
-          $Tel_note"
-
+          RELEASE_NOTES=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/\*/\\*/g' | sed 's/_/\\_/g' | sed 's/\[/\\[/g' | sed 's/\]/\\]/g')
+          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\
+          #RELEASE_NOTES
+          [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          
           # Send the message to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d '{
               "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
               "text": "'"$MESSAGE"'",
-              "parse_mode": "MarkdownV2",
+              "parse_mode": "Markdown",
               "disable_web_page_preview": true
             }'
-
       - name: Send Release Notes to Discord
         run: |
           PAYLOAD=$(jq -n \
