@@ -78,25 +78,27 @@ jobs:
         run: |
          echo "The latest tag is: ${{ env.LATEST_TAG }}"
          
-      - name: Get Release Info
-        id: release_info
+      - name: Fetch Release Details
         run: |
-          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/v2.9.1" -o release.json
           RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
           RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json)
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-          
-          # Format release notes into sections with commit count logic
-          formatted_notes=""
-          current_section=""
-          commit_count=0
-          total_commits=$(echo "$RELEASE_NOTES" | grep -c "^###")
 
-          while read -r line; do
+          # Initialize variables
+          formatted_notes=""
+          commit_count=0
+          current_section=""
+
+          # Read through the release notes
+          while IFS= read -r line; do
             if [[ "$line" =~ ^### ]]; then
+              # Append "And X more" if section had more than 5 commits
               if [[ "$commit_count" -gt 5 ]]; then
                 formatted_notes+="And $((commit_count - 5)) more\n\n"
               fi
+
+              # Start a new section
               formatted_notes+="$line\n"
               current_section="$line"
               commit_count=0
@@ -106,12 +108,19 @@ jobs:
             fi
           done <<< "$RELEASE_NOTES"
 
+          # If the last section had more than 5 commits
           if [[ "$commit_count" -gt 5 ]]; then
             formatted_notes+="And $((commit_count - 5)) more\n\n"
           fi
 
-          formatted_notes+="[Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          # Append full changelog link
+          formatted_notes+="[Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/v2.9.1)"
+
+          # Save formatted notes
           echo -e "RELEASE_NOTES<<EOF\n$formatted_notes\nEOF" >> $GITHUB_ENV
+
+      - name: Display Formatted Release Notes
+        run: echo -e "$RELEASE_NOTES"
 
       - name: Determine Webhook
         id: determine_webhook
