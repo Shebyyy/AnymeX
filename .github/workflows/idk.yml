@@ -107,14 +107,14 @@ jobs:
           while IFS= read -r line; do
             if [[ "$line" == "### "* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
-                formatted_notes+="And $((commit_counter - 5)) more\n\n"
+                formatted_notes+="And $((commit_counter - 5)) more"
               fi
-              formatted_notes+="\n$line\n"
+              formatted_notes+="$line"
               current_section="$line"
               commit_counter=0
               more_commits=false
             else
-              formatted_notes+="$line\n"
+              formatted_notes+="$line"
               commit_counter=$((commit_counter + 1))
               if [[ "$commit_counter" -gt 5 ]]; then
                 more_commits=true
@@ -148,7 +148,9 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\n\n${{ env.FORMATTED_NOTES }}\n\n[Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\
+          ${{ env.FORMATTED_NOTES }}
+          [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
@@ -163,7 +165,8 @@ jobs:
         run: |
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
-            --arg description "${{ env.FORMATTED_NOTES }}\n\n[Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
+            --arg description "${{ env.FORMATTED_NOTES }}
+            [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
             --argjson color 5814783 \
             '{ embeds: [{ title: $title, description: $description, color: $color }] }')
           
