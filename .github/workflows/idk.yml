@@ -151,8 +151,9 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
+          RELEASE_NOTES=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/\*/\\*/g' | sed 's/_/\\_/g' | sed 's/\[/\\[/g' | sed 's/\]/\\]/g')
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**\
-          ${{ env.FORMATTED_NOTES }}
+          #RELEASE_NOTES
           [Full changelog here](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
           
           # Send the message to Telegram
