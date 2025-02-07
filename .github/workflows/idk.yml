@@ -80,13 +80,17 @@ jobs:
          
       - name: Fetch Release Details
         run: |
-          curl -s "https://api.github.com/repos/reyyuuki/Azyx/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/v2.9.1" -o release.json
           RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
-          RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json)
+          RELEASE_NOTES=$(jq -r '.body // empty' release.json)
+
+          # Check if RELEASE_NOTES is empty
+          if [[ -z "$RELEASE_NOTES" ]]; then
+            echo "No release notes found. Exiting."
+            exit 1
+          fi
+
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-        
-           # Write release notes as-is with newlines
-            echo -e "RELEASE_NOTES<<EOF\n$RELEASE_NOTES\nEOF" >> $GITHUB_ENV
 
           # Initialize variables
           formatted_notes=""
@@ -95,7 +99,7 @@ jobs:
 
           # Read through the release notes
           while IFS= read -r line; do
-            if [[ "$line" =~ ^### ]]; then
+            if [[ "$line" =~ ^###\ [^[:space:]] ]]; then  # Detects "###" followed by a space and an emoji
               # Append "And X more" if section had more than 5 commits
               if [[ "$commit_count" -gt 5 ]]; then
                 formatted_notes+="And $((commit_count - 5)) more\n\n"
@@ -121,6 +125,7 @@ jobs:
 
           # Save formatted notes
           echo -e "RELEASE_NOTES<<EOF\n$formatted_notes\nEOF" >> $GITHUB_ENV
+
 
       - name: Display Formatted Release Notes
         run: echo -e "$RELEASE_NOTES"
