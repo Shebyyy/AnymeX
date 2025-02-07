@@ -71,7 +71,6 @@ jobs:
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
       - name: Format Release Notes
         id: format_notes
         run: |
@@ -104,7 +103,6 @@ jobs:
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
       - name: Debug Release Notes
         run: |
           echo "Raw release JSON:"
@@ -120,32 +118,29 @@ jobs:
           else
             echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_BETA }}" >> $GITHUB_ENV
           fi
-
       - name: Send Release Notes to Telegram
         run: |
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### /**/g')
-          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
+        
+          # Replace ### with **Heading**
+          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g')
+
           # Remove extra blank lines (or lines with only spaces), keeping only one
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
+          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
-          
-
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
           ${tel_commit}
           [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-
           echo "Telegram Message: $MESSAGE"
-
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
             '{ "chat_id": $chat_id, "text": $text, "parse_mode": "Markdown", "disable_web_page_preview": true }')
-
+            
       - name: Send Release Notes to Discord
         run: |
           formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g')
-
           # Remove extra blank lines (or lines with only spaces), keeping only one
           formatted_notes=$(echo "$formatted_notes" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
           
@@ -155,7 +150,6 @@ jobs:
             [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
             --argjson color 5814783 \
             '{ "embeds": [{ "title": $title, "description": $description, "color": $color }] }')
-
           curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD"
