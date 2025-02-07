@@ -128,7 +128,10 @@ jobs:
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
           commit=$(echo "$commit" | sed 's/^* /🔹 /g')
-          tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
+          commit=$(echo "$commit" | \
+          sed -E 's/\): [^:]+:/)/g' | \
+          sed -E 's/^\* /🔹 /g')
+
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
           ${tel_commit}
           [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
