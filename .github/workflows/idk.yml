@@ -32,7 +32,7 @@ jobs:
       - name: Fetch Repository Tags by Date and Time
         id: fetch_tags
         run: |
-          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/tags" -o tags.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
           TAGS=$(jq -r '.[].name' tags.json)
 
           declare -a TAGS_WITH_DATES=()
