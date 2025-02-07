@@ -127,6 +127,14 @@ jobs:
           fi
           
           echo "FORMATTED_NOTES=$formatted_notes" >> $GITHUB_ENV
+
+      - name: Debug Release Notes
+        run: |
+            echo "Raw release JSON:"
+            cat release.json
+            echo "Extracted release notes:"
+            jq -r '.body' release.json
+
           
       - name: Determine Webhook
         id: determine_webhook
