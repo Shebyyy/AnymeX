@@ -140,7 +140,7 @@ jobs:
       - name: Send Release Notes to Telegram
         run: |
           # Replace ### with **
-          commit=$(echo "$formatted_notes" | sed 's/^### /**/g')
+          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### /**/g')
           # Replace * with 🔹 (excluding headings)
           commit=$(echo "$commit" | sed 's/^* /🔹 /g')
           # Replace "):" with ") :"
