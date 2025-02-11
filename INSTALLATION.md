@@ -1,5 +1,3 @@
----
-
 ## 📌 How to Choose the Right Version?  
 
 | Platform  | Description |
