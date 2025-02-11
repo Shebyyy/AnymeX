@@ -105,6 +105,23 @@ jobs:
             echo -e "$CHORES" >> CHANGELOG.md
           fi
 
+          # Append Download Options as Table
+          echo -e "\n### 🔽 Download Options" >> CHANGELOG.md
+          echo "| Architecture | Description |" >> CHANGELOG.md
+          echo "|-------------|-------------|" >> CHANGELOG.md
+          echo "| **ARM64-v8a** | For most modern smartphones and tablets (2016 and later). |" >> CHANGELOG.md
+          echo "| **ARMEABI-v7a** | For older or budget Android devices (before 2016). |" >> CHANGELOG.md
+          echo "| **x86** | For Android devices with Intel processors, mainly in some tablets. |" >> CHANGELOG.md
+          echo "| **x86_64** | For newer devices with 64-bit Intel processors, usually certain tablets. |" >> CHANGELOG.md
+          echo "| **Universal** | Works on all architectures but may have a larger file size. |" >> CHANGELOG.md
+
+          # Append Architecture Guide as Table
+          echo -e "\n### ❓ Not Sure Which Version to Download?" >> CHANGELOG.md
+          echo "| Method | Description |" >> CHANGELOG.md
+          echo "|--------|-------------|" >> CHANGELOG.md
+          echo "| ✅ **Use an App** | Download *CPU-Z* or *Droid Hardware Info* from the Google Play Store to check your device's architecture. |" >> CHANGELOG.md
+          echo "| ✅ **Search Online** | Look up your device’s specifications on the manufacturer’s website or tech review sites. |" >> CHANGELOG.md
+
       - name: Commit and push changelog
         run: |
           echo "Committing and pushing changelog..."
