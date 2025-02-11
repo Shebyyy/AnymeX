@@ -100,10 +100,6 @@ flutter run
 
 ---
 
-```
-
-Let me know if you need any further tweaks! 😊
-
 ## Acknowledgments
 A heartfelt thank you to everyone who has contributed to the development of AnymeX.
 Your efforts are invaluable.
