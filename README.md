@@ -94,10 +94,11 @@ flutter run
 | **Windows (ZIP)** | Portable version for Windows. |
 | **Windows (Installer)** | Standard Windows installer for easy setup. |
 
----
 
 ✅ **Android Users:** Check your device’s architecture using *CPU-Z* or *Droid Hardware Info*.  
 ✅ **Windows & Linux Users:** Choose between installer or portable versions based on your preference.  
+
+---
 
 ```
 
