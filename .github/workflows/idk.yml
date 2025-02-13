@@ -10,7 +10,7 @@ on:
 
 jobs:
   notify:
-    #if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -76,55 +76,35 @@ jobs:
       - name: Format Release Notes
         id: format_notes
         run: |
-          escape_markdown() {
-            echo "$1" | sed -E 's/([][_*`])/\\\1/g'
-          }
-
           formatted_notes=""
           commit_counter=0
           more_commits=false
-          first_commit=true
-
+          
           while IFS= read -r line; do
-            line=$(escape_markdown "$line") # Escape special characters
-
             if [[ "$line" == "### "* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
                 formatted_notes+="> And $((commit_counter - 5)) more\n\n"
-              elif [[ "$commit_counter" -gt 0 ]]; then
-                formatted_notes+="\n"
               fi
-
-              formatted_notes+="$line\n"
+              formatted_notes+="\n$line\n"
               commit_counter=0
               more_commits=false
-              first_commit=true
             elif [[ "$line" == "*"* ]]; then
               commit_counter=$((commit_counter + 1))
-
-              if $first_commit; then
-                formatted_notes+=">\n"
-                first_commit=false
-              fi
-
               if [[ "$commit_counter" -le 5 ]]; then
-                formatted_notes+="> $line\n"
+                formatted_notes+="$line\n"
               else
                 more_commits=true
               fi
             fi
           done <<< "$RELEASE_NOTES"
-
+          
           if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
             formatted_notes+="> And $((commit_counter - 5)) more\n\n"
-          elif [[ "$commit_counter" -gt 0 ]]; then
-            formatted_notes+="\n"
           fi
-
+          
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
           
       - name: Debug Release Notes
         run: |
@@ -194,7 +174,8 @@ jobs:
           # Remove extra blank lines (or lines with only spaces), keeping only one
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
-          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
+          commit=$(echo "$commit" | sed 's/^* />🔹 /g')
+          commit=$(echo "$commit" | sed 's/^> />🔹 /g')
 
           # Replace "):" with ") :"
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
@@ -243,7 +224,6 @@ jobs:
           formatted_notes=$(echo "$formatted_notes" | \
           sed -E 's/\): [^:]+:/)/g' | \
           sed -E 's/^\* /> /g')
-          formatted_notes=$(echo "$formatted_notes" | sed 's/^🔹/> /g')
 
           
           PAYLOAD=$(jq -n \
