@@ -81,25 +81,31 @@ jobs:
           more_commits=false
           
           while IFS= read -r line; do
-            if [[ "$line" == "### "* ]]; then
-              if [[ "$commit_counter" -gt 5 ]]; then
-                formatted_notes+="> And $((commit_counter - 5)) more\n\n"
-              fi
-              formatted_notes+="\n$line\n"
-              commit_counter=0
-              more_commits=false
-            elif [[ "$line" == "*"* ]]; then
-              commit_counter=$((commit_counter + 1))
-              if [[ "$commit_counter" -le 5 ]]; then
-                formatted_notes+="$line\n"
+          if [[ "$line" =~ ^###\ [^[:space:]] ]]; then  # Detects "###" followed by space and an emoji
+          if [[ "$commit_count" -gt 5 ]]; then
+          formatted_notes+="And $((commit_count - 5)) more\n</blockquote>\n\n"
+          elif [[ "$commit_count" -gt 0 ]]; then
+           formatted_notes+="</blockquote>\n\n"
+          fi
+              formatted_notes+="$line\n"
+              current_section="$line"
+              commit_count=0
+              first_commit=true
               else
-                more_commits=true
+              # Add <blockquote> before the first commit of the section
+              if $first_commit; then
+              formatted_notes+="<blockquote>\n"
+              first_commit=false
               fi
-            fi
-          done <<< "$RELEASE_NOTES"
+              formatted_notes+="$line\n"
+              ((commit_count++))
+              fi
+              done <<< "$RELEASE_NOTES"
           
-          if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
-            formatted_notes+="> And $((commit_counter - 5)) more\n\n"
+          if [[ "$commit_count" -gt 5 ]]; then
+          formatted_notes+="And $((commit_count - 5)) more\n</blockquote>\n\n"
+          elif [[ "$commit_count" -gt 0 ]]; then
+          formatted_notes+="</blockquote>\n\n"
           fi
           
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
