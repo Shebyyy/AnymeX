@@ -178,7 +178,7 @@ jobs:
           commit=$(echo "$commit" | sed 's/^> />🔹 /g')
 
           # Replace "):" with ") :"
-          tel_commit=$(echo "$commit" | sed -E 's/([_*\[\]()~`>#+=|{}.!-])/\\\1/g')
+          tel_commit=$(echo "$commit" | perl -pe 's/([_*\[\]()~`>#+=|{}.!-])/\\$1/g')
           
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
           ${tel_commit}
