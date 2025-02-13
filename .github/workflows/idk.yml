@@ -79,38 +79,46 @@ jobs:
           formatted_notes=""
           commit_counter=0
           more_commits=false
-          
+          first_commit=true
+
           while IFS= read -r line; do
-          if [[ "$line" =~ ^###\ [^[:space:]] ]]; then  # Detects "###" followed by space and an emoji
-          if [[ "$commit_count" -gt 5 ]]; then
-          formatted_notes+="And $((commit_count - 5)) more\n</blockquote>\n\n"
-          elif [[ "$commit_count" -gt 0 ]]; then
-           formatted_notes+="</blockquote>\n\n"
-          fi
+            if [[ "$line" == "### "* ]]; then
+              if [[ "$commit_counter" -gt 5 ]]; then
+                formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
+              elif [[ "$commit_counter" -gt 0 ]]; then
+                formatted_notes+="</blockquote>\n\n"
+              fi
+              
               formatted_notes+="$line\n"
-              current_section="$line"
-              commit_count=0
+              commit_counter=0
+              more_commits=false
               first_commit=true
-              else
-              # Add <blockquote> before the first commit of the section
+            elif [[ "$line" == "*"* ]]; then
+              commit_counter=$((commit_counter + 1))
+              
               if $first_commit; then
-              formatted_notes+="<blockquote>\n"
-              first_commit=false
+                formatted_notes+="<blockquote>\n"
+                first_commit=false
               fi
-              formatted_notes+="$line\n"
-              ((commit_count++))
+
+              if [[ "$commit_counter" -le 5 ]]; then
+                formatted_notes+="$line\n"
+              else
+                more_commits=true
               fi
-              done <<< "$RELEASE_NOTES"
+            fi
+          done <<< "$RELEASE_NOTES"
           
-          if [[ "$commit_count" -gt 5 ]]; then
-          formatted_notes+="And $((commit_count - 5)) more\n</blockquote>\n\n"
-          elif [[ "$commit_count" -gt 0 ]]; then
-          formatted_notes+="</blockquote>\n\n"
+          if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
+            formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
+          elif [[ "$commit_counter" -gt 0 ]]; then
+            formatted_notes+="</blockquote>\n\n"
           fi
           
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
           
       - name: Debug Release Notes
         run: |
