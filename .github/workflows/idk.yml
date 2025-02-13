@@ -174,7 +174,7 @@ jobs:
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
           commit=$(echo "$commit" | sed 's/^* /🔹 /g')
-          commit=$(echo "$commit" | sed 's/^> /* /g')
+          commit=$(echo "$commit" | sed 's/^> /🔹 /g')
 
           # Replace "):" with ") :"
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
