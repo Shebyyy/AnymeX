@@ -116,7 +116,7 @@ jobs:
         id: categorize_assets
         run: |
           # Fetch release assets based on the latest tag
-          curl -s "https://api.github.com/repos/Shebyyy/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
           
           # Initialize environment variables
           for VAR in apk_arm64 apk_armeabi apk_universal apk_x86_64 windows linux ios setup macos; do
