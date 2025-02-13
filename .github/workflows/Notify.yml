@@ -165,32 +165,30 @@ jobs:
           else
             echo "DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_BETA }}" >> $GITHUB_ENV
           fi
-      - name: Send Release Notes to Telegram
-        run: |
-        
-          # Replace ### with **Heading**
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^###[[:space:]]*(.*)$/\*\*\1\*\*/g')
+    - name: Send Release Notes to Telegram
+      run: |
+        # Replace ### with <b>Heading</b>
+        commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^###[[:space:]]*(.*)$/<b>\1<\/b>/g')
 
-          # Remove extra blank lines (or lines with only spaces), keeping only one
-          commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
+        # Remove extra blank lines (or lines with only spaces), keeping only one
+        commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
-          commit=$(echo "$commit" | sed 's/^* /🔹 /g')
-          commit=$(echo "$commit" | sed 's/^> /🔹 /g')
+        commit=$(echo "$commit" | sed 's/^* /🔹 /g')
+        commit=$(echo "$commit" | sed 's/^> /🔹 /g')
 
-          # Replace "):" with ") :"
-          tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
-        
-          MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
-          ${tel_commit}
+        # Replace "):" with ") :"
+        tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
 
-          [❓Don't know which version to download? Click here!](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)**  
-          
-          [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          echo "Telegram Message: $MESSAGE"
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
-            '{ "chat_id": $chat_id, "text": $text, "parse_mode": "Markdown", "disable_web_page_preview": true }')
+        MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}</b>\n
+        ${tel_commit}\n\n
+        <a href='https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md'>❓Don't know which version to download? Click here!</a>\n\n
+        <a href='https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }}'>📌 Full changelog</a>"
+
+        echo "Telegram Message: $MESSAGE"
+        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -H "Content-Type: application/json" \
+          -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
+          '{ "chat_id": $chat_id, "text": $text, "parse_mode": "HTML", "disable_web_page_preview": true }')
 
       - name: Send Assets to Telegram
         run: |
