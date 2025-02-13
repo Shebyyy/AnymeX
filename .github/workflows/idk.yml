@@ -98,7 +98,7 @@ jobs:
           done <<< "$RELEASE_NOTES"
           
           if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
-            formatted_notes+="* And $((commit_counter - 5)) more\n\n"
+            formatted_notes+="> And $((commit_counter - 5)) more\n\n"
           fi
           
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
@@ -174,9 +174,11 @@ jobs:
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
           commit=$(echo "$commit" | sed 's/^* /🔹 /g')
+          commit=$(echo "$commit" | sed 's/^> /* /g')
+
           # Replace "):" with ") :"
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
-
+        
           MESSAGE="**🚀 New Release: ${{ env.RELEASE_NAME }}**
           ${tel_commit}
 
@@ -227,7 +229,7 @@ jobs:
             --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
             --arg description "${formatted_notes}
 
-            [❓Don't know which version to download? Click here!](https://github.com/Shebyyy/AnymeX/blob/main/INSTALLATION.md)**  
+            [❓Don't know which version to download? Click here!](https://github.com/Shebyyy/AnymeX/blob/main/INSTALLATION.md)  
             
             [📌 Full changelog](https://github.com/Shebyyy/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
             --argjson color 5814783 \
