@@ -84,9 +84,9 @@ jobs:
           while IFS= read -r line; do
             if [[ "$line" == "### "* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
-                formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
+                formatted_notes+="> 🔹And $((commit_counter - 5)) more\n\n"
               elif [[ "$commit_counter" -gt 0 ]]; then
-                formatted_notes+="</blockquote>\n\n"
+                formatted_notes+="\n"
               fi
               
               formatted_notes+="$line\n"
@@ -97,12 +97,12 @@ jobs:
               commit_counter=$((commit_counter + 1))
               
               if $first_commit; then
-                formatted_notes+="<blockquote>\n"
+                formatted_notes+=">\n"
                 first_commit=false
               fi
 
               if [[ "$commit_counter" -le 5 ]]; then
-                formatted_notes+="$line\n"
+                formatted_notes+="> $line\n"
               else
                 more_commits=true
               fi
@@ -110,9 +110,9 @@ jobs:
           done <<< "$RELEASE_NOTES"
           
           if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
-            formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
+            formatted_notes+="> 🔹And $((commit_counter - 5)) more\n\n"
           elif [[ "$commit_counter" -gt 0 ]]; then
-            formatted_notes+="</blockquote>\n\n"
+            formatted_notes+="\n"
           fi
           
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
@@ -189,7 +189,6 @@ jobs:
           commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
 
           commit=$(echo "$commit" | sed 's/^* /🔹 /g')
-          commit=$(echo "$commit" | sed 's/^> /🔹 /g')
 
           # Replace "):" with ") :"
           tel_commit=$(echo "$commit" | sed -E 's/\): [^:]+:/) :/g')
@@ -238,6 +237,7 @@ jobs:
           formatted_notes=$(echo "$formatted_notes" | \
           sed -E 's/\): [^:]+:/)/g' | \
           sed -E 's/^\* /> /g')
+          formatted_notes=$(echo "$formatted_notes" | sed 's/^🔹/> /g')
 
           
           PAYLOAD=$(jq -n \
