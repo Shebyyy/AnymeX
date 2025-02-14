@@ -97,7 +97,7 @@ jobs:
                 if [[ "$commit_counter" -le 5 ]]; then
                   commit_msg=$(echo "$line" | sed -E 's/\* \[([a-f0-9]{7,})\]\(([^)]+)\): (.*)/🔗 <a href="\2">\1<\/a> \3/')
                   if [[ "$first_commit" == true ]]; then
-                    formatted_notes+="$commit_msg"
+                    formatted_notes+="$commit_msg/n"
                     first_commit=false
                   else
                     formatted_notes+=", $commit_msg"
