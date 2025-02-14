@@ -8,7 +8,6 @@ on:
 
 jobs:
   notify:
-    #if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,14 +18,12 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Install dependencies
         run: |
+          sudo apt-get install -y jq
           python -m pip install --upgrade pip
           pip install requests jq
-          
+
       - name: Fetch Repository Tags by Date and Time
         id: fetch_tags
         run: |
@@ -55,11 +52,10 @@ jobs:
             fi
           done
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-          
+
       - name: Use the Latest Tag
-        run: |
-         echo "The latest tag is: ${{ env.LATEST_TAG }}"
-         
+        run: echo "The latest tag is: ${{ env.LATEST_TAG }}"
+
       - name: Get Release Info
         id: release_info
         run: |
@@ -70,70 +66,61 @@ jobs:
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-                
+
       - name: Format Release Notes
-  id: format_notes
-  run: |
-      formatted_notes=""
-      commit_counter=0
-      more_commits=false
-      
-      while IFS= read -r line; do
-        if [[ "$line" =~ ^###\ .* ]]; then
-          if [[ "$commit_counter" -gt 5 ]]; then
-            formatted_notes+=" and $((commit_counter - 5)) more</blockquote>\n\n"
+        id: format_notes
+        run: |
+          formatted_notes=""
+          commit_counter=0
+          more_commits=false
+
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^###\ .* ]]; then
+              if [[ "$commit_counter" -gt 5 ]]; then
+                formatted_notes+=" and $((commit_counter - 5)) more</blockquote>\n\n"
+              elif [[ "$commit_counter" -gt 0 ]]; then
+                formatted_notes+="</blockquote>\n\n"
+              fi
+              formatted_notes+="<b>${line:4}</b>\n<blockquote>\n"
+              commit_counter=0
+              more_commits=false
+            elif [[ "$line" =~ ^\* ]]; then
+              commit_counter=$((commit_counter + 1))
+              if [[ "$commit_counter" -le 5 ]]; then
+                commit_hash=$(echo "$line" | awk '{print $2}')
+                commit_msg=$(echo "$line" | cut -d':' -f2-)
+                formatted_notes+="🔹 <a href=\"https://github.com/RyanYuuki/AnymeX/commit/${commit_hash}\">${commit_hash}</a> ${commit_msg}<br>\n"
+              else
+                more_commits=true
+              fi
+            fi
+          done <<< "$RELEASE_NOTES"
+
+          if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
+            formatted_notes+="and $((commit_counter - 5)) more</blockquote>\n\n"
           elif [[ "$commit_counter" -gt 0 ]]; then
             formatted_notes+="</blockquote>\n\n"
           fi
-          
-          formatted_notes+="<b>${line:4}</b>\n<blockquote>\n"
-          commit_counter=0
-          more_commits=false
-        elif [[ "$line" =~ ^\* ]]; then
-          commit_counter=$((commit_counter + 1))
-          
-          if [[ "$commit_counter" -le 5 ]]; then
-            commit_msg=$(echo "$line" | sed -E 's/\* ([a-f0-9]{7,})([^)]+): (.*)/🔹 <a href="\2">\1<\/a> \3/')
-            formatted_notes+="$commit_msg<br>\n"
-          else
-            more_commits=true
-          fi
-        fi
-      done <<< "$RELEASE_NOTES"
-      
-      if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
-        formatted_notes+="and $((commit_counter - 5)) more</blockquote>\n\n"
-      elif [[ "$commit_counter" -gt 0 ]]; then
-        formatted_notes+="</blockquote>\n\n"
-      fi
-      
-      echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
-      echo -e "$formatted_notes" >> $GITHUB_ENV
-      echo "EOF" >> $GITHUB_ENV
-      
+
+          echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
+          echo -e "$formatted_notes" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
       - name: Debug Release Notes
         run: |
           echo "Raw release JSON:"
           cat release.json
           echo "Extracted release notes:"
           jq -r '.body' release.json
-          
+
       - name: Send Release Notes to Telegram
-        run: |      
-          tel_commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^###[[:space:]]*(.*)$/<b>\1<\/b>/g')
-          tel_commit=$(echo "$tel_commit" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+        run: |
+          tel_commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
+          MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}</b>\n\n${tel_commit}\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }}\">📌 Full changelog</a>"
 
-          MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}</b>
-          ${tel_commit}
-
-          <a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>  
-
-          <a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/v2.9.1\">📌 Full changelog</a>"
-          
           echo "Telegram Message: $MESSAGE"
-          
+
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
-            '{ "chat_id": $chat_id, "text": $text, "parse_mode": "HTML", "disable_web_page_preview": true }')
+            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\", \"disable_web_page_preview\": true }"
