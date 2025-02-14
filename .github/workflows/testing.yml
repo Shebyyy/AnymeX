@@ -102,7 +102,6 @@ jobs:
           elif [[ "$commit_counter" -gt 0 ]]; then
             formatted_notes+="</blockquote>\n\n"
           fi
-          formatted_notes=$(echo "$formatted_notes" | sed 's/(/\/g; s/)/\/g')
           
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
