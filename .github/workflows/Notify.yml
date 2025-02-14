@@ -1,29 +1,27 @@
-name: Send Telegram Release Notes
+name: Send Telegram Release Notification
 
-on:
-  workflow_dispatch: # Allows manual triggering
+on: push: branches: - main workflow_dispatch:
 
-jobs:
-  send_telegram_message:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+jobs: send_telegram: runs-on: ubuntu-latest
 
-      - name: Extract Changelog Entry
-        id: changelog
-        run: |
-          VERSION=$(git describe --tags --abbrev=0)
-          MESSAGE="<b>🚀 New Release: ${VERSION}</b>\n\n"
-          MESSAGE+="$(awk '/^## /{f=!f} f' CHANGELOG.md | sed -n '2,/^## /{s/^🔹 /🔗 /; p}' | sed 's/[^]]*(https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/[^)]*)/<a href=\"https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/\2\">\1<\/a>:/g')"
-          echo "MESSAGE=$MESSAGE" >> $GITHUB_ENV
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v3
 
-      - name: Send Message to Telegram
-        run: |
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
-            "text": "'"${{ env.MESSAGE }}"'",
-            "parse_mode": "HTML"
-          }'
+  - name: Extract Changelog Entry
+    id: changelog
+    run: |
+      MESSAGE="<b>🚀 New Release</b>\n\n"
+      MESSAGE+="$(awk '/^## /{f=!f} f' CHANGELOG.md | sed -n '2,/^## /{s/^🔹 /🔗 /; p}' | sed 's/[^]]*(https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/[^)]*)/<a href=\"https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/\2\">\1<\/a>:/g')"
+      echo "MESSAGE=$MESSAGE" >> $GITHUB_ENV
+
+  - name: Send Telegram Message
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    run: |
+      curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+        -d "chat_id=$TELEGRAM_CHAT_ID" \
+        -d "text=$MESSAGE" \
+        -d "parse_mode=HTML"
+
