@@ -116,10 +116,14 @@ jobs:
         run: |
           
 
-          MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}</b>\n\n${{ env.FORMATTED_NOTES }}\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }}\">📌 Full changelog</a>"
-
+          MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}<b>
+          ${tel_commit}
+          <a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>  
+          <a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.RELEASE_NAME }}\">📌 Full changelog</a>"
+          
           echo "Telegram Message: $MESSAGE"
-
+          
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"${{ secrets.TELEGRAM_CHAT_ID }}\", \"text\": \"$MESSAGE\", \"parse_mode\": \"HTML\", \"disable_web_page_preview\": true }"
+            -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
+            '{ "chat_id": $chat_id, "text": $text, "parse_mode": "HTML", "disable_web_page_preview": true }')
