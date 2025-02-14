@@ -82,12 +82,12 @@ jobs:
             while IFS= read -r line; do
               if [[ "$line" =~ ^###\ .* ]]; then
                 if [[ "$commit_counter" -gt 5 ]]; then
-                  formatted_notes+=" and $((commit_counter - 5)) more </blockquote>\n\n"
+                  formatted_notes+=" and $((commit_counter - 5)) more</blockquote>\n\n"
                 elif [[ "$commit_counter" -gt 0 ]]; then
                   formatted_notes+=" </blockquote>\n\n"
                 fi
                 
-                formatted_notes+="<b>${line:4}</b>  <blockquote>"
+                formatted_notes+="/n${line:4}/n <blockquote>"
                 commit_counter=0
                 more_commits=false
                 first_commit=true
@@ -111,7 +111,7 @@ jobs:
             if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
               formatted_notes+=" and $((commit_counter - 5)) more </blockquote>\n\n"
             elif [[ "$commit_counter" -gt 0 ]]; then
-              formatted_notes+=" </blockquote>\n\n"
+              formatted_notes+="</blockquote>\n\n"
             fi
             
             echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
