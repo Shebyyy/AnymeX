@@ -18,8 +18,26 @@ jobs:
         id: changelog
         run: |
           MESSAGE="<b>🚀 New Release</b>\n\n"
-          MESSAGE+="$(awk '/^## /{f=!f} f' CHANGELOG.md | sed -n '2,/^## /{s/^🔹 /🔗 /; p}' | sed 's/[^]]*(https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/[^)]*)/<a href=\"https:\/\/github.com\/RyanYuuki\/AnymeX\/commit\/\2\">\1<\/a>:/g')"
-          echo "MESSAGE=$MESSAGE" >> $GITHUB_ENV
+
+          # Extract and format sections
+          FORMAT_SECTION() {
+            SECTION_NAME=$1
+            MESSAGE+="<b>$SECTION_NAME</b>\n<blockquote>\n"
+            CHANGES=$(awk "/^### $SECTION_NAME/{flag=1; next} /^### /{flag=0} flag" CHANGELOG.md | grep -E "^- " | sed -E 's/^- (.*) ([a-f0-9]+)([^)]+)/🔗 <a href="\3">\2<\/a> \1/g')
+            MESSAGE+="$CHANGES\n</blockquote>\n\n"
+          }
+
+          # Process each section
+          FORMAT_SECTION "🎉 New Features"
+          FORMAT_SECTION "🛠️ Bug Fixes & Improvements"
+          FORMAT_SECTION "🔧 Refactors"
+          FORMAT_SECTION "🎨 Style Changes"
+          FORMAT_SECTION "🧹 Chores & Documentation"
+
+          # Store message in GITHUB_ENV
+          echo "MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$MESSAGE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Send Telegram Message
         env:
