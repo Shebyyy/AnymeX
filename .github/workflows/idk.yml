@@ -82,32 +82,28 @@ jobs:
           first_commit=true
           
           while IFS= read -r line; do
-            if [[ "$line" =~ ^###\ (.*) ]]; then
+            if [[ "$line" =~ ^###\ .* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
                 formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
               elif [[ "$commit_counter" -gt 0 ]]; then
                 formatted_notes+="</blockquote>\n\n"
               fi
           
-              section_name="${BASH_REMATCH[1]}"
-              formatted_notes+="<b>$section_name</b>\n<blockquote>\n"
+              formatted_notes+="$line\n"
               commit_counter=0
               more_commits=false
               first_commit=true
-            elif [[ "$line" =~ ^\*\ \[([a-f0-9]+)\]\((https:\/\/github\.com\/[^)]+)\):\ (.*) ]]; then
+            elif [[ "$line" =~ ^\* ]]; then
               commit_counter=$((commit_counter + 1))
           
-              if $first_commit; then
+              if [[ "$first_commit" == true ]]; then
                 formatted_notes+="<blockquote>\n"
                 first_commit=false
               fi
           
-              commit_hash="${BASH_REMATCH[1]}"
-              commit_url="${BASH_REMATCH[2]}"
-              commit_message="${BASH_REMATCH[3]}"
-          
               if [[ "$commit_counter" -le 5 ]]; then
-                formatted_notes+="* <a href=\"$commit_url\">$commit_hash</a> : $commit_message\n"
+                commit_msg=$(echo "$line" | sed -E 's/\* ([a-f0-9]{7,}) (.*)/🔗 <a href="https:\/\/github.com\/your-repo\/commit\/\1">\1<\/a> \2/')
+                formatted_notes+="$commit_msg\n"
               else
                 more_commits=true
               fi
