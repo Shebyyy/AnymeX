@@ -82,21 +82,21 @@ jobs:
           first_commit=true
       
           while IFS= read -r line; do
-            if [[ "$line" == "### "* ]]; then
+            if [[ "$line" =~ ^###\ .* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
                 formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
               elif [[ "$commit_counter" -gt 0 ]]; then
                 formatted_notes+="</blockquote>\n\n"
               fi
-              
+      
               formatted_notes+="$line\n"
               commit_counter=0
               more_commits=false
               first_commit=true
-            elif [[ "$line" == "*"* ]]; then
+            elif [[ "$line" =~ ^\* ]]; then
               commit_counter=$((commit_counter + 1))
-              
-              if $first_commit; then
+      
+              if [[ "$first_commit" == true ]]; then
                 formatted_notes+="<blockquote>\n"
                 first_commit=false
               fi
@@ -109,13 +109,13 @@ jobs:
               fi
             fi
           done <<< "$RELEASE_NOTES"
-          
+      
           if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
             formatted_notes+="And $((commit_counter - 5)) more\n</blockquote>\n\n"
           elif [[ "$commit_counter" -gt 0 ]]; then
             formatted_notes+="</blockquote>\n\n"
           fi
-          
+      
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
