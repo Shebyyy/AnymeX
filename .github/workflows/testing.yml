@@ -115,10 +115,8 @@ jobs:
       - name: Send Release Notes to Telegram
         run: |
           
-          ENCODED_MESSAGE=$(echo "$MESSAGE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
           MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}</b>\n\n${{ env.FORMATTED_NOTES }}\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>\n\n<a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }}\">📌 Full changelog</a>"
-          MESSAGE=$(echo "$MESSAGE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
 
           echo "Telegram Message: $MESSAGE"
 
