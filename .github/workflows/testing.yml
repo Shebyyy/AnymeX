@@ -54,7 +54,8 @@ jobs:
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
 
       - name: Use the Latest Tag
-        run: echo "The latest tag is: ${{ env.LATEST_TAG }}"
+        run: |
+         echo "The latest tag is: ${{ env.LATEST_TAG }}"
 
       - name: Get Release Info
         id: release_info
