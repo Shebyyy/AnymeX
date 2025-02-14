@@ -129,6 +129,8 @@ jobs:
           
       - name: Send Release Notes to Telegram
         run: |      
+          tel_commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^###[[:space:]]*(.*)$/<b>\1<\/b>/g')
+
           MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}<b>
           ${tel_commit}
 
