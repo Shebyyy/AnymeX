@@ -82,18 +82,14 @@ jobs:
               elif [[ "$commit_counter" -gt 0 ]]; then
                 formatted_notes+="</blockquote>\n\n"
               fi
-          formatted_notes+="<b>${line:4}</b>\n<blockquote>\n"
+          formatted_notes+="${line:4}\n<blockquote>\n"
           commit_counter=0
           more_commits=false
           elif [[ "$line" =~ ^\* ]]; then
             commit_counter=$((commit_counter + 1))
             if [[ "$commit_counter" -le 5 ]]; then
 
-              commit_msg=$(echo "$commit_msg" | sed 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g')
-              commit_msg=$(echo "$commit_msg" | tr '\n' ' ')
-
               commit_msg=$(echo "$line" | sed -E 's/\* \[([a-f0-9]{7,})\]\(([^)]+)\): (.*)/🔗 <a href="\2">\1<\/a> \3/')
-              commit_msg=$(echo "$commit_msg" | sed 's/&/&amp;/g; s/</&lt;/g; s/>/&gt;/g')
               commit_msg=$(echo "$commit_msg" | tr '\n' ' ')
               formatted_notes+="$commit_msg\n"
             fi
