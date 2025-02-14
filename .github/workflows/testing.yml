@@ -100,7 +100,7 @@ jobs:
                 fi
             
                 if [[ "$commit_counter" -le 5 ]]; then
-                  commit_msg=$(echo "$line" | sed -E 's/\* \[([a-f0-9]{7,})\]\(([^)]+)\): (.*)/🔗 <a href="\2">\1<\/a> \3/')
+                  commit_msg=$(echo "$line" | sed -E "s/\* \[([a-f0-9]{7,})\]\(([^)]+)\): (.*)/🔗 <a href=\"\2\">\1<\/a> \3/")
                   formatted_notes+="$commit_msg\n"
                 else
                   more_commits=true
