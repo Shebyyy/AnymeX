@@ -72,7 +72,7 @@ jobs:
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-          
+                
       - name: Format Release Notes
         id: format_notes
         run: |
@@ -94,7 +94,7 @@ jobs:
               commit_counter=0
               more_commits=false
               first_commit=true
-            elif [[ "$line" =~ ^\*\ \[([a-f0-9]+)\]\(([^)]+)\):\ (.*) ]]; then
+            elif [[ "$line" =~ ^\*\ \[([a-f0-9]+)\]\(\([^)]*\)\):\ (.*) ]]; then
               commit_counter=$((commit_counter + 1))
       
               if $first_commit; then
