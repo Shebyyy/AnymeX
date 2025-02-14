@@ -115,9 +115,8 @@ jobs:
       - name: Send Release Notes to Telegram
         run: |
           
-
           MESSAGE="<b>🚀 New Release: ${{ env.RELEASE_NAME }}<b>
-          ${tel_commit}
+          ${{ env.FORMATTED_NOTES }}
           <a href=\"https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md\">❓Don't know which version to download? Click here!</a>  
           <a href=\"https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.RELEASE_NAME }}\">📌 Full changelog</a>"
           
