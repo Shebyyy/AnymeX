@@ -88,9 +88,8 @@ jobs:
           elif [[ "$line" =~ ^\* ]]; then
             commit_counter=$((commit_counter + 1))
             if [[ "$commit_counter" -le 5 ]]; then
-              commit_hash=$(echo "$line" | awk '{print $2}')
-              commit_msg=$(echo "$line" | cut -d':' -f2-)
-              formatted_notes+="🔹 <a href=\"https://github.com/RyanYuuki/AnymeX/commit/${commit_hash}\">[${commit_hash}]</a>: ${commit_msg}<br>\n"
+              commit_msg=$(echo "$line" | sed -E 's/\* \[([a-f0-9]{7,})\]\(([^)]+)\): (.*)/🔗 <a href="\2">\1<\/a> \3/')
+              formatted_notes+="$commit_msg\n"
             fi
           fi
 
