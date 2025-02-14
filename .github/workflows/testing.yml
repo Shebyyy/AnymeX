@@ -87,8 +87,7 @@ jobs:
                   formatted_notes+=" </blockquote>\n\n"
                 fi
                 
-                formatted_notes+="<b>${line:4}</b>
-<blockquote>"
+                formatted_notes+="<b>${line:4}</b> /n<blockquote>"
                 commit_counter=0
                 more_commits=false
                 first_commit=true
