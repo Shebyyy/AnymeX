@@ -121,7 +121,7 @@ jobs:
       - name: Send Release Notes to Telegram
         run: |
           # Remove "### " from the beginning of lines
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | perl -pe 's/^### //g; s/([_\*\[\]\(\)~`>#+\-=|{}.!])/\\$1/g; s/\./\\./g')
+          commit=$(echo "${{ env.FORMATTED_NOTES }}" | perl -pe 's/^### //g; s/([_\*\[\]\(\)~`>#+\-=|{}!])/\\$1/g')
       
           MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
           ${commit}
