@@ -125,7 +125,7 @@ jobs:
           fi
           
           # Step 2: Remove "### " from the start of each line safely
-          formatted_notes=$(echo "$FORMATTED_NOTES" | sed 's/^### //g')
+          formatted_notes=$(echo "$FORMATTED_NOTES" | sed -E 's/^### //g' || echo "")
           
           # Step 3: Escape Telegram MarkdownV2 special characters properly
           escaped_notes=$(echo "$formatted_notes" | sed -E 's/([][_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
