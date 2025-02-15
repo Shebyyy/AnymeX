@@ -120,18 +120,18 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
+          # Replace ### with **Heading** (escaped for MarkdownV2)
+          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g' | sed -E 's/([_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
       
-          # Replace ### with **Heading**
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$//*\1*/g')
-          
-          MESSAGE="/*🚀 New Release: ${{ env.RELEASE_NAME }}*
+          MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
           ${commit}
+      
+          \[❓Don't know which version to download? Click here!\](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)  
           
-          [❓Don't know which version to download? Click here!](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)  
-          
-          [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-          
+          \[📌 Full changelog\](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+      
           echo "Telegram Message: $MESSAGE"
+      
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
             -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
