@@ -120,7 +120,7 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          # Step 1: Ensure FORMATTED_NOTES is not empty
+
           if [[ -z "${{ env.FORMATTED_NOTES }}" ]]; then
             echo "Error: FORMATTED_NOTES is empty!"
             exit 1
