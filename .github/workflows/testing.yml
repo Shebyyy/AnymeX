@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y jq
           python -m pip install --upgrade pip
           pip install requests jq
-
+          
       - name: Fetch Repository Tags by Date and Time
         id: fetch_tags
         run: |
@@ -52,29 +52,29 @@ jobs:
             fi
           done
           echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-
+          
       - name: Use the Latest Tag
         run: |
-         echo "The latest tag is: ${{ env.LATEST_TAG }}"
-
+          echo "The latest tag is: $LATEST_TAG"
+          
       - name: Get Release Info
         id: release_info
         run: |
-          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/${{ env.LATEST_TAG }}" -o release.json
+          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/$LATEST_TAG" -o release.json
           RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
           RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json)
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+          
       - name: Format Release Notes
         id: format_notes
         run: |
           formatted_notes=""
           commit_counter=0
           more_commits=false
-      
+          
           while IFS= read -r line; do
             if [[ "$line" == "### "* ]]; then
               if [[ "$commit_counter" -gt 5 ]]; then
@@ -87,12 +87,12 @@ jobs:
               commit_counter=$((commit_counter + 1))
               commit_hash=$(echo "$line" | grep -oE '\[([a-f0-9]{7,})\]' | tr -d '[]')
               commit_text=$(echo "$line" | sed -E 's/\* \[[a-f0-9]{7,}\]\(.*\): (.*)/\1/')
-      
+              
               if [[ -n "$commit_hash" && -n "$commit_text" ]]; then
                 commit_url="https://github.com/RyanYuuki/AnymeX/commit/$commit_hash"
                 commit_text_escaped=$(echo "$commit_text" | sed 's/[_*[\]()~`>#+\-=|{}.!]/\\&/g')
                 commit_line="> [$commit_hash]($commit_url): $commit_text_escaped"
-      
+                
                 if [[ "$commit_counter" -le 5 ]]; then
                   formatted_notes+="$commit_line\n"
                 else
@@ -101,15 +101,14 @@ jobs:
               fi
             fi
           done <<< "$RELEASE_NOTES"
-      
+          
           if [[ "$commit_counter" -gt 5 && "$more_commits" == "true" ]]; then
             formatted_notes+="> And $((commit_counter - 5)) more\n\n"
           fi
-      
+          
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
 
       - name: Debug Release Notes
         run: |
@@ -120,14 +119,13 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-
-          if [[ -z "${{ env.FORMATTED_NOTES }}" ]]; then
+          if [[ -z "$FORMATTED_NOTES" ]]; then
             echo "Error: FORMATTED_NOTES is empty!"
             exit 1
           fi
           
           # Step 2: Remove "### " from the start of each line safely
-          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### //g')
+          formatted_notes=$(echo "$FORMATTED_NOTES" | sed 's/^### //g')
           
           # Step 3: Escape Telegram MarkdownV2 special characters properly
           escaped_notes=$(echo "$formatted_notes" | sed -E 's/([][_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
@@ -137,10 +135,9 @@ jobs:
           
           # Step 5: Send to Telegram
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }" \
+               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
                -d "text=$commit" \
                -d "parse_mode=MarkdownV2"
-
       
       - name: Send Release Notes to Telegram
         run: |
