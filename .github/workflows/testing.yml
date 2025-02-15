@@ -83,10 +83,10 @@ jobs:
               formatted_notes+="\n$line\n"
               commit_counter=0
               more_commits=false
-            elif [[ "$line" == "*"* ]]; then
+            elif [[ "$line" == "* ["* ]]; then
               commit_counter=$((commit_counter + 1))
-              commit_hash=$(echo "$line" | grep -oE '^[a-f0-9]{7,}')
-              commit_text=$(echo "$line" | sed -E 's/^\* [a-f0-9]{7,}:? //')
+              commit_hash=$(echo "$line" | grep -oE '\[([a-f0-9]{7,})\]' | tr -d '[]')
+              commit_text=$(echo "$line" | sed -E 's/\* \[[a-f0-9]{7,}\]\(.*\): (.*)/\1/')
       
               if [[ -n "$commit_hash" && -n "$commit_text" ]]; then
                 commit_url="https://github.com/RyanYuuki/AnymeX/commit/$commit_hash"
