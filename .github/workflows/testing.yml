@@ -85,10 +85,10 @@ jobs:
               more_commits=false
             elif [[ "$line" == "*"* ]]; then
               commit_counter=$((commit_counter + 1))
-              commit_hash=$(echo "$line" | grep -oE '[a-f0-9]{7,}')
-              commit_text=$(echo "$line" | sed -E 's/\* ([a-f0-9]{7,}) (.*)/\2/g')
+              commit_hash=$(echo "$line" | grep -oE '^[a-f0-9]{7,}')
+              commit_text=$(echo "$line" | sed -E 's/^\* [a-f0-9]{7,}:? //')
       
-              if [[ -n "$commit_hash" ]]; then
+              if [[ -n "$commit_hash" && -n "$commit_text" ]]; then
                 commit_url="https://github.com/RyanYuuki/AnymeX/commit/$commit_hash"
                 commit_text_escaped=$(echo "$commit_text" | sed 's/[_*[\]()~`>#+\-=|{}.!]/\\&/g')
                 commit_line="> [$commit_hash]($commit_url): $commit_text_escaped"
@@ -109,6 +109,7 @@ jobs:
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
 
       - name: Debug Release Notes
         run: |
