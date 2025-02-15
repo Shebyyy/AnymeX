@@ -123,12 +123,6 @@ jobs:
       
           # Replace ### with **Heading**
           commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$//*\1*/g')
-         
-          # Remove extra blank lines (or lines with only spaces), keeping only one
-          commit=$(echo "$commit" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
-          
-          # Properly escape Telegram MarkdownV2 special characters
-          commit=$(echo "$commit" | sed -E 's/([_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
           
           MESSAGE="/*🚀 New Release: ${{ env.RELEASE_NAME }}*
           ${commit}
