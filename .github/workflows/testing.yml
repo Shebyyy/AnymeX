@@ -120,15 +120,17 @@ jobs:
 
       - name: Send Release Notes to Telegram
         run: |
-          # Replace ### with **Heading** (escaped for MarkdownV2)
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g' | sed -E 's/([_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
+          # Escape '### ' to '**Heading**' (for MarkdownV2)
+          commit=$(echo "
+          ${{ env.FORMATTED_NOTES }}
+          " | sed -E 's/^### (.*)$/\*\*\1\*\*/g' | sed -E 's/([_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
       
           MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
           ${commit}
-      
+          
           \[❓Don't know which version to download? Click here!\](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)  
           
-          \[📌 Full changelog\](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
+          \[📌 Full changelog\](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.RELEASE_NAME }})"
       
           echo "Telegram Message: $MESSAGE"
       
