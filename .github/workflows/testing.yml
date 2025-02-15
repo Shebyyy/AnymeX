@@ -120,19 +120,15 @@ jobs:
       
       - name: Send Release Notes to Telegram
         run: |
-          # Remove "### " from the beginning of lines
-          commit=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### //g')
-          commit=$(echo "$commit" | perl -pe 's/([_*\[\]\(\)~`>#+\-=|{}.!])/\\\\$1/g')
-          echo "DEBUG: $commit"
 
-          MESSAGE="🚀 *New Release: ${{ env.RELEASE_NAME }}*
-          ${commit}
+          # Step 1: Remove '### ' from the start of each line
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### //g')
           
-          \[❓Don't know which version to download? Click here!\](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)
+          # Step 2: Escape Telegram MarkdownV2 special characters properly
+          escaped_notes=$(echo "$formatted_notes" | sed -E 's/([_*\[\]\(\)~`>#+\-=|{}.!])/\\\1/g')
           
-          \[📌 Full changelog\](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})"
-      
-          echo "Telegram Message: $MESSAGE"
+          # Step 3: Store in commit variable
+          MESSAGE="$escaped_notes"
       
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/json" \
