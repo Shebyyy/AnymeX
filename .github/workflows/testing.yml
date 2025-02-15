@@ -117,6 +117,30 @@ jobs:
           cat release.json
           echo "Extracted release notes:"
           jq -r '.body' release.json
+
+      - name: Send Release Notes to Telegram
+        run: |
+          # Step 1: Ensure FORMATTED_NOTES is not empty
+          if [[ -z "${{ env.FORMATTED_NOTES }}" ]]; then
+            echo "Error: FORMATTED_NOTES is empty!"
+            exit 1
+          fi
+          
+          # Step 2: Remove "### " from the start of each line safely
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### //g')
+          
+          # Step 3: Escape Telegram MarkdownV2 special characters properly
+          escaped_notes=$(echo "$formatted_notes" | sed -E 's/([][_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
+          
+          # Step 4: Store in commit variable
+          commit="$escaped_notes"
+          
+          # Step 5: Send to Telegram
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }" \
+               -d "text=$commit" \
+               -d "parse_mode=MarkdownV2"
+
       
       - name: Send Release Notes to Telegram
         run: |
