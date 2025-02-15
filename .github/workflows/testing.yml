@@ -91,7 +91,7 @@ jobs:
               if [[ -n "$commit_hash" ]]; then
                 commit_url="https://github.com/RyanYuuki/AnymeX/commit/$commit_hash"
                 commit_text_escaped=$(echo "$commit_text" | sed 's/[_*[\]()~`>#+\-=|{}.!]/\\&/g')
-                commit_line="🔹 [\"$commit_text_escaped\"]($commit_url)"
+                commit_line="\> [\"$commit_text_escaped\"]($commit_url)"
       
                 if [[ "$commit_counter" -le 5 ]]; then
                   formatted_notes+="$commit_line\n"
