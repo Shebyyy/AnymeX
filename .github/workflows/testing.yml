@@ -59,29 +59,47 @@ jobs:
       - name: Format Release Notes
         id: format_notes
         run: |
-          echo "**🚀 Features**" > formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
-
-          echo "**🐛 Fixes**" >> formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
-
-          echo "**🔧 Refactors**" >> formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
-
-          echo "**💅 Style**" >> formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
-
-          echo "**⚡ Performance**" >> formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
-
-          echo "**🛠 Chores**" >> formatted_notes.txt
-          echo "$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5 || echo 'None')" >> formatted_notes.txt
-          echo "" >> formatted_notes.txt
+          features=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
+          if [[ -n "$features" ]]; then
+            echo "**🚀 Features**" > formatted_notes.txt
+            echo "$features" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
+      
+          fixes=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
+          if [[ -n "$fixes" ]]; then
+            echo "**🐛 Fixes**" >> formatted_notes.txt
+            echo "$fixes" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
+      
+          refactors=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | head -n 5)
+          if [[ -n "$refactors" ]]; then
+            echo "**🔧 Refactors**" >> formatted_notes.txt
+            echo "$refactors" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
+      
+          style=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | head -n 5)
+          if [[ -n "$style" ]]; then
+            echo "**💅 Style**" >> formatted_notes.txt
+            echo "$style" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
+      
+          perf=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | head -n 5)
+          if [[ -n "$perf" ]]; then
+            echo "**⚡ Performance**" >> formatted_notes.txt
+            echo "$perf" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
+      
+          chores=$(echo "$RELEASE_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
+          if [[ -n "$chores" ]]; then
+            echo "**🛠 Chores**" >> formatted_notes.txt
+            echo "$chores" >> formatted_notes.txt
+            echo "" >> formatted_notes.txt
+          fi
 
           cat formatted_notes.txt
           FORMATTED_NOTES=$(cat formatted_notes.txt) 
