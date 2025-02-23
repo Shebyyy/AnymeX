@@ -297,7 +297,7 @@ jobs:
                           "content": "${role_mention}",
                           "embeds": [
                             {
-                              "title": 🚀 New Release: ${{env.LATEST_TAG}}",
+                              "title": "🚀 New Release: ${{env.LATEST_TAG}}",
                               "color": $embed_color,
                               "description": $field_value,
                               "footer": {
