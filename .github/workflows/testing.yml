@@ -76,14 +76,7 @@ jobs:
           echo "$FORMATTED_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          
-      - name: Debug Release Notes
-        run: |
-          echo "Raw release JSON:"
-          cat release.json
-          echo "Extracted release notes:"
-          jq -r '.body' release.json
-         
+                
       - name: Send message to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
