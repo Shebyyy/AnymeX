@@ -1,12 +1,15 @@
-name: Test Release 
+name: Notify Release
 
 on:
+  workflow_run:
+    workflows:
+      - "changelog"
+    types:
+      - completed
   workflow_dispatch:
-  push:
-    branches:
-      - main  # Change this to your target branch
+
 jobs:
-  post-release-notes:
+  notify:
     runs-on: ubuntu-latest
     steps:
       - name: Cloing repository
