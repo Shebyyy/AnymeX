@@ -142,7 +142,7 @@ jobs:
               echo "ios_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Linux.AppImage" ]]; then
               echo "linuximg_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
-            elif [[ "$FILE_NAME" == *"Linux.rpm"* ]]; then
+            elif [[ "$FILE_NAME" == *"Linux.rpm" ]]; then
               echo "linuxrmp_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV              
             elif [[ "$FILE_NAME" == *"Linux.zip" ]]; then
               echo "linux_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
