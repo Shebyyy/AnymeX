@@ -142,6 +142,8 @@ jobs:
               echo "ios_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Linux.AppImage" ]]; then
               echo "linuximg_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
+            elif [[ "$FILE_NAME" == *"Linux.rpm"* ]]; then
+              echo "linuxrmp_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV              
             elif [[ "$FILE_NAME" == *"Linux.zip" ]]; then
               echo "linux_message=[Download]($ASSET_URL) | $SIZE_HR" >> $GITHUB_ENV
             elif [[ "$FILE_NAME" == *"Installer.exe" ]]; then
@@ -269,6 +271,7 @@ jobs:
             🔹 ${{ env.windows_message }} | **Windows Zip**
             🔹 ${{ env.setup_message }} | **Windows EXE**
             🔹 ${{ env.linuximg_message }} | **Linux appimage**
+            🔹 ${{ env.linuxrmp_message }} | **Linux rmp**
             🔹 ${{ env.linux_message }} | **Linux**
             🔹 ${{ env.ios_message }} | **iOS**
             🔹 ${{ env.macos_message }} | **macOS**"
@@ -356,6 +359,7 @@ jobs:
             🔹 ${{ env.windows_message }} | **Windows Zip**
             🔹 ${{ env.setup_message }} | **Windows EXE**
             🔹 ${{ env.linuximg_message }} | **Linux appimage**
+            🔹 ${{ env.linuxrmp_message }} | **Linux rmp**
             🔹 ${{ env.linux_message }} | **Linux**
             🔹 ${{ env.ios_message }} | **iOS**
             🔹 ${{ env.macos_message }} | **macOS**"
