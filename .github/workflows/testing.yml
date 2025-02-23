@@ -293,9 +293,10 @@ jobs:
                 section_title="$line"
                 section_content=""
               elif [[ -n "$line" && "$line" != "None" ]]; then
-                section_content+="$line"$'\n'
+                section_content+="$line"
               elif [[ -z "$line" && -n "$section_content" ]]; then
-                CLEAN_NOTES+="$section_title"$'\n'"$section_content"$'\n\n'
+                CLEAN_NOTES+="$section_title"
+                "$section_content"
               fi
             done < formatted_notes.txt
         
