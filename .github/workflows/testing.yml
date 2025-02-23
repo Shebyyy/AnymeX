@@ -305,6 +305,7 @@ jobs:
           VERSION=${VERSION:-"${{env.LATEST_TAG}}"}
       
           discord_data=$(jq -nc \
+                        --arg role_mention "$role_mention" \
                         --arg field_value "$FORMATTED_NOTES
 
             [❓Don't know which version to download? Click here!](https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md)  
@@ -314,7 +315,7 @@ jobs:
                         --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
                         --argjson embed_color "$embed_color" \
                         '{
-                          "content": "$role_mention",
+                          "content": $role_mention,
                           "embeds": [
                             {
                               "title": "🚀 New Release: ${{env.LATEST_TAG}}",
