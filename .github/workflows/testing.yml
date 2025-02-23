@@ -8,6 +8,7 @@ on:
 
 jobs:
   notify:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -18,9 +19,11 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Install dependencies
         run: |
-          sudo apt-get install -y jq
           python -m pip install --upgrade pip
           pip install requests jq
           
@@ -55,18 +58,21 @@ jobs:
           
       - name: Use the Latest Tag
         run: |
-          echo "The latest tag is: $LATEST_TAG"
-          
+         echo "The latest tag is: ${{ env.LATEST_TAG }}"
+         
       - name: Get Release Info
         id: release_info
         run: |
-          curl -s "https://api.github.com/repos/RyanYuuki/AnymeX/releases/tags/$LATEST_TAG" -o release.json
-          RELEASE_NAME=$(jq -r '.name // "No release name"' release.json)
-          RELEASE_NOTES=$(jq -r '.body // "No release notes"' release.json)
-          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          run: |
+          RELEASE_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.LATEST_TAG }}")
+
+          RELEASE_NOTES=$(echo "$RELEASE_DATA" | jq -r '.body')
+          echo "Release Notes: $RELEASE_NOTES"
+
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV    
           
       - name: Format Release Notes
         id: format_notes
@@ -83,21 +89,12 @@ jobs:
               formatted_notes+="\n$line\n"
               commit_counter=0
               more_commits=false
-            elif [[ "$line" == "* ["* ]]; then
+            elif [[ "$line" == "*"* ]]; then
               commit_counter=$((commit_counter + 1))
-              commit_hash=$(echo "$line" | grep -oE '\[([a-f0-9]{7,})\]' | tr -d '[]')
-              commit_text=$(echo "$line" | sed -E 's/\* \[[a-f0-9]{7,}\]\(.*\): (.*)/\1/')
-              
-              if [[ -n "$commit_hash" && -n "$commit_text" ]]; then
-                commit_url="https://github.com/RyanYuuki/AnymeX/commit/$commit_hash"
-                commit_text_escaped=$(echo "$commit_text" | sed 's/[_*[\]()~`>#+\-=|{}.!]/\\&/g')
-                commit_line="> [$commit_hash]($commit_url): $commit_text_escaped"
-                
-                if [[ "$commit_counter" -le 5 ]]; then
-                  formatted_notes+="$commit_line\n"
-                else
-                  more_commits=true
-                fi
+              if [[ "$commit_counter" -le 5 ]]; then
+                formatted_notes+="$line\n"
+              else
+                more_commits=true
               fi
             fi
           done <<< "$RELEASE_NOTES"
@@ -109,49 +106,84 @@ jobs:
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_notes" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+          
       - name: Debug Release Notes
         run: |
           echo "Raw release JSON:"
           cat release.json
           echo "Extracted release notes:"
           jq -r '.body' release.json
-
-      - name: Send Release Notes to Telegram
+         
+      - name: Send message to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
         run: |
-          if [[ -z "$FORMATTED_NOTES" ]]; then
-            echo "Error: FORMATTED_NOTES is empty!"
-            exit 1
+          # Extract Features, Fixes, and Chores into separate files (with cleaning)
+          echo "**🚀 Features**" > TFeatures.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
+          echo "**🐛 Fixes**" > TFixes.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfix' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
+          echo "**🛠 Chores**" > TChores.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\schore' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
+          chmod +x scripts/tel_commit_parser.sed
+          ./scripts/tel_commit_parser.sed feat.txt > feat_clean.txt
+          ./scripts/tel_commit_parser.sed fixes.txt > fixes_clean.txt
+          ./scripts/tel_commit_parser.sed chores.txt > chores_clean.txt
+          ./scripts/tel_commit_parser.sed TFeatures.txt > TFeaturesT.txt
+          ./scripts/tel_commit_parser.sed TFixes.txt > TFixesT.txt
+          ./scripts/tel_commit_parser.sed TChores.txt > TChoresT.txt
+          if [ ! -s feat_clean.txt ] || [ "$(tr -d '[:space:]' < feat_clean.txt)" = "" ]; then
+              rm -f feat_clean.txt TFeaturesT.txt
           fi
-          
-          # Step 2: Remove "### " from the start of each line safely
-          formatted_notes=$(echo "$FORMATTED_NOTES" | sed -E 's/^### //g' || echo "")
-          
-          # Step 3: Escape Telegram MarkdownV2 special characters properly
-          escaped_notes=$(echo "$formatted_notes" | sed -E 's/([][_*\[\]()~`>#+\-=|{}.!])/\\\1/g')
-          
-          # Step 4: Store in commit variable
-          commit="$escaped_notes"
-          
-          # Step 5: Send to Telegram
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-               -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-               -d "text=$commit" \
-               -d "parse_mode=MarkdownV2"
-      
-      - name: Send Release Notes to Telegram
+          if [ ! -s fixes_clean.txt ] || [ "$(tr -d '[:space:]' < fixes_clean.txt)" = "" ]; then
+              rm -f fixes_clean.txt TFixesT.txt
+          fi
+          if [ ! -s chores_clean.txt ] || [ "$(tr -d '[:space:]' < chores_clean.txt)" = "" ]; then
+              rm -f chores_clean.txt TChoresT.txt
+          fi
+          {
+              [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
+              [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
+              [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+          } > output.txt
+          if [ ! -s output.txt ]; then
+              echo "No commits found. Skipping Telegram message."
+              exit 0
+          fi
+          echo -n "<a href='https://github.com/${{github.repository}}/releases/tag/${{ env.LATEST_TAG }}'>📌 Full changelog</a>" >> output.txt
+          markdown_info_tel=$(< output.txt)
+          echo "Final Telegram Message:"
+          echo "$markdown_info_tel"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
+              -d "message_thread_id=$TELEGRAM_TOPIC" \
+              -d "text=$markdown_info_tel" \
+              -d "parse_mode=HTML" \
+              -d "disable_web_page_preview=true"
+              
+      - name: Send Release Notes to Discord
         run: |
+          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed -E 's/^### (.*)$/\*\*\1\*\*/g')
+          # Remove extra blank lines (or lines with only spaces), keeping only one
+          formatted_notes=$(echo "$formatted_notes" | awk 'BEGIN {prev=""} {if (NF == 0) {if (prev != "") print ""; prev=""} else {print; prev=$0}}')
+          # Replace "): <text>" with ") : <text>" and format list items
+          
+          formatted_notes=$(echo "$formatted_notes" | \
+          sed -E 's/\): [^:]+:/)/g' | \
+          sed -E 's/^\* /> /g')
 
-          # Step 1: Remove '### ' from the start of each line
-          formatted_notes=$(echo "${{ env.FORMATTED_NOTES }}" | sed 's/^### //g')
           
-          # Step 2: Escape Telegram MarkdownV2 special characters properly
-          escaped_notes=$(echo "$formatted_notes" | sed -E 's/([_*\[\]\(\)~`>#+\-=|{}.!])/\\\1/g')
-          
-          # Step 3: Store in commit variable
-          MESSAGE="$escaped_notes"
-      
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          PAYLOAD=$(jq -n \
+            --arg title "🚀 New Release: ${{ env.RELEASE_NAME }}" \
+            --arg description "${formatted_notes}
+
+            [❓Don't know which version to download? Click here!](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)  
+            
+            [📌 Full changelog](https://github.com/RyanYuuki/AnymeX/releases/tag/${{ env.LATEST_TAG }})" \
+            --argjson color 5814783 \
+            '{ "embeds": [{ "title": $title, "description": $description, "color": $color }] }')
+          curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d @<(jq -n --arg text "$MESSAGE" --arg chat_id "${{ secrets.TELEGRAM_CHAT_ID }}" \
-            '{ "chat_id": $chat_id, "text": $text, "parse_mode": "MarkdownV2", "disable_web_page_preview": true }')
+            -d "$PAYLOAD"
