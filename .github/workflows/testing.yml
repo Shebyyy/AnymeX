@@ -306,7 +306,7 @@ jobs:
 
 
           discord_data=$(jq -nc \
-                        --arg field_value "$FORMATTED_NOTES
+                        --arg field_value "$CLEAN_NOTES
 
             [❓Don't know which version to download? Click here!](https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md)  
             
