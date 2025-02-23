@@ -95,6 +95,10 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
         run: |
+
+          # Start with release header
+          echo "<b>🚀 New Release: ${{ env.LATEST_TAG }}</b>" > header.txt
+          
           # Extract all categories into separate files
           echo "**🚀 Features**" > TFeatures.txt
           echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
@@ -153,19 +157,24 @@ jobs:
 
           # Combine categories into final output
           {
+              cat header.txt
+              echo ""
               [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
               [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
               [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
               [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
               [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ] && echo -n "$(cat TPerformanceT.txt) <blockquote>$(cat perf_clean.txt)</blockquote> "
               [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+              echo ""
+              echo "❓<a href='https://github.com/RyanYuuki/AnymeX/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
+              echo ""
+              echo "📌 <a href='https://github.com/${{github.repository}}/releases/tag/${{ env.LATEST_TAG }}'>Full changelog</a>"
           } > output.txt
 
           if [ ! -s output.txt ]; then
               echo "No commits found. Skipping Telegram message."
               exit 0
           fi
-          echo -n "<a href='https://github.com/${{github.repository}}/releases/tag/${{ env.LATEST_TAG }}'>📌 Full changelog</a>" >> output.txt
           markdown_info_tel=$(< output.txt)
           echo "Final Telegram Message:"
           echo "$markdown_info_tel"
