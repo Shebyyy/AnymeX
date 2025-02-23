@@ -283,29 +283,19 @@ jobs:
           # Ensure VERSION is not empty
           VERSION=${VERSION:-"${{env.LATEST_TAG}}"}
 
-            # Create a temporary cleaned notes file
-            CLEAN_NOTES=""
-        
-            # Process each section, keeping only non-empty ones
-            while IFS= read -r line; do
-              if [[ "$line" == "**🚀 Features**" || "$line" == "**🐛 Fixes**" || "$line" == "**🔧 Refactors**" || \
-                    "$line" == "**💅 Style**" || "$line" == "**⚡ Performance**" || "$line" == "**🛠 Chores**" ]]; then
-                section_title="$line"
-                section_content=""
-              elif [[ -n "$line" && "$line" != "None" ]]; then
-                section_content+="$line"
-              elif [[ -z "$line" && -n "$section_content" ]]; then
-                CLEAN_NOTES+="$section_title"
-                "$section_content"
-              fi
-            done < formatted_notes.txt
-        
-            # If all sections are empty, provide a default message
-            if [[ -z "$CLEAN_NOTES" ]]; then
-              CLEAN_NOTES="No significant changes in this release."
-            fi
-
-
+          # Check and remove empty categories
+          if grep -q 'None' formatted_notes.txt; then
+              sed -i '/\*\*/{N;/\nNone/d;}' formatted_notes.txt
+          fi
+      
+          # Read cleaned formatted notes
+          CLEAN_NOTES=$(cat formatted_notes.txt)
+      
+          # If all sections were removed, add a default message
+          if [[ -z "$CLEAN_NOTES" ]]; then
+            CLEAN_NOTES="No significant changes in this release."
+          fi
+      
           discord_data=$(jq -nc \
                         --arg field_value "$CLEAN_NOTES
 
