@@ -24,8 +24,8 @@ jobs:
           workflow: dart.yml
           name: last-sha
         continue-on-error: true
-
-     - name: Get Commits Since Last Run
+        
+      - name: Get Commits Since Last Run
         id: get_commits
         run: |
           if [ -f last_sha.txt ]; then
