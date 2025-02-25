@@ -58,77 +58,55 @@ jobs:
       - name: Save Current SHA for Next Run
         run: echo ${{ github.sha }} > last_sha.txt
 
-      - name: Send message to Discord
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
-        run: |         
-          # Extract all categories into a file
-          # Initialize formatted commit log file
-          > formatted_notes.txt
-          
-          # Process commit categories
-          features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*feat' | head -n 5)
+      - name: Format Release Notes
+        id: format_notes
+        run: |
+        
+          features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
           if [[ -n "$features" ]]; then
-            echo "**🚀 Features**" >> formatted_notes.txt
+            echo "**🚀 Features**" > formatted_notes.txt
             echo "$features" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-          
-          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*(fix|bug|improvement|patch)' | head -n 5)
+      
+          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
           if [[ -n "$fixes" ]]; then
             echo "**🐛 Fixes**" >> formatted_notes.txt
             echo "$fixes" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-          
-          refactors=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*refactor' | head -n 5)
-          if [[ -n "$refactors" ]]; then
-            echo "**🔧 Refactors**" >> formatted_notes.txt
-            echo "$refactors" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-          
-          styles=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*style' | head -n 5)
-          if [[ -n "$styles" ]]; then
-            echo "**💅 Style**" >> formatted_notes.txt
-            echo "$styles" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-          
-          performance=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*perf' | head -n 5)
-          if [[ -n "$performance" ]]; then
-            echo "**⚡ Performance**" >> formatted_notes.txt
-            echo "$performance" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-          
-          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*(chore|docs|build|ci)' | head -n 5)
+
+          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
           if [[ -n "$chores" ]]; then
             echo "**🛠 Chores**" >> formatted_notes.txt
             echo "$chores" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-          
-          FORMATTED_NOTES=$(cat formatted_notes.txt)
-          
-          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
-                    
-          # Handle empty commit logs
-          if [[ -z "$FORMATTED_NOTES" || "$FORMATTED_NOTES" =~ ^[[:space:]]*$ ]]; then
-            FORMATTED_NOTES="No recent commits"
-          fi
 
-          # Print FORMATTED_NOTES for debugging
-          echo "Debug: FORMATTED_NOTES content:"
-          echo "$FORMATTED_NOTES"
-          echo "-----------------------------"
-          
-          # Ensure proper escaping for JSON
-          FORMATTED_NOTES_JSON=$(echo "$FORMATTED_NOTES" | jq -Rsa .)
+          cat formatted_notes.txt
+          FORMATTED_NOTES=$(cat formatted_notes.txt) 
+          echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$FORMATTED_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Send message to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+        run: |         
+
+          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
+          default_color="#1ac4c5"
+          hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
+          embed_color=$(hex_to_decimal "$default_color")
+
+          # Ensure VERSION is not empty
+          VERSION=${VERSION:-"${{env.LATEST_TAG}}"}
+
+
           
           # Construct Discord payload
           discord_data=$(jq -nc \
-                              --arg field_value "$FORMATTED_NOTES_JSON" \
+                              --arg field_value "$FORMATTED_NOTES" \
                               --arg footer_text "Version beta" \
                               --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
                               --arg embed_color "$embed_color" \
