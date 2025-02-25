@@ -108,11 +108,8 @@ jobs:
             echo "$chores" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-          cat formatted_notes.txt
-          FORMATTED_NOTES=$(cat formatted_notes.txt) 
-          echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$FORMATTED_NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          
+          FORMATTED_NOTES=$(cat formatted_notes.txt)
           
           FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
                     
