@@ -78,32 +78,44 @@ jobs:
 
           # Prepare commit message
           MESSAGE="### 📝 Commit Summary"
-
+          
           if [ -n "$FEATURES" ]; then
-            MESSAGE+="🚀 **Features:**$FEATURES"
+            echo "**🚀 Features**"
+            MESSAGE+="$FEATURES"
+            echo ""
           fi
           if [ -n "$FIXES" ]; then
-            MESSAGE+="🐛 **Fixes:**$FIXES"
+            echo "**🐛 Fixes**"
+            MESSAGE+="$FIXES"
+            echo ""
           fi
           if [ -n "$REFACTORS" ]; then
-            MESSAGE+="🔧 **Refactors:**$REFACTORS"
+            echo "**🔧 Refactors**"
+            MESSAGE+="$REFACTORS"
+            echo ""
           fi
           if [ -n "$STYLE" ]; then
-            MESSAGE+="💅 **Style:**$STYLE"
+            echo "**💅 Style**"
+            MESSAGE+="$STYLE"
+            echo ""
           fi
           if [ -n "$PERFORMANCE" ]; then
-            MESSAGE+="⚡ **Performance:**$PERFORMANCE"
+            echo "**⚡ Performance**"
+            MESSAGE+="$PERFORMANCE"
+            echo ""
           fi
           if [ -n "$CHORES" ]; then
-            MESSAGE+="🛠 **Chores:**$CHORES"
+            echo "**🛠 Chores**"
+            MESSAGE+="$CHORES"
+            echo ""
           fi
-
+          
           # Save to environment variable
           {
             echo "COMMIT_MESSAGE<<EOF"
             echo "$MESSAGE"
             echo "EOF"
-          } >> $GITHUB_ENV
+          } >> "$GITHUB_ENV"
         shell: /usr/bin/bash -e {0}
 
       - name: Display Commit Message
@@ -111,38 +123,21 @@ jobs:
           echo "$COMMIT_MESSAGE"
         shell: /usr/bin/bash -e {0}
 
-      - name: Format Commit Message
-        run: |
-          # Remove unnecessary colons in commit messages
-          FORMATTED_NOTES=$(echo "$COMMIT_MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
-          {
-            echo "FORMATTED_NOTES<<EOF"
-            echo "$FORMATTED_NOTES"
-            echo "EOF"
-          } >> $GITHUB_ENV
-          
-        shell: /usr/bin/bash -e {0}
-
       - name: Send message to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
-        run: |         
-
-          #!/bin/bash
-          
+        run: |
+  
           # Define default color
           default_color="#1ac4c5"
           
           # Convert HEX to Decimal
           hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
           embed_color=$(hex_to_decimal "$default_color")
-          
-          # Ensure FORMATTED_NOTES is properly escaped for JSON
-          field_value=$(echo "$FORMATTED_NOTES" | jq -Rs .)
-          
+                    
           # Construct Discord payload
           discord_data=$(jq -nc \
-            --arg field_value "$field_value" \
+            --arg field_value "$MESSAGE" \
             --arg footer_text "Version beta" \
             --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
             --argjson embed_color "$embed_color" \
