@@ -1,4 +1,4 @@
-name: Track and Announce Commits
+name: Track and Categorize Commits
 
 on:
   push:
@@ -13,11 +13,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download last seen commit
+      - name: Try downloading last seen commit artifact
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: last-seen-commit
           path: .
+          merge-multiple: false
 
       - name: Load last seen commit
         id: load_prev_commit
@@ -25,10 +27,12 @@ jobs:
           echo "Checking last seen commit..."
           if [ -f last_seen_commit.txt ]; then
             LAST_SEEN_COMMIT=$(cat last_seen_commit.txt)
+            echo "✅ Found last seen commit: $LAST_SEEN_COMMIT"
           else
+            echo "❌ No last seen commit found, falling back to first commit."
             LAST_SEEN_COMMIT=$(git rev-list --max-parents=0 HEAD)
           fi
-          echo "Last seen commit: $LAST_SEEN_COMMIT"
+          
           echo "prev_commit=$LAST_SEEN_COMMIT" >> $GITHUB_ENV
 
       - name: Get commit messages since last seen commit
@@ -36,6 +40,12 @@ jobs:
         run: |
           echo "Getting commit messages since last seen commit..."
           COMMITS=$(git log ${{ env.prev_commit }}..HEAD --pretty=format:'%h %s' | tr '\n' '|')
+          
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits found."
+            exit 0
+          fi
+          
           echo "Commits retrieved: $COMMITS"
           echo "commits=$COMMITS" >> $GITHUB_ENV
 
