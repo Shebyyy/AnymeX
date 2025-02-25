@@ -57,39 +57,54 @@ jobs:
       - name: Categorize Commits
         id: categorize_commits
         run: |
-          declare -A commit_sections
-          IFS=$'\n' read -d '' -r -a commits <<< "$COMMIT_LOGS"
+          # Ensure COMMIT_LOG is populated correctly
+          if [ -z "$COMMIT_LOG" ]; then
+            echo "No commits found."
+            exit 0
+          fi
           
+          # Declare an associative array (if needed, but not used here)
+          # declare -A commit_sections
+          
+          # Read commits into an array
+          IFS=$'\n' read -d '' -r -a commits <<< "$COMMIT_LOG"
+          
+          # Loop through each commit
           for commit in "${commits[@]}"; do
+            # Extract message, hash, and link
             message=$(echo "$commit" | cut -d' ' -f2-)
             hash=$(echo "$commit" | awk '{print $1}' | cut -d'[' -f2 | cut -d']' -f1)
             link=$(echo "$commit" | grep -oP '\[֍\]\(https://github.com/.*?\)' | sed 's/^\[֍\](//;s/\)$//')
-
+          
+            # Check if the extracted values are valid
+            if [[ -z "$message" || -z "$hash" || -z "$link" ]]; then
+              echo "Error: Unable to extract information from commit: $commit"
+              continue
+            fi
+          
+            # Categorize based on message prefix
             if [[ $message == feat* ]]; then
-              section="Features"
               heading="🚀 Features"
               echo "$heading" > TFeatures.txt
               echo "$hash [$link] : $message" >> feat.txt
             elif [[ $message == fix* || $message == bug* || $message == improvement* || $message == patch* ]]; then
-              section="Fixes"
               heading="🐛 Fixes"
               echo "$heading" > TFixes.txt
               echo "$hash [$link] : $message" >> fixes.txt
             elif [[ $message == refactor* ]]; then
-              section="Refactors"
               heading="🔧 Refactors"
               echo "$heading" > TRefactors.txt
               echo "$hash [$link] : $message" >> refactors.txt
             elif [[ $message == style* ]]; then
-              section="Style"
               heading="💅 Style"
               echo "$heading" > TStyle.txt
               echo "$hash [$link] : $message" >> style.txt
             elif [[ $message == chore* || $message == docs* || $message == build* || $message == ci* ]]; then
-              section="Chores"
               heading="🛠 Chores"
               echo "$heading" > TChores.txt
               echo "$hash [$link] : $message" >> chores.txt
+            else
+              echo "Warning: Unrecognized commit type for message: $message"
             fi
           done
 
