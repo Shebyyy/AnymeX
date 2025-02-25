@@ -67,9 +67,9 @@ jobs:
           
           # Function to get up to 5 commits per category
           get_limited_commits() {
-            echo "$1" | grep -E "$2" | head -n 5 2>/dev/null || true
+            echo "$1" | grep -E "$2" | head -n 5 2>/dev/null || echo ""
           }
-          
+
           # Categorize commits (limit to 5 per category)
           FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
           FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
@@ -78,37 +78,37 @@ jobs:
           PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
           CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
           
-          # Prepare commit message
           MESSAGE="### 📝 Commit Summary"
           
           if [ -n "$FEATURES" ]; then
-            MESSAGE+="\n\n**🚀 Features:**\n$FEATURES"
+            MESSAGE+="\n\n**🚀 Features:** $FEATURES"
           fi
           if [ -n "$FIXES" ]; then
-            MESSAGE+="\n\n**🐛 Fixes:**\n$FIXES"
+            MESSAGE+="\n\n**🐛 Fixes:** $FIXES"
           fi
           if [ -n "$REFACTORS" ]; then
-            MESSAGE+="\n\n**🔧 Refactors:**\n$REFACTORS"
+            MESSAGE+="\n\n**🔧 Refactors:** $REFACTORS"
           fi
           if [ -n "$STYLE" ]; then
-            MESSAGE+="\n\n**💅 Style:**\n$STYLE"
+            MESSAGE+="\n\n**💅 Style:** $STYLE"
           fi
           if [ -n "$PERFORMANCE" ]; then
-            MESSAGE+="\n\n**⚡ Performance:**\n$PERFORMANCE"
+            MESSAGE+="\n\n**⚡ Performance:** $PERFORMANCE"
           fi
           if [ -n "$CHORES" ]; then
-            MESSAGE+="\n\n**🛠 Chores:**\n$CHORES"
+            MESSAGE+="\n\n**🛠 Chores:** $CHORES"
           fi
           
-          # Save to environment variable
+          # Save to environment variable properly
           {
             echo "COMMIT_MESSAGE<<EOF"
             echo -e "$MESSAGE"
             echo "EOF"
-          } >> "$GITHUB_ENV"
+          } >> "$GITHUB_ENV" || { echo "Failed to write to GITHUB_ENV"; exit 1; }
           
-          # Use MESSAGE in formatted_notes.txt
-          echo -e "$MESSAGE" > formatted_notes.txt
+          # Use MESSAGE in formatted_notes.txt safely
+          echo -e "$MESSAGE" > formatted_notes.txt || { echo "Failed to write formatted_notes.txt"; exit 1; }
+
 
       - name: Display Commit Message
         run: |
