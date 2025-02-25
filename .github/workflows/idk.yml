@@ -61,33 +61,37 @@ jobs:
       - name: Format Release Notes
         id: format_notes
         run: |
-        
+          touch formatted_notes.txt  # Ensure the file exists
+  
           features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
           if [[ -n "$features" ]]; then
-            echo "**🚀 Features**" > formatted_notes.txt
+            echo "**🚀 Features**" >> formatted_notes.txt
             echo "$features" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-      
+  
           fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
           if [[ -n "$fixes" ]]; then
             echo "**🐛 Fixes**" >> formatted_notes.txt
             echo "$fixes" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-
+  
           chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
           if [[ -n "$chores" ]]; then
             echo "**🛠 Chores**" >> formatted_notes.txt
             echo "$chores" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
-
-          cat formatted_notes.txt
+  
+          echo "=== Debugging formatted_notes.txt ==="
+          cat formatted_notes.txt || echo "formatted_notes.txt not found!"
+  
           FORMATTED_NOTES=$(cat formatted_notes.txt) 
           echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
           echo "$FORMATTED_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
 
       - name: Send message to Discord
         env:
