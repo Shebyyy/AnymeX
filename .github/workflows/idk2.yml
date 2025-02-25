@@ -80,7 +80,7 @@ jobs:
           CHORES=""
           REPO_URL="https://github.com/${{ github.repository }}"
 
-          IFS=$'\n' read -ra COMMIT_LIST <<< "${{ env.COMMIT_LOG }}"
+          IFS=$'\n' read -ra COMMIT_LIST <<< "$(echo -e "$COMMIT_LOGS")"
           for LINE in "${COMMIT_LIST[@]}"; do
             HASH=$(echo "$LINE" | grep -oE "[0-9a-f]{7,}")
             MESSAGE=$(echo "$LINE" | sed -E 's/● (.*) ~.* \[֍\].*/\1/')
