@@ -111,13 +111,29 @@ jobs:
           echo "$COMMIT_MESSAGE"
         shell: /usr/bin/bash -e {0}
 
+      - name: Format Commit Message
+        run: |
+          # Remove unnecessary colons in commit messages
+          FORMATTED_NOTES=$(echo "$COMMIT_MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
+          
+          # Remove extra newlines (optional)
+          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | tr -s '\n')
+
+          # Save the formatted message
+          {
+            echo "FORMATTED_NOTES<<EOF"
+            echo "$FORMATTED_NOTES"
+            echo "EOF"
+          } >> $GITHUB_ENV
+          
+        shell: /usr/bin/bash -e {0}
 
       - name: Send message to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |         
 
-          FORMATTED_NOTES=$(echo "$COMMIT_MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
+          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
           default_color="#1ac4c5"
           hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
           embed_color=$(hex_to_decimal "$default_color")
@@ -166,88 +182,80 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
         run: |
+          # Define release type (Beta or Stable)
+          RELEASE_TYPE="Beta"  # Change this dynamically if needed
+          
           # Start with release header
-          echo "<b>🚀 New Release: Beta</b>" > header.txt
+          echo "<b>🚀 New Release: $RELEASE_TYPE</b>" > header.txt
           
           # Extract all categories into separate files
-          echo "**🚀 Features**" > TFeatures.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
-          echo "**🐛 Fixes**" > TFixes.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
-          echo "**🔧 Refactors**" > TRefactors.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
-          echo "**💅 Style**" > TStyle.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
-          echo "**⚡ Performance**" > TPerformance.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
-          echo "**🛠 Chores**" > TChores.txt
-          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
+          declare -A categories=(
+              ["feat"]="🚀 Features"
+              ["fix|bug|improvement|patch"]="🐛 Fixes"
+              ["refactor"]="🔧 Refactors"
+              ["style"]="💅 Style"
+              ["perf"]="⚡ Performance"
+              ["chore|docs|build|ci"]="🛠 Chores"
+          )
+          
+          for key in "${!categories[@]}"; do
+              title="${categories[$key]}"
+              file_key=$(echo "$title" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
+              
+              echo "**$title**" > "T${file_key}.txt"
+              echo "$(echo "$FORMATTED_NOTES" | grep -iE "^\*\s\[[a-f0-9]+\]\(.*\):\s($key)" | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > "${file_key}.txt"
+          done
+          
           # Process each file through the parser
           chmod +x scripts/tel_commit_parser.sed
           
-          ./scripts/tel_commit_parser.sed feat.txt > feat_clean.txt
-          ./scripts/tel_commit_parser.sed fixes.txt > fixes_clean.txt
-          ./scripts/tel_commit_parser.sed refactors.txt > refactors_clean.txt
-          ./scripts/tel_commit_parser.sed style.txt > style_clean.txt
-          ./scripts/tel_commit_parser.sed perf.txt > perf_clean.txt
-          ./scripts/tel_commit_parser.sed chores.txt > chores_clean.txt
+          for key in "${!categories[@]}"; do
+              file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
+              ./scripts/tel_commit_parser.sed "${file_key}.txt" > "${file_key}_clean.txt"
+              ./scripts/tel_commit_parser.sed "T${file_key}.txt" > "T${file_key}T.txt"
+          done
           
-          ./scripts/tel_commit_parser.sed TFeatures.txt > TFeaturesT.txt
-          ./scripts/tel_commit_parser.sed TFixes.txt > TFixesT.txt
-          ./scripts/tel_commit_parser.sed TRefactors.txt > TRefactorsT.txt
-          ./scripts/tel_commit_parser.sed TStyle.txt > TStyleT.txt
-          ./scripts/tel_commit_parser.sed TPerformance.txt > TPerformanceT.txt
-          ./scripts/tel_commit_parser.sed TChores.txt > TChoresT.txt
           # Check and remove empty categories
-          if [ ! -s feat_clean.txt ] || [ "$(tr -d '[:space:]' < feat_clean.txt)" = "" ]; then
-              rm -f feat_clean.txt TFeaturesT.txt
-          fi
-          if [ ! -s fixes_clean.txt ] || [ "$(tr -d '[:space:]' < fixes_clean.txt)" = "" ]; then
-              rm -f fixes_clean.txt TFixesT.txt
-          fi
-          if [ ! -s refactors_clean.txt ] || [ "$(tr -d '[:space:]' < refactors_clean.txt)" = "" ]; then
-              rm -f refactors_clean.txt TRefactorsT.txt
-          fi
-          if [ ! -s style_clean.txt ] || [ "$(tr -d '[:space:]' < style_clean.txt)" = "" ]; then
-              rm -f style_clean.txt TStyleT.txt
-          fi
-          if [ ! -s perf_clean.txt ] || [ "$(tr -d '[:space:]' < perf_clean.txt)" = "" ]; then
-              rm -f perf_clean.txt TPerformanceT.txt
-          fi
-          if [ ! -s chores_clean.txt ] || [ "$(tr -d '[:space:]' < chores_clean.txt)" = "" ]; then
-              rm -f chores_clean.txt TChoresT.txt
-          fi
+          for key in "${!categories[@]}"; do
+              file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
+              if [ ! -s "${file_key}_clean.txt" ] || [ "$(tr -d '[:space:]' < "${file_key}_clean.txt")" = "" ]; then
+                  rm -f "${file_key}_clean.txt" "T${file_key}T.txt"
+              fi
+          done
+          
           # Combine categories into final output
           {
               cat header.txt
               echo ""
-              [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
-              [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
-              [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
-              [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
-              [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ] && echo -n "$(cat TPerformanceT.txt) <blockquote>$(cat perf_clean.txt)</blockquote> "
-              [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+              for key in "${!categories[@]}"; do
+                  file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
+                  [ -f "T${file_key}T.txt" ] && [ -f "${file_key}_clean.txt" ] && echo -n "$(cat T${file_key}T.txt) <blockquote>$(cat ${file_key}_clean.txt)</blockquote> "
+              done
               echo ""
               echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
-              } > output.txt
+          } > output.txt
+          
+          # Send message to Telegram if commits exist
           if [ ! -s output.txt ]; then
               echo "No commits found. Skipping Telegram message."
               exit 0
           fi
+          
           markdown_info_tel=$(< output.txt)
           echo "Final Telegram Message:"
           echo "$markdown_info_tel"
+          
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
               -d "chat_id=$TELEGRAM_CHAT_ID" \
               -d "text=$markdown_info_tel" \
               -d "parse_mode=HTML" \
               -d "disable_web_page_preview=true"
-              
+          
           Commits:
           ${telegram_commit_messages}
-          Version: $VERSION" \
-              -d "parse_mode=HTML" \
-              -d "disable_web_page_preview=true")
+          Version: $VERSION
+
+
               
       - name: Upload Current SHA as Artifact
         uses: actions/upload-artifact@v4
