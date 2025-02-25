@@ -1,249 +1,210 @@
-name: Build (Beta) idk2
+name: Track and Announce Commits
 
 on:
   push:
     branches:
       - idk
-  workflow_dispatch:
 
 jobs:
-  sendMessage:
+  track_commits:
     runs-on: ubuntu-latest
-    #needs: [build-android, build-ios, build-linux, build-windows, build-macos]
+
     steps:
-      - name: Cloning repository
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Download last SHA artifact
-        uses: dawidd6/action-download-artifact@v6
+      - name: Download last seen commit
+        uses: actions/download-artifact@v4
         with:
-          workflow: idk2.yml
-          name: last-sha
-        continue-on-error: true
+          name: last-seen-commit
+          path: .
 
-      - name: Get Commits Since Last Run
+      - name: Load last seen commit
+        id: load_prev_commit
         run: |
-          # Determine last commit SHA
-          if [ -f last_sha.txt ]; then
-              LAST_SHA=$(cat last_sha.txt)
+          echo "Checking last seen commit..."
+          if [ -f last_seen_commit.txt ]; then
+            LAST_SEEN_COMMIT=$(cat last_seen_commit.txt)
           else
-              LAST_SHA=$(git rev-list --max-parents=0 HEAD)
+            LAST_SEEN_COMMIT=$(git rev-list --max-parents=0 HEAD)
           fi
-          
-          echo "Commits since $LAST_SHA:"
-          
-          # Store commit logs with short hashes
-          COMMIT_LOG=$(git log $LAST_SHA..HEAD --pretty=format:"* [%h](https://github.com/${{ github.repository }}/commit/%H) : %s")
-          
-          # Save commit logs to a file
-          echo "$COMMIT_LOG" > commit_log.txt
-          
-          cat commit_log.txt
-          COMMIT_LOG=$(cat commit_log.txt) 
-          echo "COMMIT_LOG<<EOF" >> $GITHUB_ENV
-          echo "$COMMIT_LOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          
-          # Extract branch name from github.ref
-          BRANCH=${{ github.ref }}
-          BRANCH=${BRANCH#refs/heads/}
-          echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
-        shell: /usr/bin/bash -e {0}
-        env:
-          CI: true
-        continue-on-error: true
+          echo "Last seen commit: $LAST_SEEN_COMMIT"
+          echo "prev_commit=$LAST_SEEN_COMMIT" >> $GITHUB_ENV
 
-      - name: Save Current SHA for Next Run
-        run: echo ${{ github.sha }} > last_sha.txt
-
-      - name: Categorize Commits (Limit to 5 Each)
+      - name: Get commit messages since last seen commit
+        id: get_commits
         run: |
-            #!/bin/bash
-            
-            # Read commit log
-            COMMIT_LOG=$(cat commit_log.txt)
-            
-            # Function to get up to 5 commits per category
-            get_limited_commits() {
-              echo "$1" | grep -Ei "$2" | head -n 5 | sed ':a;N;$!ba;s/\n/\\n/g' || true
-            }
-            
-            # Categorize commits (limit to 5 per category)
-            FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
-            FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
-            REFACTORS=$(get_limited_commits "$COMMIT_LOG" "refactor")
-            STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
-            PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
-            CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
-            
-            # Prepare commit message
-            MESSAGE="### 📝 Commit Summary"
-            
-            if [ -n "$FEATURES" ]; then
-              MESSAGE+="\n\n**🚀 Features:** $FEATURES"
-            fi
-            if [ -n "$FIXES" ]; then
-              MESSAGE+="\n\n**🐛 Fixes:** $FIXES"
-            fi
-            if [ -n "$REFACTORS" ]; then
-              MESSAGE+="\n\n**🔧 Refactors:** $REFACTORS"
-            fi
-            if [ -n "$STYLE" ]; then
-              MESSAGE+="\n\n**💅 Style:** $STYLE"
-            fi
-            if [ -n "$PERFORMANCE" ]; then
-              MESSAGE+="\n\n**⚡ Performance:** $PERFORMANCE"
-            fi
-            if [ -n "$CHORES" ]; then
-              MESSAGE+="\n\n**🛠 Chores:** $CHORES"
-            fi
-            
-            # Remove all newlines for Discord JSON formatting
-            MESSAGE=$(echo -e "$MESSAGE" | sed ':a;N;$!ba;s/\n/\\n/g')
-            
-            # Save to environment variable
-            {
-              echo "COMMIT_MESSAGE<<EOF"
-              echo "$MESSAGE"
-              echo "EOF"
-            } >> "$GITHUB_ENV"
-            
-            # Debugging
-            echo "Final Commit Message:"
-            echo "$MESSAGE"
+          echo "Getting commit messages since last seen commit..."
+          COMMITS=$(git log ${{ env.prev_commit }}..HEAD --pretty=format:'%h %s' | tr '\n' '|')
+          echo "Commits retrieved: $COMMITS"
+          echo "commits=$COMMITS" >> $GITHUB_ENV
 
-      - name: Display Commit Message
+      - name: Categorize commits
+        id: categorize
         run: |
-          echo "$MESSAGE"
-        shell: /usr/bin/bash -e {0}
+          echo "Categorizing commits..."
+          FEATURES=""
+          BUG_FIXES=""
+          REFACTORS=""
+          STYLE_CHANGES=""
+          PERFORMANCE=""
+          CHORES=""
+          REPO_URL="https://github.com/${{ github.repository }}"
 
-      - name: Send message to Discord
+          IFS='|' read -ra COMMIT_LIST <<< "${{ env.commits }}"
+          for LINE in "${COMMIT_LIST[@]}"; do
+            HASH=$(echo "$LINE" | awk '{print $1}')
+            MESSAGE=$(echo "$LINE" | cut -d' ' -f2-)
+            LINK="[$HASH]($REPO_URL/commit/$HASH)"
+            FORMATTED_COMMIT="* $LINK: $MESSAGE"
+
+            case "$MESSAGE" in
+              feat*) FEATURES+="$FORMATTED_COMMIT\n" ;;
+              fix*|bug*|improvement*|patch*) BUG_FIXES+="$FORMATTED_COMMIT\n" ;;
+              refactor*) REFACTORS+="$FORMATTED_COMMIT\n" ;;
+              style*) STYLE_CHANGES+="$FORMATTED_COMMIT\n" ;;
+              perf*) PERFORMANCE+="$FORMATTED_COMMIT\n" ;;
+              chore*|docs*|build*|ci*) CHORES+="$FORMATTED_COMMIT\n" ;;
+            esac
+          done
+
+          # Formatting the final changelog message
+          FORMATTED_NOTES=""
+          [[ -n "$FEATURES" ]] && FORMATTED_NOTES+="### 🎉 Features\n$FEATURES\n"
+          [[ -n "$BUG_FIXES" ]] && FORMATTED_NOTES+="### 🛠️ Fixes\n$BUG_FIXES\n"
+          [[ -n "$REFACTORS" ]] && FORMATTED_NOTES+="### 🔧 Refactors\n$REFACTORS\n"
+          [[ -n "$STYLE_CHANGES" ]] && FORMATTED_NOTES+="### 🎨 Style Changes\n$STYLE_CHANGES\n"
+          [[ -n "$PERFORMANCE" ]] && FORMATTED_NOTES+="### 🚀 Performance\n$PERFORMANCE\n"
+          [[ -n "$CHORES" ]] && FORMATTED_NOTES+="### 🧹 Chores & Docs\n$CHORES\n"
+
+          if [ -z "$FORMATTED_NOTES" ]; then
+            echo "No new commits to report."
+            exit 0
+          fi
+
+          echo "$FORMATTED_NOTES" > changelog.txt
+          echo "changelog=$FORMATTED_NOTES" >> $GITHUB_ENV
+
+      - name: Send update to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |
-          FORMATTED_NOTES=$(echo "$MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
-          # Define default color
-          default_color="#1ac4c5"
-          
-          # Convert HEX to Decimal
-          hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
-          embed_color=$(hex_to_decimal "$default_color")
-                    
-          # Construct Discord payload
           discord_data=$(jq -nc \
-            --arg field_value "$FORMATTED_NOTES" \
-            --arg footer_text "Version beta" \
-            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-            --argjson embed_color "$embed_color" \
+            --arg desc "$FORMATTED_NOTES\n[📌 Full Changelog](https://github.com/${{github.repository}}/commits/main)" \
             '{
-              "content": "<@&1313089691523878942>",
-              "embeds": [
-                {
-                  "title": "🚀 New Beta Release",
-                  "color": $embed_color,
-                  "fields": [
-                    {
-                      "name": "Commits:",
-                      "value": $field_value,
-                      "inline": false
-                    }
-                  ],
-                  "footer": {
-                    "text": $footer_text
-                  },
-                  "timestamp": $timestamp
-                }
-              ]
+              "content": "<@&1298977336124903457>",
+              "embeds": [{
+                "title": "📢 New Updates",
+                "description": $desc,
+                "color": 3447003
+              }]
             }')
-          
-          # Debugging: Print the payload
-          echo "Debug: Discord Payload -> $discord_data"
-          
-          # Validate JSON before sending
-          echo "$discord_data" | jq . || { echo "Invalid JSON"; exit 1; }
-          
-          # Send the message to Discord
+
           curl -H "Content-Type: application/json" \
                -X POST \
                -d "$discord_data" \
                "$DISCORD_WEBHOOK_URL"
 
-      - name: Upload Current SHA as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: last-sha
-          path: last_sha.txt
-
-      - name: Send Discord Notification with Download Links
+      - name: Send update to Telegram
         env:
-          ANDROID_ARM64_LINK: ${{ needs.build-android.outputs.arm64_link }}
-          ANDROID_ARMEABI_LINK: ${{ needs.build-android.outputs.armeabi_link }}
-          ANDROID_X86_LINK: ${{ needs.build-android.outputs.x86_link }}
-          ANDROID_UNIVERSAL_LINK: ${{ needs.build-android.outputs.universal_link }}
-          IOS_LINK: ${{ needs.build-ios.outputs.ios_link }}
-          LINUX_ZIP_LINK: ${{ needs.build-linux.outputs.linux_zip_link }}
-          LINUX_APPIMAGE_LINK: ${{ needs.build-linux.outputs.linux_appimage_link }}
-          LINUX_RPM_LINK: ${{ needs.build-linux.outputs.linux_rpm_link }}
-          WINDOWS_ZIP_LINK: ${{ needs.build-windows.outputs.windows_zip_link }}
-          WINDOWS_EXE_LINK: ${{ needs.build-windows.outputs.windows_exe_link }}
-          MACOS_LINK: ${{ needs.build-macos.outputs.macos_link }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
         run: |
-          MESSAGE="Beta Released
-      
-          🔹 [Download]($ANDROID_ARM64_LINK) | **Android (arm64)**
-          🔹 [Download]($ANDROID_ARMEABI_LINK) | **Android (armeabi-v7a)**
-          🔹 [Download]($ANDROID_UNIVERSAL_LINK) | **Android (universal)**
-          🔹 [Download]($ANDROID_X86_LINK) | **Android (x86 & x64)**
-          🔹 [Download]($WINDOWS_ZIP_LINK) | **Windows ZIP**
-          🔹 [Download]($WINDOWS_EXE_LINK) | **Windows EXE**
-          🔹 [Download]($LINUX_ZIP_LINK) | **Linux ZIP**
-          🔹 [Download]($LINUX_APPIMAGE_LINK) | **Linux AppImage**
-          🔹 [Download]($LINUX_RPM_LINK) | **Linux RPM**
-          🔹 [Download]($IOS_LINK) | **iOS**
-          🔹 [Download]($MACOS_LINK) | **macOS**"
+          # Start with release header
+          echo "<b>🚀 New Release: beta</b>" > header.txt
+          
+          # Extract all categories into separate files
+          echo "**🚀 Features**" > TFeatures.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
 
-          # Send to Discord if the message is not empty
-          if [[ -n "$MESSAGE" ]]; then
-            curl -H "Content-Type: application/json" \
-                 -d "{\"content\": \"$MESSAGE\"}" \
-                 "${{ secrets.DISCORD_WEBHOOK_ALPHA }}"
+          echo "**🐛 Fixes**" > TFixes.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
+
+          echo "**🔧 Refactors**" > TRefactors.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
+
+          echo "**💅 Style**" > TStyle.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
+
+          echo "**⚡ Performance**" > TPerformance.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
+
+          echo "**🛠 Chores**" > TChores.txt
+          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
+
+          # Process each file through the parser
+          chmod +x scripts/tel_commit_parser.sed
+          
+          ./scripts/tel_commit_parser.sed feat.txt > feat_clean.txt
+          ./scripts/tel_commit_parser.sed fixes.txt > fixes_clean.txt
+          ./scripts/tel_commit_parser.sed refactors.txt > refactors_clean.txt
+          ./scripts/tel_commit_parser.sed style.txt > style_clean.txt
+          ./scripts/tel_commit_parser.sed perf.txt > perf_clean.txt
+          ./scripts/tel_commit_parser.sed chores.txt > chores_clean.txt
+          
+          ./scripts/tel_commit_parser.sed TFeatures.txt > TFeaturesT.txt
+          ./scripts/tel_commit_parser.sed TFixes.txt > TFixesT.txt
+          ./scripts/tel_commit_parser.sed TRefactors.txt > TRefactorsT.txt
+          ./scripts/tel_commit_parser.sed TStyle.txt > TStyleT.txt
+          ./scripts/tel_commit_parser.sed TPerformance.txt > TPerformanceT.txt
+          ./scripts/tel_commit_parser.sed TChores.txt > TChoresT.txt
+
+          # Check and remove empty categories
+          if [ ! -s feat_clean.txt ] || [ "$(tr -d '[:space:]' < feat_clean.txt)" = "" ]; then
+              rm -f feat_clean.txt TFeaturesT.txt
+          fi
+          if [ ! -s fixes_clean.txt ] || [ "$(tr -d '[:space:]' < fixes_clean.txt)" = "" ]; then
+              rm -f fixes_clean.txt TFixesT.txt
+          fi
+          if [ ! -s refactors_clean.txt ] || [ "$(tr -d '[:space:]' < refactors_clean.txt)" = "" ]; then
+              rm -f refactors_clean.txt TRefactorsT.txt
+          fi
+          if [ ! -s style_clean.txt ] || [ "$(tr -d '[:space:]' < style_clean.txt)" = "" ]; then
+              rm -f style_clean.txt TStyleT.txt
+          fi
+          if [ ! -s perf_clean.txt ] || [ "$(tr -d '[:space:]' < perf_clean.txt)" = "" ]; then
+              rm -f perf_clean.txt TPerformanceT.txt
+          fi
+          if [ ! -s chores_clean.txt ] || [ "$(tr -d '[:space:]' < chores_clean.txt)" = "" ]; then
+              rm -f chores_clean.txt TChoresT.txt
           fi
 
-      - name: Send Telegram Notification
-        env:
-          ANDROID_ARM64_LINK: ${{ needs.build-android.outputs.arm64_link }}
-          ANDROID_ARMEABI_LINK: ${{ needs.build-android.outputs.armeabi_link }}
-          ANDROID_X86_LINK: ${{ needs.build-android.outputs.x86_link }}
-          ANDROID_UNIVERSAL_LINK: ${{ needs.build-android.outputs.universal_link }}
-          IOS_LINK: ${{ needs.build-ios.outputs.ios_link }}
-          LINUX_ZIP_LINK: ${{ needs.build-linux.outputs.linux_zip_link }}
-          LINUX_APPIMAGE_LINK: ${{ needs.build-linux.outputs.linux_appimage_link }}
-          LINUX_RPM_LINK: ${{ needs.build-linux.outputs.linux_rpm_link }}
-          WINDOWS_ZIP_LINK: ${{ needs.build-windows.outputs.windows_zip_link }}
-          WINDOWS_EXE_LINK: ${{ needs.build-windows.outputs.windows_exe_link }}
-          MACOS_LINK: ${{ needs.build-macos.outputs.macos_link }}
-        run: |
-          TELEGRAM_MESSAGE="🎉 *Beta Released* 🎉
-      
-          🔹 [Download]($ANDROID_ARM64_LINK) | **Android (arm64)**
-          🔹 [Download]($ANDROID_ARMEABI_LINK) | **Android (armeabi-v7a)**
-          🔹 [Download]($ANDROID_UNIVERSAL_LINK) | **Android (universal)**
-          🔹 [Download]($ANDROID_X86_LINK) | **Android (x86 & x64)**
-          🔹 [Download]($WINDOWS_ZIP_LINK) | **Windows ZIP**
-          🔹 [Download]($WINDOWS_EXE_LINK) | **Windows EXE**
-          🔹 [Download]($LINUX_ZIP_LINK) | **Linux ZIP**
-          🔹 [Download]($LINUX_APPIMAGE_LINK) | **Linux AppImage**
-          🔹 [Download]($LINUX_RPM_LINK) | **Linux RPM**
-          🔹 [Download]($IOS_LINK) | **iOS**
-          🔹 [Download]($MACOS_LINK) | **macOS**"
+          # Combine categories into final output
+          {
+              cat header.txt
+              echo ""
+              [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
+              [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
+              [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
+              [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
+              [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ] && echo -n "$(cat TPerformanceT.txt) <blockquote>$(cat perf_clean.txt)</blockquote> "
+              [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+              echo ""
+              echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
+          } > output.txt
 
-          curl -sS -f -X POST \
-              "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-              -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-              -F "message_thread_id=${{ secrets.TELEGRAM_THREAD_ID }}" \
-              -F parse_mode="Markdown" \
-              -F disable_notification=true \
-              -F "text=$TELEGRAM_MESSAGE"
-              
+          if [ ! -s output.txt ]; then
+              echo "No commits found. Skipping Telegram message."
+              exit 0
+          fi
+          markdown_info_tel=$(< output.txt)
+          echo "Final Telegram Message:"
+          echo "$markdown_info_tel"
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
+              -d "text=$markdown_info_tel" \
+              -d "parse_mode=HTML" \
+              -d "disable_web_page_preview=true"
+
+      - name: Save current commit for next run
+        id: save_commit
+        run: |
+          echo "Saving current commit for next run..."
+          git rev-parse HEAD > last_seen_commit.txt
+
+      - name: Upload last seen commit (for next run)
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-seen-commit
+          path: last_seen_commit.txt
