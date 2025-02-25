@@ -132,45 +132,58 @@ jobs:
           default_color="#1ac4c5"
           hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
           embed_color=$(hex_to_decimal "$default_color")
-
-          # Ensure VERSION is not empty
-          VERSION=${VERSION:-"${{env.LATEST_TAG}}"}
+          
+          #!/bin/bash
+          
+          # Define default color
+          default_color="#1ac4c5"
+          
+          # Convert HEX to Decimal
+          hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
+          embed_color=$(hex_to_decimal "$default_color")
+          
+          # Escape and format FORMATTED_NOTES
+          field_value=$(echo "$FORMATTED_NOTES" | jq -Rsa .)
+          
           # Construct Discord payload
           discord_data=$(jq -nc \
-                              --arg field_value "$FORMATTED_NOTES" \
-                              --arg footer_text "Version beta" \
-                              --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-                              --arg embed_color "$embed_color" \
-                              '{
-                                "content": "<@&1313089691523878942>",
-                                "embeds": [
-                                  {
-                                    "title": "🚀 New Beta Release",
-                                    "color": ($embed_color | tonumber),
-                                    "fields": [
-                                      {
-                                        "name": "Commits:",
-                                        "value": $field_value,
-                                        "inline": false
-                                      }
-                                    ],
-                                    "footer": {
-                                      "text": $footer_text
-                                    },
-                                    "timestamp": $timestamp
-                                  }
-                                ]
-                              }')
+            --argjson field_value "$field_value" \
+            --arg footer_text "Version beta" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
+            --argjson embed_color "$embed_color" \
+            '{
+              "content": "<@&1313089691523878942>",
+              "embeds": [
+                {
+                  "title": "🚀 New Beta Release",
+                  "color": $embed_color,
+                  "fields": [
+                    {
+                      "name": "Commits:",
+                      "value": $field_value,
+                      "inline": false
+                    }
+                  ],
+                  "footer": {
+                    "text": $footer_text
+                  },
+                  "timestamp": $timestamp
+                }
+              ]
+            }')
           
           # Debugging: Print the payload
           echo "Debug: Discord Payload -> $discord_data"
+          
+          # Validate JSON before sending
+          echo "$discord_data" | jq . || { echo "Invalid JSON"; exit 1; }
           
           # Send the message to Discord
           curl -H "Content-Type: application/json" \
                -X POST \
                -d "$discord_data" \
                "$DISCORD_WEBHOOK_URL"
-               
+
       - name: Send message to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
