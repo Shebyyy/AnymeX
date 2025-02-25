@@ -67,42 +67,42 @@ jobs:
           > formatted_notes.txt
           
           # Process commit categories
-          features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
+          features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*feat' | head -n 5)
           if [[ -n "$features" ]]; then
             echo "**🚀 Features**" >> formatted_notes.txt
             echo "$features" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
           
-          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
+          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*(fix|bug|improvement|patch)' | head -n 5)
           if [[ -n "$fixes" ]]; then
             echo "**🐛 Fixes**" >> formatted_notes.txt
             echo "$fixes" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
           
-          refactors=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | head -n 5)
+          refactors=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*refactor' | head -n 5)
           if [[ -n "$refactors" ]]; then
             echo "**🔧 Refactors**" >> formatted_notes.txt
             echo "$refactors" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
           
-          styles=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | head -n 5)
+          styles=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*style' | head -n 5)
           if [[ -n "$styles" ]]; then
             echo "**💅 Style**" >> formatted_notes.txt
             echo "$styles" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
           
-          performance=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | head -n 5)
+          performance=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*perf' | head -n 5)
           if [[ -n "$performance" ]]; then
             echo "**⚡ Performance**" >> formatted_notes.txt
             echo "$performance" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
           
-          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
+          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s*(chore|docs|build|ci)' | head -n 5)
           if [[ -n "$chores" ]]; then
             echo "**🛠 Chores**" >> formatted_notes.txt
             echo "$chores" >> formatted_notes.txt
