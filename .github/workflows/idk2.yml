@@ -65,13 +65,9 @@ jobs:
             # Read commit log
             COMMIT_LOG=$(cat commit_log.txt)
             
-            # Debug: Check commit log content
-            echo "DEBUG: Commit Log Content:"
-            echo "$COMMIT_LOG"
-            
             # Function to get up to 5 commits per category
             get_limited_commits() {
-              echo "$1" | grep -Ei "$2" | head -n 5 || true
+              echo "$1" | grep -Ei "$2" | head -n 5 | sed ':a;N;$!ba;s/\n/\\n/g' || true
             }
             
             # Categorize commits (limit to 5 per category)
@@ -81,14 +77,6 @@ jobs:
             STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
             PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
             CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
-            
-            # Debug: Check if categories are populated
-            echo "DEBUG: Features: $FEATURES"
-            echo "DEBUG: Fixes: $FIXES"
-            echo "DEBUG: Refactors: $REFACTORS"
-            echo "DEBUG: Style: $STYLE"
-            echo "DEBUG: Performance: $PERFORMANCE"
-            echo "DEBUG: Chores: $CHORES"
             
             # Prepare commit message
             MESSAGE="### 📝 Commit Summary"
@@ -112,15 +100,19 @@ jobs:
               MESSAGE+="\n\n**🛠 Chores:** $CHORES"
             fi
             
-            # Save to environment variable safely
+            # Remove all newlines for Discord JSON formatting
+            MESSAGE=$(echo -e "$MESSAGE" | sed ':a;N;$!ba;s/\n/\\n/g')
+            
+            # Save to environment variable
             {
               echo "COMMIT_MESSAGE<<EOF"
-              echo -e "$MESSAGE"
+              echo "$MESSAGE"
               echo "EOF"
             } >> "$GITHUB_ENV"
             
-            # Save MESSAGE to formatted_notes.txt safely
-            echo -e "$MESSAGE" > formatted_notes.txt
+            # Debugging
+            echo "Final Commit Message:"
+            echo "$MESSAGE"
 
       - name: Display Commit Message
         run: |
@@ -131,7 +123,7 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |
-  
+          FORMATTED_NOTES=$(echo "$MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
           # Define default color
           default_color="#1ac4c5"
           
@@ -141,7 +133,7 @@ jobs:
                     
           # Construct Discord payload
           discord_data=$(jq -nc \
-            --arg field_value "$MESSAGE" \
+            --arg field_value "$FORMATTED_NOTES" \
             --arg footer_text "Version beta" \
             --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
             --argjson embed_color "$embed_color" \
