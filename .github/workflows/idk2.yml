@@ -1,4 +1,4 @@
-name: Build (Beta) idk
+name: Build (Beta) idk2
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
       - name: Download last SHA artifact
         uses: dawidd6/action-download-artifact@v6
         with:
-          workflow: idk.yml
+          workflow: idk2.yml
           name: last-sha
         continue-on-error: true
 
