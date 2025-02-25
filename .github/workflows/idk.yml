@@ -58,50 +58,58 @@ jobs:
       - name: Save Current SHA for Next Run
         run: echo ${{ github.sha }} > last_sha.txt
 
-      - name: Format Release Notes
-        id: format_notes
+      - name: Categorize Commits (Limit to 5 Each)
         run: |
-          touch formatted_notes.txt  # Ensure the file exists
-  
-          features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
-          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
-          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
-  
-          if [[ -n "$features" ]]; then
-            echo "**🚀 Features**" >> formatted_notes.txt
-            echo "$features" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-  
-          if [[ -n "$fixes" ]]; then
-            echo "**🐛 Fixes**" >> formatted_notes.txt
-            echo "$fixes" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-  
-          if [[ -n "$chores" ]]; then
-            echo "**🛠 Chores**" >> formatted_notes.txt
-            echo "$chores" >> formatted_notes.txt
-            echo "" >> formatted_notes.txt
-          fi
-  
-          # If still empty, add a placeholder
-          if [[ ! -s formatted_notes.txt ]]; then
-            echo "No significant changes in this release." > formatted_notes.txt
-          fi
-  
-          echo "=== Debugging formatted_notes.txt ==="
-          cat formatted_notes.txt || echo "formatted_notes.txt not found!"
-  
-          FORMATTED_NOTES=$(cat formatted_notes.txt) 
-          echo "FORMATTED_NOTES<<EOF" >> $GITHUB_ENV
-          echo "$FORMATTED_NOTES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Read commit log
+          COMMIT_LOG=$(cat commit_log.txt)
 
-      - name: Debug Grep Filter
+          # Function to get up to 5 commits per category
+          get_limited_commits() {
+            echo "$1" | grep -E "$2" | head -n 5 || true
+          }
+
+          # Categorize commits (limit to 5 per category)
+          FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
+          FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
+          REFACTORS=$(get_limited_commits "$COMMIT_LOG" "refactor")
+          STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
+          PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
+          CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
+
+          # Prepare commit message
+          MESSAGE="### 📝 Commit Summary\n"
+
+          if [ -n "$FEATURES" ]; then
+            MESSAGE+="\n🚀 **Features:**\n$FEATURES\n"
+          fi
+          if [ -n "$FIXES" ]; then
+            MESSAGE+="\n🐛 **Fixes:**\n$FIXES\n"
+          fi
+          if [ -n "$REFACTORS" ]; then
+            MESSAGE+="\n🔧 **Refactors:**\n$REFACTORS\n"
+          fi
+          if [ -n "$STYLE" ]; then
+            MESSAGE+="\n💅 **Style:**\n$STYLE\n"
+          fi
+          if [ -n "$PERFORMANCE" ]; then
+            MESSAGE+="\n⚡ **Performance:**\n$PERFORMANCE\n"
+          fi
+          if [ -n "$CHORES" ]; then
+            MESSAGE+="\n🛠 **Chores:**\n$CHORES\n"
+          fi
+
+          # Save to environment variable
+          {
+            echo "COMMIT_MESSAGE<<EOF"
+            echo "$MESSAGE"
+            echo "EOF"
+          } >> $GITHUB_ENV
+        shell: /usr/bin/bash -e {0}
+
+      - name: Display Commit Message
         run: |
-          echo "=== Debugging Grep Filter ==="
-          echo "$COMMIT_LOG" | grep -E 'fix|feat|build|style|chore'
+          echo "$COMMIT_MESSAGE"
+        shell: /usr/bin/bash -e {0}
 
 
       - name: Send message to Discord
@@ -109,16 +117,13 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |         
 
-          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
+          FORMATTED_NOTES=$(echo "$COMMIT_MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
           default_color="#1ac4c5"
           hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
           embed_color=$(hex_to_decimal "$default_color")
 
           # Ensure VERSION is not empty
           VERSION=${VERSION:-"${{env.LATEST_TAG}}"}
-
-
-          
           # Construct Discord payload
           discord_data=$(jq -nc \
                               --arg field_value "$FORMATTED_NOTES" \
@@ -166,17 +171,17 @@ jobs:
           
           # Extract all categories into separate files
           echo "**🚀 Features**" > TFeatures.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
           echo "**🐛 Fixes**" > TFixes.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
           echo "**🔧 Refactors**" > TRefactors.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
           echo "**💅 Style**" > TStyle.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
           echo "**⚡ Performance**" > TPerformance.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
           echo "**🛠 Chores**" > TChores.txt
-          echo "$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
+          echo "$(echo "$COMMIT_MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
           # Process each file through the parser
           chmod +x scripts/tel_commit_parser.sed
           
