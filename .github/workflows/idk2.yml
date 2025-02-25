@@ -39,6 +39,8 @@ jobs:
 
       - name: Categorize Commits
         run: |
+          #Start with release header
+          echo "**🚀 New Release: Beta**" > header.txt
           echo "**🚀 Features**" > TFeatures.txt
           echo "**🐛 Fixes**" > TFixes.txt
           echo "**🔧 Refactors**" > TRefactors.txt
