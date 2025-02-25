@@ -60,14 +60,16 @@ jobs:
 
       - name: Categorize Commits (Limit to 5 Each)
         run: |
+          #!/bin/bash
+          
           # Read commit log
           COMMIT_LOG=$(cat commit_log.txt)
-
+          
           # Function to get up to 5 commits per category
           get_limited_commits() {
-            echo "$1" | grep -E "$2" | head -n 5 || true
+            echo "$1" | grep -E "$2" | head -n 5 2>/dev/null || true
           }
-
+          
           # Categorize commits (limit to 5 per category)
           FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
           FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
@@ -75,52 +77,42 @@ jobs:
           STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
           PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
           CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
-
+          
           # Prepare commit message
           MESSAGE="### 📝 Commit Summary"
           
           if [ -n "$FEATURES" ]; then
-            echo "**🚀 Features**"
-            MESSAGE+="$FEATURES"
-            echo ""
+            MESSAGE+="\n\n**🚀 Features:**\n$FEATURES"
           fi
           if [ -n "$FIXES" ]; then
-            echo "**🐛 Fixes**"
-            MESSAGE+="$FIXES"
-            echo ""
+            MESSAGE+="\n\n**🐛 Fixes:**\n$FIXES"
           fi
           if [ -n "$REFACTORS" ]; then
-            echo "**🔧 Refactors**"
-            MESSAGE+="$REFACTORS"
-            echo ""
+            MESSAGE+="\n\n**🔧 Refactors:**\n$REFACTORS"
           fi
           if [ -n "$STYLE" ]; then
-            echo "**💅 Style**"
-            MESSAGE+="$STYLE"
-            echo ""
+            MESSAGE+="\n\n**💅 Style:**\n$STYLE"
           fi
           if [ -n "$PERFORMANCE" ]; then
-            echo "**⚡ Performance**"
-            MESSAGE+="$PERFORMANCE"
-            echo ""
+            MESSAGE+="\n\n**⚡ Performance:**\n$PERFORMANCE"
           fi
           if [ -n "$CHORES" ]; then
-            echo "**🛠 Chores**"
-            MESSAGE+="$CHORES"
-            echo ""
+            MESSAGE+="\n\n**🛠 Chores:**\n$CHORES"
           fi
           
           # Save to environment variable
           {
             echo "COMMIT_MESSAGE<<EOF"
-            echo "$MESSAGE"
+            echo -e "$MESSAGE"
             echo "EOF"
           } >> "$GITHUB_ENV"
-        shell: /usr/bin/bash -e {0}
+          
+          # Use MESSAGE in formatted_notes.txt
+          echo -e "$MESSAGE" > formatted_notes.txt
 
       - name: Display Commit Message
         run: |
-          echo "$COMMIT_MESSAGE"
+          echo "$MESSAGE"
         shell: /usr/bin/bash -e {0}
 
       - name: Send message to Discord
@@ -174,87 +166,6 @@ jobs:
                -d "$discord_data" \
                "$DISCORD_WEBHOOK_URL"
 
-      - name: Send message to Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
-        run: |
-          # Define release type (Beta or Stable)
-          RELEASE_TYPE="Beta"  # Change this dynamically if needed
-          
-          # Start with release header
-          echo "<b>🚀 New Release: $RELEASE_TYPE</b>" > header.txt
-          
-          # Extract all categories into separate files
-          declare -A categories=(
-              ["feat"]="🚀 Features"
-              ["fix|bug|improvement|patch"]="🐛 Fixes"
-              ["refactor"]="🔧 Refactors"
-              ["style"]="💅 Style"
-              ["perf"]="⚡ Performance"
-              ["chore|docs|build|ci"]="🛠 Chores"
-          )
-          
-          for key in "${!categories[@]}"; do
-              title="${categories[$key]}"
-              file_key=$(echo "$title" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
-              
-              echo "**$title**" > "T${file_key}.txt"
-              echo "$(echo "$FORMATTED_NOTES" | grep -iE "^\*\s\[[a-f0-9]+\]\(.*\):\s($key)" | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > "${file_key}.txt"
-          done
-          
-          # Process each file through the parser
-          chmod +x scripts/tel_commit_parser.sed
-          
-          for key in "${!categories[@]}"; do
-              file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
-              ./scripts/tel_commit_parser.sed "${file_key}.txt" > "${file_key}_clean.txt"
-              ./scripts/tel_commit_parser.sed "T${file_key}.txt" > "T${file_key}T.txt"
-          done
-          
-          # Check and remove empty categories
-          for key in "${!categories[@]}"; do
-              file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
-              if [ ! -s "${file_key}_clean.txt" ] || [ "$(tr -d '[:space:]' < "${file_key}_clean.txt")" = "" ]; then
-                  rm -f "${file_key}_clean.txt" "T${file_key}T.txt"
-              fi
-          done
-          
-          # Combine categories into final output
-          {
-              cat header.txt
-              echo ""
-              for key in "${!categories[@]}"; do
-                  file_key=$(echo "${categories[$key]}" | tr '[:upper:] ' '[:lower:]_' | tr -d '🛠⚡💅🔧🐛🚀')
-                  [ -f "T${file_key}T.txt" ] && [ -f "${file_key}_clean.txt" ] && echo -n "$(cat T${file_key}T.txt) <blockquote>$(cat ${file_key}_clean.txt)</blockquote> "
-              done
-              echo ""
-              echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
-          } > output.txt
-          
-          # Send message to Telegram if commits exist
-          if [ ! -s output.txt ]; then
-              echo "No commits found. Skipping Telegram message."
-              exit 0
-          fi
-          
-          markdown_info_tel=$(< output.txt)
-          echo "Final Telegram Message:"
-          echo "$markdown_info_tel"
-          
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-              -d "chat_id=$TELEGRAM_CHAT_ID" \
-              -d "text=$markdown_info_tel" \
-              -d "parse_mode=HTML" \
-              -d "disable_web_page_preview=true"
-          
-          Commits:
-          ${telegram_commit_messages}
-          Version: $VERSION
-
-
-              
       - name: Upload Current SHA as Artifact
         uses: actions/upload-artifact@v4
         with:
