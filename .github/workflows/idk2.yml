@@ -6,29 +6,16 @@ on:
       - idk  # Change this to your default branch if necessary
 
 jobs:
-  sendMessage:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-      actions: read
-    steps:
-      - name: Clone Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Download Last SHA Artifact
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          workflow: dart.yml
-          name: last-sha
-        continue-on-error: true
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
       - name: Get Commits Since Last Run
         id: get_commits
         run: |
-          # Check if last_sha.txt exists
           if [ -f last_sha.txt ]; then
             LAST_SHA=$(cat last_sha.txt)
             echo "✅ Found last SHA: $LAST_SHA"
@@ -38,25 +25,16 @@ jobs:
           fi
           
           echo "Fetching commits since $LAST_SHA..."
-          # Fetch new commits
           COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/${{ github.repository }}/commit/%H)")
           
-          # Check if there are new commits
           if [ -z "$COMMIT_LOGS" ]; then
             echo "⚠️ No new commits found."
             exit 0
           fi
 
-          # URL-encode for GitHub Actions
-          COMMIT_LOGS="${COMMIT_LOGS//'%'/'%25'}"
-          COMMIT_LOGS="${COMMIT_LOGS//$'\n'/'%0A'}"
-          COMMIT_LOGS="${COMMIT_LOGS//$'\r'/'%0D'}"
-          echo "Commits retrieved: $COMMIT_LOGS"
-          
-          # Save commit logs to a file
           echo "$COMMIT_LOGS" > commit_log.txt
-          
-          # Save the latest SHA for future reference
+          echo "$COMMIT_LOGS" | tee commit_log.txt
+
           echo "HEAD" > last_sha.txt
 
       - name: Categorize Commits
@@ -67,7 +45,7 @@ jobs:
           echo "**💅 Style**" > TStyle.txt
           echo "**🛠 Chores**" > TChores.txt
 
-          # Read commit logs from the previously saved file and categorize them
+          # Read from COMMIT_LOGS variable
           while IFS= read -r line; do
               if [[ $line == feat* ]]; then
                   echo "$line" >> TFeatures.txt
@@ -80,13 +58,11 @@ jobs:
               elif [[ $line =~ ^(chore|docs|build|ci) ]]; then
                   echo "$line" >> TChores.txt
               fi
-          done < commit_log.txt
+          done <<< "$COMMIT_LOGS"  # Use the variable directly
 
-      - name: Process Commit Sections
-        run: |
           # Process each file through the parser
           chmod +x scripts/tel_commit_parser.sed
-          
+
           ./scripts/tel_commit_parser.sed TFeatures.txt > TFeaturesT.txt
           ./scripts/tel_commit_parser.sed TFixes.txt > TFixesT.txt
           ./scripts/tel_commit_parser.sed TRefactors.txt > TRefactorsT.txt
@@ -94,25 +70,15 @@ jobs:
           ./scripts/tel_commit_parser.sed TChores.txt > TChoresT.txt
 
           # Check and remove empty categories
-          if [ ! -s TFeaturesT.txt ]; then
-              rm -f TFeaturesT.txt
-          fi
-          if [ ! -s TFixesT.txt ]; then
-              rm -f TFixesT.txt
-          fi
-          if [ ! -s TRefactorsT.txt ]; then
-              rm -f TRefactorsT.txt
-          fi
-          if [ ! -s TStyleT.txt ]; then
-              rm -f TStyleT.txt
-          fi
-          if [ ! -s TChoresT.txt ]; then
-              rm -f TChoresT.txt
-          fi
+          if [ ! -s TFeaturesT.txt ]; then rm -f TFeaturesT.txt; fi
+          if [ ! -s TFixesT.txt ]; then rm -f TFixesT.txt; fi
+          if [ ! -s TRefactorsT.txt ]; then rm -f TRefactorsT.txt; fi
+          if [ ! -s TStyleT.txt ]; then rm -f TStyleT.txt; fi
+          if [ ! -s TChoresT.txt ]; then rm -f TChoresT.txt; fi
 
           # Combine categories into final output
           {
-              echo "Commit Summary"
+              cat header.txt
               echo ""
               [ -f TFeaturesT.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat TFeatures.txt)</blockquote> "
               [ -f TFixesT.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat TFixes.txt)</blockquote> "
@@ -122,13 +88,14 @@ jobs:
               echo ""
               echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
               echo ""
-              echo "📌 <a href='https://github.com/${{github.repository}}/releases/tag/${{ env.LATEST_TAG }}'>Full changelog</a>"
+              echo "📌 <a href='https://github.com/${{ github.repository }}/releases/tag/${{ env.LATEST_TAG }}'>Full changelog</a>"
           } > output.txt
 
           if [ ! -s output.txt ]; then
               echo "No commits found. Skipping Telegram message."
               exit 0
           fi
+
           markdown_info_tel=$(< output.txt)
           echo "Final Telegram Message:"
           echo "$markdown_info_tel"
