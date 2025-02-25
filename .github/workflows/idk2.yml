@@ -79,14 +79,16 @@ jobs:
           PERFORMANCE=""
           CHORES=""
           REPO_URL="https://github.com/${{ github.repository }}"
-
-          IFS=$'\n' read -ra COMMIT_LIST <<< "$(echo -e "$COMMIT_LOGS")"
+    
+          IFS='|' read -ra COMMIT_LIST <<< "${{ env.commits }}"
+          echo "Commit list: ${COMMIT_LIST[@]}"
           for LINE in "${COMMIT_LIST[@]}"; do
-            HASH=$(echo "$LINE" | grep -oE "[0-9a-f]{7,}")
-            MESSAGE=$(echo "$LINE" | sed -E 's/● (.*) ~.* \[֍\].*/\1/')
+            HASH=$(echo "$LINE" | awk '{print $1}')
+            MESSAGE=$(echo "$LINE" | cut -d' ' -f2-)
             LINK="[$HASH]($REPO_URL/commit/$HASH)"
-            FORMATTED_COMMIT="* $LINK: $MESSAGE"
 
+            FORMATTED_COMMIT="* $LINK: $MESSAGE"
+            echo "Processing commit: $FORMATTED_COMMIT"
             if [[ $MESSAGE == feat* ]]; then
               FEATURES+="$FORMATTED_COMMIT\n"
             elif [[ $MESSAGE == fix* || $MESSAGE == bug* || $MESSAGE == improvement* || $MESSAGE == patch* ]]; then
@@ -101,10 +103,14 @@ jobs:
               CHORES+="$FORMATTED_COMMIT\n"
             fi
           done
-
-          FORMATTED_NOTES="$FEATURES\n$BUG_FIXES\n$REFACTORS\n$STYLE_CHANGES\n$PERFORMANCE\n$CHORES"
+          
           echo "$FORMATTED_NOTES" > changelog.txt
           echo "changelog=$FORMATTED_NOTES" >> $GITHUB_ENV
+          
+      - name: Preview FORMATTED_NOTES
+        run: |
+          echo "📝 FORMATTED_NOTES Preview:"
+          echo "$FORMATTED_NOTES"
 
       - name: Send update to Discord
         env:
