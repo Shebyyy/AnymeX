@@ -54,115 +54,153 @@ jobs:
           BRANCH=${BRANCH#refs/heads/}
           echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
 
-      - name: Categorize Commits
-        id: categorize_commits
+      - name: Set up commit categorization
         run: |
-          # Ensure COMMIT_LOG is populated correctly
-          if [ -z "$COMMIT_LOG" ]; then
-            echo "No commits found."
-            exit 0
-          fi
-          
-          # Declare an associative array (if needed, but not used here)
-          # declare -A commit_sections
-          
-          # Read commits into an array
-          IFS=$'\n' read -d '' -r -a commits <<< "$COMMIT_LOG"
-          
-          # Loop through each commit
-          for commit in "${commits[@]}"; do
-            # Extract message, hash, and link
-            message=$(echo "$commit" | cut -d' ' -f2-)
-            hash=$(echo "$commit" | awk '{print $1}' | cut -d'[' -f2 | cut -d']' -f1)
-            link=$(echo "$commit" | grep -oP '\[֍\]\(https://github.com/.*?\)' | sed 's/^\[֍\](//;s/\)$//')
-          
-            # Check if the extracted values are valid
-            if [[ -z "$message" || -z "$hash" || -z "$link" ]]; then
-              echo "Error: Unable to extract information from commit: $commit"
-              continue
-            fi
-          
-            # Categorize based on message prefix
-            if [[ $message == feat* ]]; then
-              heading="🚀 Features"
-              echo "$heading" > TFeatures.txt
-              echo "$hash [$link] : $message" >> feat.txt
-            elif [[ $message == fix* || $message == bug* || $message == improvement* || $message == patch* ]]; then
-              heading="🐛 Fixes"
-              echo "$heading" > TFixes.txt
-              echo "$hash [$link] : $message" >> fixes.txt
-            elif [[ $message == refactor* ]]; then
-              heading="🔧 Refactors"
-              echo "$heading" > TRefactors.txt
-              echo "$hash [$link] : $message" >> refactors.txt
-            elif [[ $message == style* ]]; then
-              heading="💅 Style"
-              echo "$heading" > TStyle.txt
-              echo "$hash [$link] : $message" >> style.txt
-            elif [[ $message == chore* || $message == docs* || $message == build* || $message == ci* ]]; then
-              heading="🛠 Chores"
-              echo "$heading" > TChores.txt
-              echo "$hash [$link] : $message" >> chores.txt
-            else
-              echo "Warning: Unrecognized commit type for message: $message"
-            fi
-          done
-
-      - name: Process Commit Files
-        id: process_commits
-        run: |
-          # Make the parser executable
+          # Create scripts directory and parser script
+          mkdir -p scripts
+          cat > scripts/tel_commit_parser.sed << 'EOF'
+          #!/bin/sed -f
+          s/%0A/\n/g
+          s/%25/%/g
+          s/%0D/\r/g
+          EOF
           chmod +x scripts/tel_commit_parser.sed
           
+          # Create header
+          echo "<b>📣 New commits in branch <code>${BRANCH}</code></b>" > header.txt
+      
+      - name: Categorize commits
+        run: |
+          # Decode commits
+          echo "$COMMIT_LOG" | sed 's/%0A/\n/g' > all_commits.txt
+          
+          # Create empty files for each category
+          echo "**🚀 Features**" > TFeatures.txt
+          echo "**🐛 Fixes**" > TFixes.txt
+          echo "**🔧 Refactors**" > TRefactors.txt
+          echo "**💅 Style**" > TStyle.txt
+          echo "**⚡ Performance**" > TPerformance.txt
+          echo "**🛠 Chores**" > TChores.txt
+          
+          touch feat.txt fixes.txt refactors.txt style.txt perf.txt chores.txt
+          
+          # Process each commit and categorize
+          commit_count_feat=0
+          commit_count_fix=0
+          commit_count_refactor=0
+          commit_count_style=0
+          commit_count_perf=0
+          commit_count_chore=0
+          
+          while IFS= read -r line; do
+            # Extract commit hash (last 7 characters) from the link
+            commit_hash=$(echo "$line" | grep -o "commit/[a-f0-9]*" | sed 's/commit\///' | cut -c1-7)
+            commit_link=$(echo "$line" | grep -o "\[֍\](https://[^)]*)" | sed 's/\[֍\]//g')
+            commit_msg=$(echo "$line" | sed -e 's/● //' -e 's/ ~.*//')
+            
+            formatted_line="[${commit_hash}]${commit_link}: ${commit_msg}"
+            
+            if [[ "$line" == *"● feat:"* ]] && [ $commit_count_feat -lt 5 ]; then
+              echo "$formatted_line" >> feat.txt
+              ((commit_count_feat++))
+            elif [[ "$line" == *"● fix:"* || "$line" == *"● bug:"* || "$line" == *"● improvement:"* || "$line" == *"● patch:"* ]] && [ $commit_count_fix -lt 5 ]; then
+              echo "$formatted_line" >> fixes.txt
+              ((commit_count_fix++))
+            elif [[ "$line" == *"● refactor:"* ]] && [ $commit_count_refactor -lt 5 ]; then
+              echo "$formatted_line" >> refactors.txt
+              ((commit_count_refactor++))
+            elif [[ "$line" == *"● style:"* ]] && [ $commit_count_style -lt 5 ]; then
+              echo "$formatted_line" >> style.txt
+              ((commit_count_style++))
+            elif [[ "$line" == *"● perf:"* ]] && [ $commit_count_perf -lt 5 ]; then
+              echo "$formatted_line" >> perf.txt
+              ((commit_count_perf++))
+            elif [[ "$line" == *"● chore:"* || "$line" == *"● docs:"* || "$line" == *"● build:"* || "$line" == *"● ci:"* ]] && [ $commit_count_chore -lt 5 ]; then
+              echo "$formatted_line" >> chores.txt
+              ((commit_count_chore++))
+            fi
+          done < all_commits.txt
+      
+      - name: Process and clean commit files
+        run: |
           # Process each file through the parser
+          chmod +x scripts/tel_commit_parser.sed
+          
           ./scripts/tel_commit_parser.sed feat.txt > feat_clean.txt
           ./scripts/tel_commit_parser.sed fixes.txt > fixes_clean.txt
           ./scripts/tel_commit_parser.sed refactors.txt > refactors_clean.txt
           ./scripts/tel_commit_parser.sed style.txt > style_clean.txt
+          ./scripts/tel_commit_parser.sed perf.txt > perf_clean.txt
           ./scripts/tel_commit_parser.sed chores.txt > chores_clean.txt
-
+          
           ./scripts/tel_commit_parser.sed TFeatures.txt > TFeaturesT.txt
           ./scripts/tel_commit_parser.sed TFixes.txt > TFixesT.txt
           ./scripts/tel_commit_parser.sed TRefactors.txt > TRefactorsT.txt
           ./scripts/tel_commit_parser.sed TStyle.txt > TStyleT.txt
+          ./scripts/tel_commit_parser.sed TPerformance.txt > TPerformanceT.txt
           ./scripts/tel_commit_parser.sed TChores.txt > TChoresT.txt
-
+          
           # Check and remove empty categories
-          for category in "feat" "fixes" "refactors" "style" "chores"; do
-              if [ ! -s "${category}_clean.txt" ] || [ "$(tr -d '[:space:]' < "${category}_clean.txt")" = "" ]; then
-                  rm -f "${category}_clean.txt" "T${category^}sT.txt"
-              fi
-          done
-
-      - name: Combine Categories into Final Output
-        id: combine_output
+          if [ ! -s feat_clean.txt ] || [ "$(tr -d '[:space:]' < feat_clean.txt)" = "" ]; then
+              rm -f feat_clean.txt TFeaturesT.txt
+          fi
+          if [ ! -s fixes_clean.txt ] || [ "$(tr -d '[:space:]' < fixes_clean.txt)" = "" ]; then
+              rm -f fixes_clean.txt TFixesT.txt
+          fi
+          if [ ! -s refactors_clean.txt ] || [ "$(tr -d '[:space:]' < refactors_clean.txt)" = "" ]; then
+              rm -f refactors_clean.txt TRefactorsT.txt
+          fi
+          if [ ! -s style_clean.txt ] || [ "$(tr -d '[:space:]' < style_clean.txt)" = "" ]; then
+              rm -f style_clean.txt TStyleT.txt
+          fi
+          if [ ! -s perf_clean.txt ] || [ "$(tr -d '[:space:]' < perf_clean.txt)" = "" ]; then
+              rm -f perf_clean.txt TPerformanceT.txt
+          fi
+          if [ ! -s chores_clean.txt ] || [ "$(tr -d '[:space:]' < chores_clean.txt)" = "" ]; then
+              rm -f chores_clean.txt TChoresT.txt
+          fi
+      
+      - name: Combine and send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # Combine categories into final output
           {
-              echo "<your header content here>"
+              cat header.txt
               echo ""
               [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
               [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
               [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
               [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
+              [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ] && echo -n "$(cat TPerformanceT.txt) <blockquote>$(cat perf_clean.txt)</blockquote> "
               [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
               echo ""
               echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
           } > output.txt
-
+          
           if [ ! -s output.txt ]; then
               echo "No commits found. Skipping Telegram message."
               exit 0
           fi
+          
           markdown_info_tel=$(< output.txt)
           echo "Final Telegram Message:"
           echo "$markdown_info_tel"
-
-      - name: Send to Telegram
-        run: |
-          TELEGRAM_TOKEN="<YOUR_TELEGRAM_BOT_TOKEN>"
-          CHAT_ID="<YOUR_CHAT_ID>"
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
-              -d "chat_id=$CHAT_ID" \
+          
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
               -d "text=$markdown_info_tel" \
               -d "parse_mode=HTML" \
               -d "disable_web_page_preview=true"
+      
+      - name: Save current SHA for next run
+        run: |
+          git rev-parse HEAD > last_sha.txt
+          
+      - name: Upload SHA as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: last-sha
+          path: last_sha.txt
+          retention-days: 90
