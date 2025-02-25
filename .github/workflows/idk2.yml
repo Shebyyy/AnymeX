@@ -6,48 +6,67 @@ on:
       - idk
 
 jobs:
-  track_commits:
+  sendMessage:
     runs-on: ubuntu-latest
-
+    needs: [build_android, build_windows, build_linux, build_ios, build_macos]
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
     steps:
-      - name: Checkout repository
+      - name: Cloing repository
         uses: actions/checkout@v4
-
-      - name: Try downloading last seen commit artifact
-        continue-on-error: true
-        uses: actions/download-artifact@v4
         with:
-          name: last-seen-commit
-          path: .
-          merge-multiple: false
+          fetch-depth: 0
 
-      - name: Load last seen commit
-        id: load_prev_commit
-        run: |
-          echo "Checking last seen commit..."
-          if [ -f last_seen_commit.txt ]; then
-            LAST_SEEN_COMMIT=$(cat last_seen_commit.txt)
-            echo "✅ Found last seen commit: $LAST_SEEN_COMMIT"
-          else
-            echo "❌ No last seen commit found, falling back to first commit."
-            LAST_SEEN_COMMIT=$(git rev-list --max-parents=0 HEAD)
-          fi
-          
-          echo "prev_commit=$LAST_SEEN_COMMIT" >> $GITHUB_ENV
+      - name: Download last SHA artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: dart.yml
+          name: last-sha
+        continue-on-error: true
 
-      - name: Get commit messages since last seen commit
+      - name: Get Commits Since Last Run
         id: get_commits
         run: |
-          echo "Getting commit messages since last seen commit..."
-          COMMITS=$(git log ${{ env.prev_commit }}..HEAD --pretty=format:'%h %s' | tr '\n' '|')
-          
-          if [ -z "$COMMITS" ]; then
-            echo "No new commits found."
-            exit 0
+          if [ -f last_sha.txt ]; then
+            LAST_SHA=$(cat last_sha.txt)
+            echo "✅ Found last SHA: $LAST_SHA"
+          else
+            echo "⚠️ No previous SHA found, using first commit."
+            LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
           
-          echo "Commits retrieved: $COMMITS"
-          echo "commits=$COMMITS" >> $GITHUB_ENV
+          echo "Fetching commits since $LAST_SHA..."
+          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/${{ github.repository }}/commit/%H")
+
+          if [ -z "$COMMIT_LOGS" ]; then
+            echo "⚠️ No new commits found."
+            exit 0
+          fi
+
+          # URL-encode for GitHub Actions
+          COMMIT_LOGS="${COMMIT_LOGS//'%'/'%25'}"
+          COMMIT_LOGS="${COMMIT_LOGS//$'\n'/'%0A'}"
+          COMMIT_LOGS="${COMMIT_LOGS//$'\r'/'%0D'}"
+
+          echo "Commits retrieved: $COMMIT_LOGS"
+          echo "COMMIT_LOG=$COMMIT_LOGS" >> $GITHUB_ENV
+          echo "$COMMIT_LOGS" > commit_log.txt
+
+          # Extract branch name
+          BRANCH=${{ github.ref }}
+          BRANCH=${BRANCH#refs/heads/}
+          echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
+
+      - name: Save Current SHA for Next Run
+        run: echo ${{ github.sha }} > last_sha.txt
+
+      - name: Upload Last SHA for Next Run
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-sha
+          path: last_sha.txt
 
       - name: Categorize commits
         id: categorize
@@ -61,37 +80,29 @@ jobs:
           CHORES=""
           REPO_URL="https://github.com/${{ github.repository }}"
 
-          IFS='|' read -ra COMMIT_LIST <<< "${{ env.commits }}"
+          IFS=$'\n' read -ra COMMIT_LIST <<< "${{ env.COMMIT_LOG }}"
           for LINE in "${COMMIT_LIST[@]}"; do
-            HASH=$(echo "$LINE" | awk '{print $1}')
-            MESSAGE=$(echo "$LINE" | cut -d' ' -f2-)
+            HASH=$(echo "$LINE" | grep -oE "[0-9a-f]{7,}")
+            MESSAGE=$(echo "$LINE" | sed -E 's/● (.*) ~.* \[֍\].*/\1/')
             LINK="[$HASH]($REPO_URL/commit/$HASH)"
             FORMATTED_COMMIT="* $LINK: $MESSAGE"
 
-            case "$MESSAGE" in
-              feat*) FEATURES+="$FORMATTED_COMMIT\n" ;;
-              fix*|bug*|improvement*|patch*) BUG_FIXES+="$FORMATTED_COMMIT\n" ;;
-              refactor*) REFACTORS+="$FORMATTED_COMMIT\n" ;;
-              style*) STYLE_CHANGES+="$FORMATTED_COMMIT\n" ;;
-              perf*) PERFORMANCE+="$FORMATTED_COMMIT\n" ;;
-              chore*|docs*|build*|ci*) CHORES+="$FORMATTED_COMMIT\n" ;;
-            esac
+            if [[ $MESSAGE == feat* ]]; then
+              FEATURES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == fix* || $MESSAGE == bug* || $MESSAGE == improvement* || $MESSAGE == patch* ]]; then
+              BUG_FIXES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == refactor* ]]; then
+              REFACTORS+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == style* ]]; then
+              STYLE_CHANGES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == perf* ]]; then
+              PERFORMANCE+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == chore* || $MESSAGE == docs* || $MESSAGE == build* || $MESSAGE == ci* ]]; then
+              CHORES+="$FORMATTED_COMMIT\n"
+            fi
           done
 
-          # Formatting the final changelog message
-          FORMATTED_NOTES=""
-          [[ -n "$FEATURES" ]] && FORMATTED_NOTES+="### 🎉 Features\n$FEATURES\n"
-          [[ -n "$BUG_FIXES" ]] && FORMATTED_NOTES+="### 🛠️ Fixes\n$BUG_FIXES\n"
-          [[ -n "$REFACTORS" ]] && FORMATTED_NOTES+="### 🔧 Refactors\n$REFACTORS\n"
-          [[ -n "$STYLE_CHANGES" ]] && FORMATTED_NOTES+="### 🎨 Style Changes\n$STYLE_CHANGES\n"
-          [[ -n "$PERFORMANCE" ]] && FORMATTED_NOTES+="### 🚀 Performance\n$PERFORMANCE\n"
-          [[ -n "$CHORES" ]] && FORMATTED_NOTES+="### 🧹 Chores & Docs\n$CHORES\n"
-
-          if [ -z "$FORMATTED_NOTES" ]; then
-            echo "No new commits to report."
-            exit 0
-          fi
-
+          FORMATTED_NOTES="$FEATURES\n$BUG_FIXES\n$REFACTORS\n$STYLE_CHANGES\n$PERFORMANCE\n$CHORES"
           echo "$FORMATTED_NOTES" > changelog.txt
           echo "changelog=$FORMATTED_NOTES" >> $GITHUB_ENV
 
