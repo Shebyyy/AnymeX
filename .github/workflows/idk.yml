@@ -77,25 +77,25 @@ jobs:
           CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
 
           # Prepare commit message
-          MESSAGE="### 📝 Commit Summary\n"
+          MESSAGE="### 📝 Commit Summary"
 
           if [ -n "$FEATURES" ]; then
-            MESSAGE+="\n🚀 **Features:**\n$FEATURES\n"
+            MESSAGE+="🚀 **Features:**$FEATURES"
           fi
           if [ -n "$FIXES" ]; then
-            MESSAGE+="\n🐛 **Fixes:**\n$FIXES\n"
+            MESSAGE+="🐛 **Fixes:**$FIXES"
           fi
           if [ -n "$REFACTORS" ]; then
-            MESSAGE+="\n🔧 **Refactors:**\n$REFACTORS\n"
+            MESSAGE+="🔧 **Refactors:**$REFACTORS"
           fi
           if [ -n "$STYLE" ]; then
-            MESSAGE+="\n💅 **Style:**\n$STYLE\n"
+            MESSAGE+="💅 **Style:**$STYLE"
           fi
           if [ -n "$PERFORMANCE" ]; then
-            MESSAGE+="\n⚡ **Performance:**\n$PERFORMANCE\n"
+            MESSAGE+="⚡ **Performance:**$PERFORMANCE"
           fi
           if [ -n "$CHORES" ]; then
-            MESSAGE+="\n🛠 **Chores:**\n$CHORES\n"
+            MESSAGE+="🛠 **Chores:**$CHORES"
           fi
 
           # Save to environment variable
@@ -115,11 +115,6 @@ jobs:
         run: |
           # Remove unnecessary colons in commit messages
           FORMATTED_NOTES=$(echo "$COMMIT_MESSAGE" | sed -E 's/\): [^:]+:/) :/g')
-          
-          # Remove extra newlines (optional)
-          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | tr -s '\n')
-
-          # Save the formatted message
           {
             echo "FORMATTED_NOTES<<EOF"
             echo "$FORMATTED_NOTES"
