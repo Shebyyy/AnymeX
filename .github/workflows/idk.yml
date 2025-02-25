@@ -98,10 +98,10 @@ jobs:
           echo "$FORMATTED_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Debug Discord Payload
+      - name: Debug Commit Log
         run: |
-          echo "=== Debugging Discord Payload ==="
-          echo "FORMATTED_NOTES: $FORMATTED_NOTES"
+          echo "=== Debugging COMMIT_LOG ==="
+          echo "$COMMIT_LOG"
 
       - name: Send message to Discord
         env:
