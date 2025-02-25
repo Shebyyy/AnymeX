@@ -64,24 +64,30 @@ jobs:
           touch formatted_notes.txt  # Ensure the file exists
   
           features=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | head -n 5)
+          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
+          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
+  
           if [[ -n "$features" ]]; then
             echo "**🚀 Features**" >> formatted_notes.txt
             echo "$features" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
   
-          fixes=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | head -n 5)
           if [[ -n "$fixes" ]]; then
             echo "**🐛 Fixes**" >> formatted_notes.txt
             echo "$fixes" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
           fi
   
-          chores=$(echo "$COMMIT_LOG" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | head -n 5)
           if [[ -n "$chores" ]]; then
             echo "**🛠 Chores**" >> formatted_notes.txt
             echo "$chores" >> formatted_notes.txt
             echo "" >> formatted_notes.txt
+          fi
+  
+          # If still empty, add a placeholder
+          if [[ ! -s formatted_notes.txt ]]; then
+            echo "No significant changes in this release." > formatted_notes.txt
           fi
   
           echo "=== Debugging formatted_notes.txt ==="
@@ -92,6 +98,10 @@ jobs:
           echo "$FORMATTED_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
+      - name: Debug Discord Payload
+        run: |
+          echo "=== Debugging Discord Payload ==="
+          echo "FORMATTED_NOTES: $FORMATTED_NOTES"
 
       - name: Send message to Discord
         env:
