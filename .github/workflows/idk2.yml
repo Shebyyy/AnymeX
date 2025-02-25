@@ -60,55 +60,67 @@ jobs:
 
       - name: Categorize Commits (Limit to 5 Each)
         run: |
-          #!/bin/bash
-          
-          # Read commit log
-          COMMIT_LOG=$(cat commit_log.txt)
-          
-          # Function to get up to 5 commits per category
-          get_limited_commits() {
-            echo "$1" | grep -E "$2" | head -n 5 2>/dev/null || echo ""
-          }
-
-          # Categorize commits (limit to 5 per category)
-          FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
-          FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
-          REFACTORS=$(get_limited_commits "$COMMIT_LOG" "refactor")
-          STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
-          PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
-          CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
-          
-          MESSAGE="### 📝 Commit Summary"
-          
-          if [ -n "$FEATURES" ]; then
-            MESSAGE+="\n\n**🚀 Features:** $FEATURES"
-          fi
-          if [ -n "$FIXES" ]; then
-            MESSAGE+="\n\n**🐛 Fixes:** $FIXES"
-          fi
-          if [ -n "$REFACTORS" ]; then
-            MESSAGE+="\n\n**🔧 Refactors:** $REFACTORS"
-          fi
-          if [ -n "$STYLE" ]; then
-            MESSAGE+="\n\n**💅 Style:** $STYLE"
-          fi
-          if [ -n "$PERFORMANCE" ]; then
-            MESSAGE+="\n\n**⚡ Performance:** $PERFORMANCE"
-          fi
-          if [ -n "$CHORES" ]; then
-            MESSAGE+="\n\n**🛠 Chores:** $CHORES"
-          fi
-          
-          # Save to environment variable properly
-          {
-            echo "COMMIT_MESSAGE<<EOF"
-            echo -e "$MESSAGE"
-            echo "EOF"
-          } >> "$GITHUB_ENV" || { echo "Failed to write to GITHUB_ENV"; exit 1; }
-          
-          # Use MESSAGE in formatted_notes.txt safely
-          echo -e "$MESSAGE" > formatted_notes.txt || { echo "Failed to write formatted_notes.txt"; exit 1; }
-
+            #!/bin/bash
+            
+            # Read commit log
+            COMMIT_LOG=$(cat commit_log.txt)
+            
+            # Debug: Check commit log content
+            echo "DEBUG: Commit Log Content:"
+            echo "$COMMIT_LOG"
+            
+            # Function to get up to 5 commits per category
+            get_limited_commits() {
+              echo "$1" | grep -Ei "$2" | head -n 5 || true
+            }
+            
+            # Categorize commits (limit to 5 per category)
+            FEATURES=$(get_limited_commits "$COMMIT_LOG" "feat")
+            FIXES=$(get_limited_commits "$COMMIT_LOG" "(fix|bug|improvement|patch)")
+            REFACTORS=$(get_limited_commits "$COMMIT_LOG" "refactor")
+            STYLE=$(get_limited_commits "$COMMIT_LOG" "style")
+            PERFORMANCE=$(get_limited_commits "$COMMIT_LOG" "perf")
+            CHORES=$(get_limited_commits "$COMMIT_LOG" "(chore|docs|build|ci)")
+            
+            # Debug: Check if categories are populated
+            echo "DEBUG: Features: $FEATURES"
+            echo "DEBUG: Fixes: $FIXES"
+            echo "DEBUG: Refactors: $REFACTORS"
+            echo "DEBUG: Style: $STYLE"
+            echo "DEBUG: Performance: $PERFORMANCE"
+            echo "DEBUG: Chores: $CHORES"
+            
+            # Prepare commit message
+            MESSAGE="### 📝 Commit Summary"
+            
+            if [ -n "$FEATURES" ]; then
+              MESSAGE+="\n\n**🚀 Features:** $FEATURES"
+            fi
+            if [ -n "$FIXES" ]; then
+              MESSAGE+="\n\n**🐛 Fixes:** $FIXES"
+            fi
+            if [ -n "$REFACTORS" ]; then
+              MESSAGE+="\n\n**🔧 Refactors:** $REFACTORS"
+            fi
+            if [ -n "$STYLE" ]; then
+              MESSAGE+="\n\n**💅 Style:** $STYLE"
+            fi
+            if [ -n "$PERFORMANCE" ]; then
+              MESSAGE+="\n\n**⚡ Performance:** $PERFORMANCE"
+            fi
+            if [ -n "$CHORES" ]; then
+              MESSAGE+="\n\n**🛠 Chores:** $CHORES"
+            fi
+            
+            # Save to environment variable safely
+            {
+              echo "COMMIT_MESSAGE<<EOF"
+              echo -e "$MESSAGE"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+            
+            # Save MESSAGE to formatted_notes.txt safely
+            echo -e "$MESSAGE" > formatted_notes.txt
 
       - name: Display Commit Message
         run: |
