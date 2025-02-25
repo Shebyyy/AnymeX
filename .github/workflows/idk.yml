@@ -128,11 +128,6 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |         
 
-          FORMATTED_NOTES=$(echo "$FORMATTED_NOTES" | sed -E 's/\): [^:]+:/) :/g')
-          default_color="#1ac4c5"
-          hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
-          embed_color=$(hex_to_decimal "$default_color")
-          
           #!/bin/bash
           
           # Define default color
@@ -142,12 +137,12 @@ jobs:
           hex_to_decimal() { printf '%d' "0x${1#"#"}"; }
           embed_color=$(hex_to_decimal "$default_color")
           
-          # Escape and format FORMATTED_NOTES
-          field_value=$(echo "$FORMATTED_NOTES" | jq -Rsa .)
+          # Ensure FORMATTED_NOTES is properly escaped for JSON
+          field_value=$(echo "$FORMATTED_NOTES" | jq -Rs .)
           
           # Construct Discord payload
           discord_data=$(jq -nc \
-            --argjson field_value "$field_value" \
+            --arg field_value "$field_value" \
             --arg footer_text "Version beta" \
             --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
             --argjson embed_color "$embed_color" \
