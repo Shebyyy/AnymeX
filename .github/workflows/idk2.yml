@@ -24,7 +24,7 @@ jobs:
           workflow: dart.yml
           name: last-sha
         continue-on-error: true
-        
+
       - name: Get Commits Since Last Run
         id: get_commits
         run: |
@@ -35,13 +35,14 @@ jobs:
             echo "⚠️ No previous SHA found, using first commit."
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          
+
           echo "Fetching commits since $LAST_SHA..."
-          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/${{ github.repository }}/commit/%H")
+          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/${{ github.repository }}/commit/%H)")
           if [ -z "$COMMIT_LOGS" ]; then
             echo "⚠️ No new commits found."
             exit 0
           fi
+
           # URL-encode for GitHub Actions
           COMMIT_LOGS="${COMMIT_LOGS//'%'/'%25'}"
           COMMIT_LOGS="${COMMIT_LOGS//$'\n'/'%0A'}"
@@ -49,6 +50,7 @@ jobs:
           echo "Commits retrieved: $COMMIT_LOGS"
           echo "COMMIT_LOG=$COMMIT_LOGS" >> $GITHUB_ENV
           echo "$COMMIT_LOGS" > commit_log.txt
+          
           # Extract branch name
           BRANCH=${{ github.ref }}
           BRANCH=${BRANCH#refs/heads/}
@@ -84,9 +86,9 @@ jobs:
           done
 
           # Check and remove empty categories
-          for section in feat fixes refactor style chores; do
-              if [ ! -s "${section}_clean.txt" ]; then
-                  rm -f "${section}_clean.txt" "T${section^}T.txt"
+          for section in TFeatures TFixes TRefactors TStyle TChores; do
+              if [ ! -s "${section}T.txt" ]; then
+                  rm -f "${section}T.txt"
               fi
           done
 
@@ -94,11 +96,11 @@ jobs:
           {
               echo "Commit Summary"
               echo ""
-              [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
-              [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
-              [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
-              [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
-              [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+              [ -f TFeaturesT.txt ] && echo -n "$(cat TFeaturesT.txt) "
+              [ -f TFixesT.txt ] && echo -n "$(cat TFixesT.txt) "
+              [ -f TRefactorsT.txt ] && echo -n "$(cat TRefactorsT.txt) "
+              [ -f TStyleT.txt ] && echo -n "$(cat TStyleT.txt) "
+              [ -f TChoresT.txt ] && echo -n "$(cat TChoresT.txt) "
               echo ""
           } > output.txt
 
