@@ -98,10 +98,11 @@ jobs:
           echo "$FORMATTED_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Debug Commit Log
+      - name: Debug Grep Filter
         run: |
-          echo "=== Debugging COMMIT_LOG ==="
-          echo "$COMMIT_LOG"
+          echo "=== Debugging Grep Filter ==="
+          echo "$COMMIT_LOG" | grep -E 'fix|feat|build|style|chore'
+
 
       - name: Send message to Discord
         env:
