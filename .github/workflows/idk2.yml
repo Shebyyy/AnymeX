@@ -8,12 +8,9 @@ on:
 jobs:
   sendMessage:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-      actions: read
+    #needs: [build-android, build-ios, build-linux, build-windows, build-macos]
     steps:
-      - name: Clone repository
+      - name: Cloing repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -22,38 +19,38 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: dart.yml
-          name: last-sha
+          name: last-shaa
         continue-on-error: true
 
       - name: Get Commits Since Last Run
-        id: get_commits
         run: |
           if [ -f last_sha.txt ]; then
             LAST_SHA=$(cat last_sha.txt)
-            echo "✅ Found last SHA: $LAST_SHA"
           else
-            echo "⚠️ No previous SHA found, using first commit."
             LAST_SHA=$(git rev-list --max-parents=0 HEAD)
           fi
-          echo "Fetching commits since $LAST_SHA..."
-          COMMIT_LOGS=$(git log $LAST_SHA..HEAD --pretty=format:"● %s ~%an [֍](https://github.com/${{ github.repository }}/commit/%H)")
-          if [ -z "$COMMIT_LOGS" ]; then
-            echo "⚠️ No new commits found."
-            exit 0
-          fi
-          # URL-encode for GitHub Actions
-          COMMIT_LOGS="${COMMIT_LOGS//'%'/'%25'}"
-          COMMIT_LOGS="${COMMIT_LOGS//$'\n'/'%0A'}"
-          COMMIT_LOGS="${COMMIT_LOGS//$'\r'/'%0D'}"
-          echo "Commits retrieved: $COMMIT_LOGS"
-          echo "COMMIT_LOG=$COMMIT_LOGS" >> $GITHUB_ENV
-          echo "$COMMIT_LOGS" > commit_log.txt
+          echo "Commits since $LAST_SHA:"
           
-          # Extract branch name
+          # Store commit logs in a file directly
+          git log $LAST_SHA..HEAD --pretty=format:"* [%H](https://github.com/$GITHUB_REPOSITORY/commit/%H) : %s" > commit_log.txt
+      
+          # Encode and save the file content to GITHUB_ENV
+          echo "COMMIT_LOG<<EOF" >> $GITHUB_ENV
+          cat commit_log.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      
+          # Extract branch name from github.ref
           BRANCH=${{ github.ref }}
           BRANCH=${BRANCH#refs/heads/}
           echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
+        shell: bash
 
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: Save Current SHA for Next Run
+        run: echo ${{ github.sha }} > last_sha.txt
       - name: Set up commit categorization
         run: |
           # Create scripts directory and parser script
