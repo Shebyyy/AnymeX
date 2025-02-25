@@ -105,19 +105,20 @@ jobs:
           done
           
           echo "$FORMATTED_NOTES" > changelog.txt
-          echo "changelog=$FORMATTED_NOTES" >> $GITHUB_ENV
-          
-      - name: Preview FORMATTED_NOTES
+          echo "changelog=$(cat changelog.txt)" >> $GITHUB_ENV
+
+      - name: Use Changelog in Another Step
         run: |
-          echo "📝 FORMATTED_NOTES Preview:"
-          echo "$FORMATTED_NOTES"
+          echo "🚀 Changelog Preview:"
+          cat changelog.txt  # This will print it in logs
 
       - name: Send update to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
         run: |
+          DISCORD_MESSAGE=$(cat changelog.txt)
           discord_data=$(jq -nc \
-            --arg desc "$FORMATTED_NOTES\n[📌 Full Changelog](https://github.com/${{github.repository}}/commits/main)" \
+            --arg desc "$DISCORD_MESSAGE\n[📌 Full Changelog](https://github.com/${{github.repository}}/commits/main)" \
             '{
               "content": "<@&1298977336124903457>",
               "embeds": [{
@@ -138,27 +139,28 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_TOPIC: ${{ secrets.TELEGRAM_THREAD_ID }}
         run: |
+          MESSAGE=$(cat changelog.txt)
           # Start with release header
           echo "<b>🚀 New Release: beta</b>" > header.txt
           
           # Extract all categories into separate files
           echo "**🚀 Features**" > TFeatures.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sfeat' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > feat.txt
 
           echo "**🐛 Fixes**" > TFixes.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(fix|bug|improvement|patch)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > fixes.txt
 
           echo "**🔧 Refactors**" > TRefactors.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\srefactor' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > refactors.txt
 
           echo "**💅 Style**" > TStyle.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sstyle' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > style.txt
 
           echo "**⚡ Performance**" > TPerformance.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\sperf' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > perf.txt
 
           echo "**🛠 Chores**" > TChores.txt
-          echo "$(echo "$FORMATTED_NOTES" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
+          echo "$(echo "$MESSAGE" | grep -iE '^\*\s\[[a-f0-9]+\]\(.*\):\s(chore|docs|build|ci)' | sed -E 's/\): [^:]+:/) :/g' | head -n 5)" > chores.txt
 
           # Process each file through the parser
           chmod +x scripts/tel_commit_parser.sed
