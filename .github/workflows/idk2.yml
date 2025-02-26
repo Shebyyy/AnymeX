@@ -5,25 +5,25 @@ on:
     branches:
       - idk
 
-jobs:
-  runs-on: ubuntu-latest
-  #needs: [build_android, build_windows, build_linux, build_ios, build_macos]
-  permissions:
-    contents: read
-    pull-requests: read
-    actions: read
-  steps:
-    - name: Cloing repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Download last SHA artifact
-      uses: dawidd6/action-download-artifact@v6
-      with:
-        workflow: dart.yml
-        name: last-sha
-      continue-on-error: true
+  jobs:
+    runs-on: ubuntu-latest
+    #needs: [build_android, build_windows, build_linux, build_ios, build_macos]
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    steps:
+      - name: Cloing repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  
+      - name: Download last SHA artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: dart.yml
+          name: last-sha
+        continue-on-error: true
 
       - name: Get Commits Since Last Run
         run: |
