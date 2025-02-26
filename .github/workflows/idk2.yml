@@ -31,13 +31,14 @@ jobs:
           fi
           echo "Commits since $LAST_SHA:"
           
-          # Store commit logs in a file directly
-          git log $LAST_SHA..HEAD --pretty=format:"* [%H](https://github.com/$GITHUB_REPOSITORY/commit/%H) : %s" > commit_log.txt
-      
-          # Encode and save the file content to GITHUB_ENV
+          COMMIT_LOG=$(git log $LAST_SHA..HEAD --pretty=format:"* [%H](https://github.com/$GITHUB_REPOSITORY/commit/%H) : %s")
+          
+          echo "Commit Log: $COMMIT_LOG"
+          
           echo "COMMIT_LOG<<EOF" >> $GITHUB_ENV
-          cat commit_log.txt >> $GITHUB_ENV
+          echo "$COMMIT_LOG" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+
       
           # Extract branch name from github.ref
           BRANCH=${{ github.ref }}
@@ -51,22 +52,11 @@ jobs:
 
       - name: Save Current SHA for Next Run
         run: echo ${{ github.sha }} > last_sha.txt
-      - name: Set up commit categorization
-        run: |
-          # Create scripts directory and parser script
-          mkdir -p scripts
-          cat > scripts/tel_commit_parser.sed << 'EOF'
-          #!/bin/sed -f
-          s/%0A/\n/g
-          s/%25/%/g
-          s/%0D/\r/g
-          EOF
-          chmod +x scripts/tel_commit_parser.sed
-          
-          # Create header
-          echo "<b>📣 New commits in branch <code>${BRANCH}</code></b>" > header.txt
       
-      - name: Categorize commits
+      - name: Combine and send to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           # Decode commits
           echo "$COMMIT_LOG" | sed 's/%0A/\n/g' > all_commits.txt
@@ -118,8 +108,6 @@ jobs:
             fi
           done < all_commits.txt
       
-      - name: Process and clean commit files
-        run: |
           # Process each file through the parser
           chmod +x scripts/tel_commit_parser.sed
           
@@ -157,11 +145,6 @@ jobs:
               rm -f chores_clean.txt TChoresT.txt
           fi
       
-      - name: Combine and send to Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
           # Combine categories into final output
           {
               cat header.txt
