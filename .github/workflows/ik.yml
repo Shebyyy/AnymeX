@@ -8,13 +8,16 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Install dependencies
+        run: sudo apt-get install -y jq  # Ensures jq is available
+
       - name: Send Discord Notification with Download Links
         env:
             ANDROID_ARM64_LINK: https://example.com/android-arm64-v1.0.0.apk
             ANDROID_ARMEABI_LINK: https://example.com/android-armeabi-v7a-v1.0.0.apk
             ANDROID_X86_LINK: https://example.com/android-x86-v1.0.0.apk
             ANDROID_UNIVERSAL_LINK: https://example.com/android-universal-v1.0.0.apk
-            IOS_LINK: IOS_LINK=https://example.com/ios-v1.0.0.ipa
+            IOS_LINK: https://example.com/ios-v1.0.0.ipa
             LINUX_ZIP_LINK: https://example.com/linux-v1.0.0.zip
             LINUX_APPIMAGE_LINK: https://example.com/linux-v1.0.0.AppImage
             LINUX_RPM_LINK: https://example.com/linux-v1.0.0.rpm
@@ -26,7 +29,7 @@ jobs:
           BUTTONS="[]"
       
           add_button() {
-            if [[ -n "$2" ]]; then
+            if [[ -n "$2" && "$2" != "null" ]]; then
               BUTTONS=$(echo $BUTTONS | jq --arg label "$1" --arg url "$2" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
             fi
           }
