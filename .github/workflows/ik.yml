@@ -1,7 +1,10 @@
 name: Test Platform Messaging
 
 on:
-  workflow_dispatch:  # Allows manual triggering
+  push:
+    branches:
+      - beta
+  workflow_dispatch:
 
 jobs:
   test-platform-messages:
@@ -11,24 +14,50 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get install -y jq  # Ensures jq is available
 
-      - name: Send Discord Notification with Buttons
+      - name: Send Discord Notification with Buttons (1 Row Each)
         env:
-            DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+          ANDROID_ARM64_LINK: https://example.com/android-arm64-v1.0.0.apk
+          ANDROID_ARMEABI_LINK: https://example.com/android-armeabi-v7a-v1.0.0.apk
+          ANDROID_X86_LINK: https://example.com/android-x86-v1.0.0.apk
+          ANDROID_UNIVERSAL_LINK: https://example.com/android-universal-v1.0.0.apk
+          IOS_LINK: https://example.com/ios-v1.0.0.ipa
+          LINUX_ZIP_LINK: https://example.com/linux-v1.0.0.zip
+          LINUX_APPIMAGE_LINK: https://example.com/linux-v1.0.0.AppImage
+          LINUX_RPM_LINK: https://example.com/linux-v1.0.0.rpm
+          WINDOWS_ZIP_LINK: https://example.com/windows-v1.0.0.zip
+          WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
+          MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
+          # Construct the button components dynamically
+          BUTTONS="[]"
+      
+          add_button() {
+            if [[ -n "$2" ]]; then
+              BUTTONS=$(echo $BUTTONS | jq --arg label "$1" --arg url "$2" '. + [{"type": 1, "components": [{"type": 2, "label": $label, "style": 5, "url": $url}]}]')
+            fi
+          }
+      
+          add_button "Android (arm64)" "$ANDROID_ARM64_LINK"
+          add_button "Android (armeabi-v7a)" "$ANDROID_ARMEABI_LINK"
+          add_button "Android (x86 & x64)" "$ANDROID_X86_LINK"
+          add_button "Android (universal)" "$ANDROID_UNIVERSAL_LINK"
+          add_button "iOS" "$IOS_LINK"
+          add_button "Linux ZIP" "$LINUX_ZIP_LINK"
+          add_button "Linux AppImage" "$LINUX_APPIMAGE_LINK"
+          add_button "Linux RPM" "$LINUX_RPM_LINK"
+          add_button "Windows ZIP" "$WINDOWS_ZIP_LINK"
+          add_button "Windows EXE" "$WINDOWS_EXE_LINK"
+          add_button "macOS" "$MACOS_LINK"
+      
           MESSAGE_JSON=$(jq -n \
             --arg content "🚀 **New Build Available!** Click a button below to download:" \
-            --argjson components '[{
-              "type": 1,
-              "components": [
-                {"type": 2, "label": "Android (arm64)", "style": 5, "url": "https://example.com/android-arm64-v1.0.0.apk"},
-                {"type": 2, "label": "Windows EXE", "style": 5, "url": "https://example.com/windows-v1.0.0.exe"},
-                {"type": 2, "label": "macOS", "style": 5, "url": "https://example.com/macos-v1.0.0.dmg"}
-              ]
-            }]' \
-            '{"content": $content, "components": $components}'
+            --argjson buttons "$BUTTONS" \
+            '{"content": $content, "components": $buttons}'
           )
       
           curl -X POST \
                -H "Content-Type: application/json" \
                -d "$MESSAGE_JSON" \
                "$DISCORD_WEBHOOK?wait=true&with_components=true"
+
