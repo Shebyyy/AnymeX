@@ -12,9 +12,9 @@ jobs:
     
     steps:
       - name: Install dependencies
-        run: sudo apt-get install -y jq  # Ensures jq is available
+        run: sudo apt-get install -y jq  # Ensure jq is available
 
-      - name: Send Discord Notification with Buttons (1 Row Each)
+      - name: Send Discord Notification with Buttons (Grouped by Platform)
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
           ANDROID_ARM64_LINK: https://example.com/android-arm64-v1.0.0.apk
@@ -29,34 +29,48 @@ jobs:
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
-          # Construct the button components dynamically
-          BUTTONS="[]"
-      
-          add_button() {
-            if [[ -n "$2" ]]; then
-              BUTTONS=$(echo $BUTTONS | jq --arg label "$1" --arg url "$2" '. + [{"type": 1, "components": [{"type": 2, "label": $label, "style": 5, "url": $url}]}]')
-            fi
+          # Function to add a row with multiple buttons
+          add_row() {
+            local ROW="[]"
+            for ((i=1; i<=$#; i+=2)); do
+              local LABEL=${!i}
+              local LINK=${!((i+1))}
+              if [[ -n "$LINK" ]]; then
+                ROW=$(echo $ROW | jq --arg label "$LABEL" --arg url "$LINK" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
+              fi
+            done
+            COMPONENTS=$(echo $COMPONENTS | jq --argjson row "$ROW" '. + [{"type": 1, "components": $row}]')
           }
-      
-          add_button "Android (arm64)" "$ANDROID_ARM64_LINK"
-          add_button "Android (armeabi-v7a)" "$ANDROID_ARMEABI_LINK"
-          add_button "Android (x86 & x64)" "$ANDROID_X86_LINK"
-          add_button "Android (universal)" "$ANDROID_UNIVERSAL_LINK"
-          add_button "iOS" "$IOS_LINK"
-          add_button "Linux ZIP" "$LINUX_ZIP_LINK"
-          add_button "Linux AppImage" "$LINUX_APPIMAGE_LINK"
-          add_button "Linux RPM" "$LINUX_RPM_LINK"
-          add_button "Windows ZIP" "$WINDOWS_ZIP_LINK"
-          add_button "macOS" "$MACOS_LINK"
-      
+
+          # Initialize the components array
+          COMPONENTS="[]"
+
+          # Add platform-specific rows
+          add_row "Android (arm64)" "$ANDROID_ARM64_LINK" \
+                  "Android (armeabi-v7a)" "$ANDROID_ARMEABI_LINK" \
+                  "Android (x86 & x64)" "$ANDROID_X86_LINK" \
+                  "Android (universal)" "$ANDROID_UNIVERSAL_LINK"
+
+          add_row "iOS" "$IOS_LINK"
+
+          add_row "Linux ZIP" "$LINUX_ZIP_LINK" \
+                  "Linux AppImage" "$LINUX_APPIMAGE_LINK" \
+                  "Linux RPM" "$LINUX_RPM_LINK"
+
+          add_row "Windows ZIP" "$WINDOWS_ZIP_LINK" \
+                  "Windows EXE" "$WINDOWS_EXE_LINK"
+
+          add_row "macOS" "$MACOS_LINK"
+
+          # Construct the final message JSON
           MESSAGE_JSON=$(jq -n \
             --arg content "🚀 **New Build Available!** Click a button below to download:" \
-            --argjson buttons "$BUTTONS" \
-            '{"content": $content, "components": $buttons}'
+            --argjson components "$COMPONENTS" \
+            '{"content": $content, "components": $components}'
           )
-      
+
+          # Send the message to Discord
           curl -X POST \
                -H "Content-Type: application/json" \
                -d "$MESSAGE_JSON" \
                "$DISCORD_WEBHOOK?wait=true&with_components=true"
-
