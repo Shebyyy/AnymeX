@@ -47,7 +47,6 @@ jobs:
           add_button "Linux AppImage" "$LINUX_APPIMAGE_LINK"
           add_button "Linux RPM" "$LINUX_RPM_LINK"
           add_button "Windows ZIP" "$WINDOWS_ZIP_LINK"
-          add_button "Windows EXE" "$WINDOWS_EXE_LINK"
           add_button "macOS" "$MACOS_LINK"
       
           MESSAGE_JSON=$(jq -n \
