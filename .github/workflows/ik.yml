@@ -25,12 +25,15 @@ jobs:
             WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
             MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
-          # Construct the button components dynamically
-          BUTTONS="[]"
+          # Ensure jq is installed
+          sudo apt-get install -y jq
+          
+          # Initialize BUTTONS as an empty JSON array
+          BUTTONS=$(jq -n '[]')
       
           add_button() {
             if [[ -n "$2" && "$2" != "null" ]]; then
-              BUTTONS=$(echo $BUTTONS | jq --arg label "$1" --arg url "$2" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
+              BUTTONS=$(echo "$BUTTONS" | jq --arg label "$1" --arg url "$2" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
             fi
           }
       
@@ -52,6 +55,10 @@ jobs:
             '{"content": $content, "components": [{"type": 1, "components": $buttons}]}'
           )
       
+          echo "DEBUG: MESSAGE_JSON"
+          echo "$MESSAGE_JSON"
+      
           curl -H "Content-Type: application/json" \
                -d "$MESSAGE_JSON" \
                "${{ secrets.DISCORD_WEBHOOK_ALPHA }}"
+
