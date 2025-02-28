@@ -592,6 +592,7 @@ jobs:
 
       - name: Send Discord Notification with Download Links
         env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
           ANDROID_ARM64_LINK: ${{ needs.build-android.outputs.arm64_link }}
           ANDROID_ARMEABI_LINK: ${{ needs.build-android.outputs.armeabi_link }}
           ANDROID_X86_LINK: ${{ needs.build-android.outputs.x86_link }}
