@@ -45,25 +45,32 @@ jobs:
 
           # Initialize the components array
           COMPONENTS="[]"
-
+          
           # Android row
-          add_row "🤖 arm64" "$ANDROID_ARM64_LINK" \
-                  "🤖 armeabi-v7a" "$ANDROID_ARMEABI_LINK" \
-                  "🤖 x86 & x64" "$ANDROID_X86_LINK" \
-                  "🤖 universal" "$ANDROID_UNIVERSAL_LINK"
-
+          add_row "🤖 Android ➡️" "" \
+                  "arm64" "$ANDROID_ARM64_LINK" \
+                  "armeabi-v7a" "$ANDROID_ARMEABI_LINK" \
+                  "x86 & x64" "$ANDROID_X86_LINK" \
+                  "universal" "$ANDROID_UNIVERSAL_LINK"
+          
           # Linux row
-          add_row "🐧 ZIP" "$LINUX_ZIP_LINK" \
-                  "🐧 AppImage" "$LINUX_APPIMAGE_LINK" \
-                  "🐧 RPM" "$LINUX_RPM_LINK"
-
+          add_row "🐧 Linux ➡️" "" \
+                  "ZIP" "$LINUX_ZIP_LINK" \
+                  "AppImage" "$LINUX_APPIMAGE_LINK" \
+                  "RPM" "$LINUX_RPM_LINK"
+          
           # Windows row
-          add_row "🖥️ ZIP" "$WINDOWS_ZIP_LINK" \
-                  "🖥️ EXE" "$WINDOWS_EXE_LINK"
-
-          # iOS & macOS row
-          add_row "🍏 iOS" "$IOS_LINK" \
-                  "🍎 macOS" "$MACOS_LINK"
+          add_row "🖥️ Windows ➡️" "" \
+                  "ZIP" "$WINDOWS_ZIP_LINK" \
+                  "EXE" "$WINDOWS_EXE_LINK"
+          
+          # iOS row
+          add_row "🍏 iOS ➡️" "" \
+                  "IPA" "$IOS_LINK"
+          
+          # macOS row
+          add_row "🍎 macOS ➡️" "" \
+                  "DMG" "$MACOS_LINK"
 
           # Construct the final message JSON
           MESSAGE_JSON=$(jq -n \
