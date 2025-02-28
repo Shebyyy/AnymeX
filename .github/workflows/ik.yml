@@ -29,45 +29,43 @@ jobs:
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
-          # Define your custom emoji images
-          ANDROID_ICON="https://i.imgur.com/WkN2Wfc.png"
-          WINDOWS_ICON="https://i.imgur.com/THq9eXI.png"
-          MACOS_ICON="https://i.imgur.com/QRfgvrv.png"
-          LINUX_ICON="https://i.imgur.com/aQxJ1FV.png"
-          IOS_ICON="https://i.imgur.com/QRfgvrv.png"  # Add iOS icon here
-      
-          # Construct the message
+          # Function to add a row with multiple buttons
+          add_row() {
+            local ROW="[]"
+            for ((i=1; i<=$#; i+=2)); do
+              local LABEL=${!i}
+              local LINK_VAR=$((i+1))
+              local LINK=${!LINK_VAR}
+              if [[ -n "$LINK" ]]; then
+                ROW=$(echo $ROW | jq --arg label "$LABEL" --arg url "$LINK" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
+              fi
+            done
+            COMPONENTS=$(echo $COMPONENTS | jq --argjson row "$ROW" '. + [{"type": 1, "components": $row}]')
+          }
+          # Initialize the components array
+          COMPONENTS="[]"
+          # Android row
+          add_row "🤖 arm64" "$ANDROID_ARM64_LINK" \
+                  "🤖 armeabi-v7a" "$ANDROID_ARMEABI_LINK" \
+                  "🤖 x86 & x64" "$ANDROID_X86_LINK" \
+                  "🤖 universal" "$ANDROID_UNIVERSAL_LINK"
+          # Linux row
+          add_row "🐧 ZIP" "$LINUX_ZIP_LINK" \
+                  "🐧 AppImage" "$LINUX_APPIMAGE_LINK" \
+                  "🐧 RPM" "$LINUX_RPM_LINK"
+          # Windows row
+          add_row "🪟 ZIP" "$WINDOWS_ZIP_LINK" \
+                  "🪟 EXE" "$WINDOWS_EXE_LINK"
+          # iOS & macOS row
+          add_row "🍏 iOS" "$IOS_LINK" \
+                  "🍎 macOS" "$MACOS_LINK"
+                  
+          # Construct the final message JSON
           MESSAGE_JSON=$(jq -n \
-            --arg content "🚀 **New Build Available!** Click a button below to download:\n\n\
-            🟢 **Android** ![]($ANDROID_ICON)\n\
-            🟢 **Windows** ![]($WINDOWS_ICON)\n\
-            🟢 **MacOS** ![]($MACOS_ICON)\n\
-            🟢 **Linux** ![]($LINUX_ICON)\n\
-            🟢 **iOS** ![]($IOS_ICON)" \
-            --argjson components '[
-              {"type": 1, "components": [
-                {"type": 2, "label": "Android arm64", "style": 5, "url": "'"$ANDROID_ARM64_LINK"'"},
-                {"type": 2, "label": "Android armeabi-v7a", "style": 5, "url": "'"$ANDROID_ARMEABI_LINK"'"}
-              ]},
-              {"type": 1, "components": [
-                {"type": 2, "label": "Windows ZIP", "style": 5, "url": "'"$WINDOWS_ZIP_LINK"'"},
-                {"type": 2, "label": "Windows EXE", "style": 5, "url": "'"$WINDOWS_EXE_LINK"'"}
-              ]},
-              {"type": 1, "components": [
-                {"type": 2, "label": "macOS", "style": 5, "url": "'"$MACOS_LINK"'"}
-              ]},
-              {"type": 1, "components": [
-                {"type": 2, "label": "Linux ZIP", "style": 5, "url": "'"$LINUX_ZIP_LINK"'"},
-                {"type": 2, "label": "Linux AppImage", "style": 5, "url": "'"$LINUX_APPIMAGE_LINK"'"},
-                {"type": 2, "label": "Linux RPM", "style": 5, "url": "'"$LINUX_RPM_LINK"'"}
-              ]},
-              {"type": 1, "components": [
-                {"type": 2, "label": "iOS", "style": 5, "url": "'"$IOS_LINK"'"}
-              ]}
-            ]' \
+            --arg content "🚀 **New Build Available!** Click a button below to download:" \
+            --argjson components "$COMPONENTS" \
             '{"content": $content, "components": $components}'
           )
-      
           # Send the message to Discord
           curl -X POST \
                -H "Content-Type: application/json" \
