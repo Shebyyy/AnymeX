@@ -29,45 +29,33 @@ jobs:
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
-          # Function to add a row with multiple buttons
-          add_row() {
-            local ROW="[]"
-            for ((i=1; i<=$#; i+=2)); do
-              local LABEL=${!i}
-              local LINK_VAR=$((i+1))
-              local LINK=${!LINK_VAR}
-              if [[ -n "$LINK" ]]; then
-                ROW=$(echo $ROW | jq --arg label "$LABEL" --arg url "$LINK" '. + [{"type": 2, "label": $label, "style": 5, "url": $url}]')
-              fi
-            done
-            COMPONENTS=$(echo $COMPONENTS | jq --argjson row "$ROW" '. + [{"type": 1, "components": $row}]')
-          }
-          # Initialize the components array
-          COMPONENTS="[]"
-          # Android row
-          add_row "🤖 arm64" "$ANDROID_ARM64_LINK" \
-                  "🤖 armeabi-v7a" "$ANDROID_ARMEABI_LINK" \
-                  "🤖 x86 & x64" "$ANDROID_X86_LINK" \
-                  "🤖 universal" "$ANDROID_UNIVERSAL_LINK"
-          # Linux row
-          add_row "🐧 ZIP" "$LINUX_ZIP_LINK" \
-                  "🐧 AppImage" "$LINUX_APPIMAGE_LINK" \
-                  "🐧 RPM" "$LINUX_RPM_LINK"
-          # Windows row
-          add_row "🪟 ZIP" "$WINDOWS_ZIP_LINK" \
-                  "🪟 EXE" "$WINDOWS_EXE_LINK"
-          # iOS & macOS row
-          add_row "🍏 iOS" "$IOS_LINK" \
-                  "🍎 macOS" "$MACOS_LINK"
-                  
-          # Construct the final message JSON
-          MESSAGE_JSON=$(jq -n \
-            --arg content "🚀 **New Build Available!** Click a button below to download:" \
-            --argjson components "$COMPONENTS" \
-            '{"content": $content, "components": $components}'
-          )
-          # Send the message to Discord
-          curl -X POST \
-               -H "Content-Type: application/json" \
-               -d "$MESSAGE_JSON" \
-               "$DISCORD_WEBHOOK?wait=true&with_components=true"
+
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
+            "text": "🚀 *New Build Available!* Click a button below to download:",
+            "parse_mode": "Markdown",
+            "reply_markup": {
+              "inline_keyboard": [
+                [
+                  { "text": "🤖 Android arm64", "url": "https://example.com/android-arm64-v1.0.0.apk" },
+                  { "text": "🤖 Android armeabi-v7a", "url": "https://example.com/android-armeabi-v7a-v1.0.0.apk" }
+                ],
+                [
+                  { "text": "🐧 Linux ZIP", "url": "https://example.com/linux-v1.0.0.zip" },
+                  { "text": "🐧 Linux AppImage", "url": "https://example.com/linux-v1.0.0.AppImage" }
+                ],
+                [
+                  { "text": "🖥️ Windows ZIP", "url": "https://example.com/windows-v1.0.0.zip" },
+                  { "text": "🖥️ Windows EXE", "url": "https://example.com/windows-v1.0.0.exe" }
+                ],
+                [
+                  { "text": "🍎 macOS", "url": "https://example.com/macos-v1.0.0.dmg" }
+                ],
+                [
+                  { "text": "📱 iOS", "url": "https://example.com/ios-v1.0.0.ipa" }
+                ]
+              ]
+            }
+          }'
