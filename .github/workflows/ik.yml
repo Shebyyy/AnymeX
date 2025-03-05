@@ -29,16 +29,7 @@ jobs:
           WINDOWS_ZIP_LINK: https://example.com/windows-v1.0.0.zip
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
-        run: |
-          # Send Image First
-          curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendPhoto" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "chat_id": "'$TELEGRAM_CHAT_ID'",
-            "caption": "🚀 *New Build Available!* Choose your platform below:",
-            "parse_mode": "Markdown"
-          }'
-      
+        run: |   
           # Send Download Buttons
           curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
           -H "Content-Type: application/json" \
