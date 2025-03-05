@@ -630,8 +630,8 @@ jobs:
                   "🐧 AppImage" "$LINUX_APPIMAGE_LINK" \
                   "🐧 RPM" "$LINUX_RPM_LINK"
           # Windows row
-          add_row "🖥️ ZIP" "$WINDOWS_ZIP_LINK" \
-                  "🖥️ EXE" "$WINDOWS_EXE_LINK"
+          add_row "🪟 ZIP" "$WINDOWS_ZIP_LINK" \
+                  "🪟 EXE" "$WINDOWS_EXE_LINK"
           # iOS & macOS row
           add_row "🍏 iOS" "$IOS_LINK" \
                   "🍎 macOS" "$MACOS_LINK"
@@ -662,24 +662,36 @@ jobs:
           WINDOWS_EXE_LINK: ${{ needs.build-windows.outputs.windows_exe_link }}
           MACOS_LINK: ${{ needs.build-macos.outputs.macos_link }}
         run: |
-          TELEGRAM_MESSAGE="🎉 *${{ env.LATEST_TAG }} Released* 🎉
-      
-          🔹 [Download]($ANDROID_ARM64_LINK) | **Android (arm64)**
-          🔹 [Download]($ANDROID_ARMEABI_LINK) | **Android (armeabi-v7a)**
-          🔹 [Download]($ANDROID_UNIVERSAL_LINK) | **Android (universal)**
-          🔹 [Download]($ANDROID_X86_LINK) | **Android (x86 & x64)**
-          🔹 [Download]($WINDOWS_ZIP_LINK) | **Windows ZIP**
-          🔹 [Download]($WINDOWS_EXE_LINK) | **Windows EXE**
-          🔹 [Download]($LINUX_ZIP_LINK) | **Linux ZIP**
-          🔹 [Download]($LINUX_APPIMAGE_LINK) | **Linux AppImage**
-          🔹 [Download]($LINUX_RPM_LINK) | **Linux RPM**
-          🔹 [Download]($IOS_LINK) | **iOS**
-          🔹 [Download]($MACOS_LINK) | **macOS**"
-      
-          curl -sS -f -X POST \
-              "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-              -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-              -F "message_thread_id=${{ secrets.TELEGRAM_THREAD_ID }}" \
-              -F parse_mode="Markdown" \
-              -F disable_notification=true \
-              -F "text=$TELEGRAM_MESSAGE"
+            curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
+                "message_thread_id": "${{ secrets.TELEGRAM_THREAD_ID }}",
+                "text": "🚀 *New Build Available!* Choose your platform below:",
+                "parse_mode": "Markdown",
+                "reply_markup": {
+                  "inline_keyboard": [
+                    [
+                      { "text": "🤖 arm64", "url": "${{ secrets.ANDROID_ARM64_LINK }}" },
+                      { "text": "🤖 armeabi-v7a", "url": "${{ secrets.ANDROID_ARMEABI_LINK }}" }
+                    ],
+                    [
+                      { "text": "🤖 x86", "url": "${{ secrets.ANDROID_X86_LINK }}" },
+                      { "text": "🤖 Universal", "url": "${{ secrets.ANDROID_UNIVERSAL_LINK }}" }
+                    ],
+                    [
+                      { "text": "🐧 ZIP", "url": "${{ secrets.LINUX_ZIP_LINK }}" },
+                      { "text": "🐧 AppImage", "url": "${{ secrets.LINUX_APPIMAGE_LINK }}" },
+                      { "text": "🐧 RPM", "url": "${{ secrets.LINUX_RPM_LINK }}" }
+                    ],
+                    [
+                      { "text": "🪟 ZIP", "url": "${{ secrets.WINDOWS_ZIP_LINK }}" },
+                      { "text": "🪟 EXE", "url": "${{ secrets.WINDOWS_EXE_LINK }}" }
+                    ],
+                    [
+                      { "text": "🍎 macOS", "url": "${{ secrets.MACOS_LINK }}" },
+                      { "text": "🍏 iOS", "url": "${{ secrets.IOS_LINK }}" }
+                    ]
+                  ]
+                }
+              }'
