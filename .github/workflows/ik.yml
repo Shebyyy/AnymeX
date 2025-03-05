@@ -30,34 +30,35 @@ jobs:
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |   
-          # Send Download Buttons
           curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "chat_id": "'$TELEGRAM_CHAT_ID'",
-            "reply_markup": {
-              "inline_keyboard": [
-                [
-                  { "text": "🤖 arm64", "url": "'$ANDROID_ARM64_LINK'" },
-                  { "text": "🤖 armeabi-v7a", "url": "'$ANDROID_ARMEABI_LINK'" }
-                ],
-                [
-                  { "text": "🤖 x86", "url": "'$ANDROID_X86_LINK'" },
-                  { "text": "🤖 Universal", "url": "'$ANDROID_UNIVERSAL_LINK'" }
-                ],
-                [
-                  { "text": "🐧 ZIP", "url": "'$LINUX_ZIP_LINK'" },
-                  { "text": "🐧 AppImage", "url": "'$LINUX_APPIMAGE_LINK'" },
-                  { "text": "🐧 RPM", "url": "'$LINUX_RPM_LINK'" }
-                ],
-                [
-                  { "text": "🖥️ ZIP", "url": "'$WINDOWS_ZIP_LINK'" },
-                  { "text": "🖥️ EXE", "url": "'$WINDOWS_EXE_LINK'" }
-                ],
-                [
-                  { "text": "🍎 macOS", "url": "'$MACOS_LINK'" },
-                  { "text": "📱 iOS", "url": "'$IOS_LINK'" }
+            -H "Content-Type: application/json" \
+            -d '{
+              "chat_id": "'$TELEGRAM_CHAT_ID'",
+              "text": "🚀 *New Build Available!* Choose your platform below:",
+              "parse_mode": "Markdown",
+              "reply_markup": {
+                "inline_keyboard": [
+                  [
+                    { "text": "🤖 arm64", "url": "'$ANDROID_ARM64_LINK'" },
+                    { "text": "🤖 armeabi-v7a", "url": "'$ANDROID_ARMEABI_LINK'" }
+                  ],
+                  [
+                    { "text": "🤖 x86", "url": "'$ANDROID_X86_LINK'" },
+                    { "text": "🤖 Universal", "url": "'$ANDROID_UNIVERSAL_LINK'" }
+                  ],
+                  [
+                    { "text": "🐧 ZIP", "url": "'$LINUX_ZIP_LINK'" },
+                    { "text": "🐧 AppImage", "url": "'$LINUX_APPIMAGE_LINK'" },
+                    { "text": "🐧 RPM", "url": "'$LINUX_RPM_LINK'" }
+                  ],
+                  [
+                    { "text": "🖥️ ZIP", "url": "'$WINDOWS_ZIP_LINK'" },
+                    { "text": "🖥️ EXE", "url": "'$WINDOWS_EXE_LINK'" }
+                  ],
+                  [
+                    { "text": "🍎 macOS", "url": "'$MACOS_LINK'" },
+                    { "text": "📱 iOS", "url": "'$IOS_LINK'" }
+                  ]
                 ]
-              ]
-            }
-          }'
+              }
+            }'
