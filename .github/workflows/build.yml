@@ -671,27 +671,28 @@ jobs:
                 "parse_mode": "Markdown",
                 "reply_markup": {
                   "inline_keyboard": [
-                    [
-                      { "text": "🤖 arm64", "url": "${{ secrets.ANDROID_ARM64_LINK }}" },
-                      { "text": "🤖 armeabi-v7a", "url": "${{ secrets.ANDROID_ARMEABI_LINK }}" }
-                    ],
-                    [
-                      { "text": "🤖 x86", "url": "${{ secrets.ANDROID_X86_LINK }}" },
-                      { "text": "🤖 Universal", "url": "${{ secrets.ANDROID_UNIVERSAL_LINK }}" }
-                    ],
-                    [
-                      { "text": "🐧 ZIP", "url": "${{ secrets.LINUX_ZIP_LINK }}" },
-                      { "text": "🐧 AppImage", "url": "${{ secrets.LINUX_APPIMAGE_LINK }}" },
-                      { "text": "🐧 RPM", "url": "${{ secrets.LINUX_RPM_LINK }}" }
-                    ],
-                    [
-                      { "text": "🪟 ZIP", "url": "${{ secrets.WINDOWS_ZIP_LINK }}" },
-                      { "text": "🪟 EXE", "url": "${{ secrets.WINDOWS_EXE_LINK }}" }
-                    ],
-                    [
-                      { "text": "🍎 macOS", "url": "${{ secrets.MACOS_LINK }}" },
-                      { "text": "🍏 iOS", "url": "${{ secrets.IOS_LINK }}" }
-                    ]
+                  [
+                    { "text": "🤖 arm64", "url": "'$ANDROID_ARM64_LINK'" },
+                    { "text": "🤖 armeabi-v7a", "url": "'$ANDROID_ARMEABI_LINK'" }
+                  ],
+                  [
+                    { "text": "🤖 x86", "url": "'$ANDROID_X86_LINK'" },
+                    { "text": "🤖 Universal", "url": "'$ANDROID_UNIVERSAL_LINK'" }
+                  ],
+                  [
+                    { "text": "🐧 ZIP", "url": "'$LINUX_ZIP_LINK'" },
+                    { "text": "🐧 AppImage", "url": "'$LINUX_APPIMAGE_LINK'" },
+                    { "text": "🐧 RPM", "url": "'$LINUX_RPM_LINK'" }
+                  ],
+                  [
+                    { "text": "🪟 ZIP", "url": "'$WINDOWS_ZIP_LINK'" },
+                    { "text": "🪟 EXE", "url": "'$WINDOWS_EXE_LINK'" }
+                  ],
+                  [
+                    { "text": "🍎 macOS", "url": "'$MACOS_LINK'" },
+                    { "text": "🍏 iOS", "url": "'$IOS_LINK'" }
                   ]
-                }
+                ]
+              }
+            }'
               }'
