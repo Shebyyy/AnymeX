@@ -14,9 +14,10 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get install -y jq  # Ensures jq is available
 
-      - name: Send Discord Notification with Custom Images
+      - name: Send Telegram Notification with Image and Buttons
         env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_ALPHA }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ANDROID_ARM64_LINK: https://example.com/android-arm64-v1.0.0.apk
           ANDROID_ARMEABI_LINK: https://example.com/android-armeabi-v7a-v1.0.0.apk
           ANDROID_X86_LINK: https://example.com/android-x86-v1.0.0.apk
@@ -29,32 +30,42 @@ jobs:
           WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
           MACOS_LINK: https://example.com/macos-v1.0.0.dmg
         run: |
-
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          # Send Image First
+          curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendPhoto" \
           -H "Content-Type: application/json" \
           -d '{
-            "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}",
-            "text": "🚀 *New Build Available!* Click a button below to download:",
-            "parse_mode": "Markdown",
+            "chat_id": "'$TELEGRAM_CHAT_ID'",
+            "caption": "🚀 *New Build Available!* Choose your platform below:",
+            "parse_mode": "Markdown"
+          }'
+      
+          # Send Download Buttons
+          curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "chat_id": "'$TELEGRAM_CHAT_ID'",
             "reply_markup": {
               "inline_keyboard": [
                 [
-                  { "text": "🤖 Android arm64", "url": "https://example.com/android-arm64-v1.0.0.apk" },
-                  { "text": "🤖 Android armeabi-v7a", "url": "https://example.com/android-armeabi-v7a-v1.0.0.apk" }
+                  { "text": "🤖 arm64", "url": "'$ANDROID_ARM64_LINK'" },
+                  { "text": "🤖 armeabi-v7a", "url": "'$ANDROID_ARMEABI_LINK'" }
                 ],
                 [
-                  { "text": "🐧 Linux ZIP", "url": "https://example.com/linux-v1.0.0.zip" },
-                  { "text": "🐧 Linux AppImage", "url": "https://example.com/linux-v1.0.0.AppImage" }
+                  { "text": "🤖 x86", "url": "'$ANDROID_X86_LINK'" },
+                  { "text": "🤖 Universal", "url": "'$ANDROID_UNIVERSAL_LINK'" }
                 ],
                 [
-                  { "text": "🖥️ Windows ZIP", "url": "https://example.com/windows-v1.0.0.zip" },
-                  { "text": "🖥️ Windows EXE", "url": "https://example.com/windows-v1.0.0.exe" }
+                  { "text": "🐧 ZIP", "url": "'$LINUX_ZIP_LINK'" },
+                  { "text": "🐧 AppImage", "url": "'$LINUX_APPIMAGE_LINK'" },
+                  { "text": "🐧 RPM", "url": "'$LINUX_RPM_LINK'" }
                 ],
                 [
-                  { "text": "🍎 macOS", "url": "https://example.com/macos-v1.0.0.dmg" }
+                  { "text": "🖥️ ZIP", "url": "'$WINDOWS_ZIP_LINK'" },
+                  { "text": "🖥️ EXE", "url": "'$WINDOWS_EXE_LINK'" }
                 ],
                 [
-                  { "text": "📱 iOS", "url": "https://example.com/ios-v1.0.0.ipa" }
+                  { "text": "🍎 macOS", "url": "'$MACOS_LINK'" },
+                  { "text": "📱 iOS", "url": "'$IOS_LINK'" }
                 ]
               ]
             }
