@@ -1,64 +1,54 @@
-name: Test Platform Messaging
+name: Fetch Torrent RSS & Send to Telegram
 
 on:
-  push:
-    branches:
-      - beta
-  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *" # Runs every hour
+  workflow_dispatch: # Allows manual execution
 
 jobs:
-  test-platform-messages:
+  fetch-and-send:
     runs-on: ubuntu-latest
-    
-    steps:
-      - name: Install dependencies
-        run: sudo apt-get install -y jq  # Ensures jq is available
 
-      - name: Send Telegram Notification with Image and Buttons
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          ANDROID_ARM64_LINK: https://example.com/android-arm64-v1.0.0.apk
-          ANDROID_ARMEABI_LINK: https://example.com/android-armeabi-v7a-v1.0.0.apk
-          ANDROID_X86_LINK: https://example.com/android-x86-v1.0.0.apk
-          ANDROID_UNIVERSAL_LINK: https://example.com/android-universal-v1.0.0.apk
-          IOS_LINK: https://example.com/ios-v1.0.0.ipa
-          LINUX_ZIP_LINK: https://example.com/linux-v1.0.0.zip
-          LINUX_APPIMAGE_LINK: https://example.com/linux-v1.0.0.AppImage
-          LINUX_RPM_LINK: https://example.com/linux-v1.0.0.rpm
-          WINDOWS_ZIP_LINK: https://example.com/windows-v1.0.0.zip
-          WINDOWS_EXE_LINK: https://example.com/windows-v1.0.0.exe
-          MACOS_LINK: https://example.com/macos-v1.0.0.dmg
-        run: |   
-          curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "chat_id": "'$TELEGRAM_CHAT_ID'",
-              "text": "🚀 *New Build Available!* Choose your platform below:",
-              "parse_mode": "Markdown",
-              "reply_markup": {
-                "inline_keyboard": [
-                  [
-                    { "text": "🤖 arm64", "url": "'$ANDROID_ARM64_LINK'" },
-                    { "text": "🤖 armeabi-v7a", "url": "'$ANDROID_ARMEABI_LINK'" }
-                  ],
-                  [
-                    { "text": "🤖 x86", "url": "'$ANDROID_X86_LINK'" },
-                    { "text": "🤖 Universal", "url": "'$ANDROID_UNIVERSAL_LINK'" }
-                  ],
-                  [
-                    { "text": "🐧 ZIP", "url": "'$LINUX_ZIP_LINK'" },
-                    { "text": "🐧 AppImage", "url": "'$LINUX_APPIMAGE_LINK'" },
-                    { "text": "🐧 RPM", "url": "'$LINUX_RPM_LINK'" }
-                  ],
-                  [
-                    { "text": "🖥️ ZIP", "url": "'$WINDOWS_ZIP_LINK'" },
-                    { "text": "🖥️ EXE", "url": "'$WINDOWS_EXE_LINK'" }
-                  ],
-                  [
-                    { "text": "🍎 macOS", "url": "'$MACOS_LINK'" },
-                    { "text": "📱 iOS", "url": "'$IOS_LINK'" }
-                  ]
-                ]
-              }
-            }'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl xmlstarlet
+
+      - name: Fetch Torrent RSS
+        run: |
+          RSS_URL="https://nyaa.si/?page=rss" # Change to your RSS feed
+          FEED_XML=$(curl -s "$RSS_URL")
+          
+          echo "$FEED_XML" > feed.xml  # Save for debugging
+
+          # Extract torrent details
+          COUNT=0
+          while IFS= read -r line; do
+            TITLE=$(echo "$line" | xmlstarlet sel -t -v "//item[$COUNT]/title" 2>/dev/null)
+            LINK=$(echo "$line" | xmlstarlet sel -t -v "//item[$COUNT]/link" 2>/dev/null)
+            TORRENT_URL="$LINK/download" # Adjust for your site
+            SEEDS=$(echo "$line" | xmlstarlet sel -t -v "//item[$COUNT]/seeders" 2>/dev/null)
+            LEECHES=$(echo "$line" | xmlstarlet sel -t -v "//item[$COUNT]/leechers" 2>/dev/null)
+            
+            [[ -z "$TITLE" ]] && break
+
+            MESSAGE="🎬 *$TITLE*  
+            📥 [Download Torrent]($TORRENT_URL)  
+            🌱 *Seeders:* $SEEDS | 🐢 *Leechers:* $LEECHES"
+
+            # Send to Telegram
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              -d "parse_mode=Markdown" \
+              -d "text=$MESSAGE" \
+              -d "reply_markup={\"inline_keyboard\":[[{\"text\":\"Download Torrent\",\"url\":\"$TORRENT_URL\"}]]}"
+
+            ((COUNT++))
+          done <<< "$(echo "$FEED_XML" | xmlstarlet sel -t -m "//item" -c ".")"
+
+      - name: Clean up
+        run: rm -f feed.xml
