@@ -1,4 +1,4 @@
-name: Generate Changelog
+name: Changelog
 
 on:
   workflow_run:
@@ -78,7 +78,7 @@ jobs:
           echo "$COMMITS" > commits.txt
           echo "commits_file=commits.txt" >> $GITHUB_ENV
 
-      - name: Generate changelog content
+      - name: Generate changelog
         id: generate_changelog
         run: |
           echo "Generating changelog content..."
@@ -177,8 +177,6 @@ EOF
             echo "" >> CHANGELOG.md
             echo -e "$CHORES" >> CHANGELOG.md
           fi
-          
-
           
           # Add footer
           echo "" >> CHANGELOG.md
