@@ -1,4 +1,4 @@
-name: Changelog
+name: changelog
 
 on:
   workflow_run:
@@ -9,216 +9,161 @@ on:
   workflow_dispatch: # Allow manual triggering of this workflow
 
 jobs:
-  generate-changelog:
+  notify:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Get latest tag
-        id: get_latest_tag
+    
+      # Clear existing CHANGELOG.md
+      - name: Clear CHANGELOG.md
         run: |
-          # Fetch all tags
-          git fetch --tags
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+      # Step 1: Get the latest tag FIRST
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          # Fetch all tags to make sure we have the latest
+          git fetch --tags --force
           # Get the latest tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          echo "Latest tag: $LATEST_TAG"
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$TAG" ]; then
+            echo "No tags found"
+            exit 1
+          fi
+          echo "Latest tag: $TAG"
+          echo "latest_tag=$TAG" >> $GITHUB_ENV
+          echo "latest_tag=$TAG" >> $GITHUB_OUTPUT
     
       - name: Get previous tag
         id: get_prev_tag
         run: |
           echo "Getting the previous tag..."
-          if [ -n "${{ env.latest_tag }}" ]; then
-            # Get the tag before the latest one
-            PREV_TAG=$(git describe --tags --abbrev=0 ${{ env.latest_tag }}^ 2>/dev/null || echo "")
-          else
-            PREV_TAG=""
-          fi
-          
+          # Get the tag before the latest one
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ env.latest_tag }}^ 2>/dev/null || echo "")
+          echo "Previous tag retrieved: $PREV_TAG"
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag found, using the initial commit."
             PREV_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
-          
-          echo "Previous tag: $PREV_TAG"
           echo "prev_tag=$PREV_TAG" >> $GITHUB_ENV
-          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
           
       - name: Get commit messages between tags
         id: get_commits
         run: |
-          echo "Getting commit messages between ${{ env.prev_tag }} and ${{ env.latest_tag }}..."
-          
-          if [ -n "${{ env.latest_tag }}" ]; then
-            RANGE="${{ env.prev_tag }}..${{ env.latest_tag }}"
-          else
-            RANGE="${{ env.prev_tag }}..HEAD"
-          fi
-          
-          echo "Using range: $RANGE"
-          
-          # Get commits with better formatting
-          COMMITS=$(git log $RANGE --pretty=format:'%h|%s|%an|%ad' --date=short)
-          COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
-          echo "Total commits retrieved: $COMMIT_COUNT"
-          echo "Commits retrieved (first 5 lines):"
-          echo "$COMMITS" | head -5
-          
-          # Save commits to file to handle multiline properly
-          echo "$COMMITS" > commits.txt
-          echo "commits_file=commits.txt" >> $GITHUB_ENV
+          echo "Getting commit messages between tags..."
+          echo "Range: ${{ env.prev_tag }}..${{ env.latest_tag }}"
+          COMMITS=$(git log ${{ env.prev_tag }}..${{ env.latest_tag }} --pretty=format:'%h %s' | tr '\n' '|')
+          echo "Commits retrieved: $COMMITS"
+          echo "commits=$COMMITS" >> $GITHUB_ENV
 
-      - name: Generate changelog
-        id: generate_changelog
+      - name: Categorize commits
+        id: categorize
         run: |
-          echo "Generating changelog content..."
-          
-          # Initialize changelog with header
-          cat > CHANGELOG.md << EOF
-# Changelog for ${{ env.latest_tag }}
-
-Generated on $(date '+%Y-%m-%d %H:%M:%S UTC')
-
-EOF
-
-          # Initialize category variables
+          echo "Categorizing commits..."
           FEATURES=""
           BUG_FIXES=""
           REFACTORS=""
           STYLE_CHANGES=""
           PERFORMANCE=""
           CHORES=""
-          OTHER=""
-          
           REPO_URL="https://github.com/${{ github.repository }}"
-          
-          # Process commits
-          while IFS='|' read -r HASH MESSAGE AUTHOR DATE; do
-            if [ -z "$HASH" ]; then continue; fi
-            
+    
+          IFS='|' read -ra COMMIT_LIST <<< "${{ env.commits }}"
+          echo "Commit list: ${COMMIT_LIST[@]}"
+          for LINE in "${COMMIT_LIST[@]}"; do
+            if [ -z "$LINE" ]; then continue; fi
+            HASH=$(echo "$LINE" | awk '{print $1}')
+            MESSAGE=$(echo "$LINE" | cut -d' ' -f2-)
             LINK="[$HASH]($REPO_URL/commit/$HASH)"
-            FORMATTED_COMMIT="* $LINK: $MESSAGE (by $AUTHOR on $DATE)"
-            
-            # Categorize based on commit message patterns
-            case "$MESSAGE" in
-              feat:* | feature:* | add:*)
-                FEATURES+="$FORMATTED_COMMIT\n"
-                ;;
-              fix:* | bug:* | hotfix:* | patch:*)
-                BUG_FIXES+="$FORMATTED_COMMIT\n"
-                ;;
-              refactor:* | refact:*)
-                REFACTORS+="$FORMATTED_COMMIT\n"
-                ;;
-              style:* | format:*)
-                STYLE_CHANGES+="$FORMATTED_COMMIT\n"
-                ;;
-              perf:* | performance:* | optimize:*)
-                PERFORMANCE+="$FORMATTED_COMMIT\n"
-                ;;
-              chore:* | docs:* | build:* | ci:* | test:*)
-                CHORES+="$FORMATTED_COMMIT\n"
-                ;;
-              *)
-                OTHER+="$FORMATTED_COMMIT\n"
-                ;;
-            esac
-          done < commits.txt
-          
-          # Add sections to changelog if they have content
+
+            FORMATTED_COMMIT="* $LINK: $MESSAGE"
+            echo "Processing commit: $FORMATTED_COMMIT"
+            if [[ $MESSAGE == feat* ]]; then
+              FEATURES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == fix* || $MESSAGE == bug* || $MESSAGE == improvement* || $MESSAGE == patch* ]]; then
+              BUG_FIXES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == refactor* ]]; then
+              REFACTORS+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == style* ]]; then
+              STYLE_CHANGES+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == perf* ]]; then
+              PERFORMANCE+="$FORMATTED_COMMIT\n"
+            elif [[ $MESSAGE == chore* || $MESSAGE == docs* || $MESSAGE == build* || $MESSAGE == ci* ]]; then
+              CHORES+="$FORMATTED_COMMIT\n"
+            fi
+          done
+
           if [ -n "$FEATURES" ]; then
-            echo "" >> CHANGELOG.md
-            echo "## 🎉 New Features" >> CHANGELOG.md
+            echo "### 🎉 New Features" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
             echo -e "$FEATURES" >> CHANGELOG.md
-          fi
-          
-          if [ -n "$BUG_FIXES" ]; then
             echo "" >> CHANGELOG.md
-            echo "## 🛠️ Bug Fixes & Improvements" >> CHANGELOG.md
+          fi
+          if [ -n "$BUG_FIXES" ]; then
+            echo "### 🛠️ Bug Fixes & Improvements" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
             echo -e "$BUG_FIXES" >> CHANGELOG.md
-          fi
-          
-          if [ -n "$PERFORMANCE" ]; then
             echo "" >> CHANGELOG.md
-            echo "## 🚀 Performance Improvements" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo -e "$PERFORMANCE" >> CHANGELOG.md
           fi
-          
           if [ -n "$REFACTORS" ]; then
-            echo "" >> CHANGELOG.md
-            echo "## 🔧 Refactors" >> CHANGELOG.md
+            echo "### 🔧 Refactors" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
             echo -e "$REFACTORS" >> CHANGELOG.md
-          fi
-          
-          if [ -n "$STYLE_CHANGES" ]; then
             echo "" >> CHANGELOG.md
-            echo "## 🎨 Style Changes" >> CHANGELOG.md
+          fi
+          if [ -n "$STYLE_CHANGES" ]; then
+            echo "### 🎨 Style Changes" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
             echo -e "$STYLE_CHANGES" >> CHANGELOG.md
-          fi
-          
-          if [ -n "$CHORES" ]; then
             echo "" >> CHANGELOG.md
-            echo "## 🧹 Chores & Documentation" >> CHANGELOG.md
+          fi
+          if [ -n "$PERFORMANCE" ]; then
+            echo "### 🚀 Performance Improvements" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$PERFORMANCE" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+          if [ -n "$CHORES" ]; then
+            echo "### 🧹 Chores & Documentation" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
             echo -e "$CHORES" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
           fi
-          
-          # Add footer
-          echo "" >> CHANGELOG.md
-          echo "---" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "**Full Changelog**: [${{ env.prev_tag }}...${{ env.latest_tag }}]($REPO_URL/compare/${{ env.prev_tag }}...${{ env.latest_tag }})" >> CHANGELOG.md
-          
-          echo "Changelog generated successfully!"
 
-      - name: Display changelog preview
+      - name: Display changelog for debugging
         run: |
-          echo "=== CHANGELOG PREVIEW ==="
+          echo "=== Generated Changelog ==="
           cat CHANGELOG.md
-          echo "========================"
+          echo "=========================="
 
       - name: Commit and push changelog
-        if: env.latest_tag != ''
         run: |
           echo "Committing and pushing changelog..."
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           
-          # Check if there are changes to commit
           if git diff --quiet CHANGELOG.md; then
-            echo "No changes to changelog, skipping commit"
+            echo "No changes to commit"
           else
             git add CHANGELOG.md
-            git commit -m "📝 Update changelog for version ${{ env.latest_tag }}"
+            git commit -m "Update changelog for version ${{ env.latest_tag }}"
             git push origin HEAD:${{ github.ref_name }}
           fi
 
+      # Step 4: Run release action with the latest tag
       - name: Create or Update Release
-        if: env.latest_tag != ''
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           bodyFile: CHANGELOG.md
-          tag: ${{ env.latest_tag }}
+          tag: ${{ env.latest_tag }} # Use the latest tag
           name: "Release ${{ env.latest_tag }}"
           allowUpdates: true
-          makeLatest: true
-          
-      - name: Cleanup temporary files
-        run: |
-          rm -f commits.txt
