@@ -1,4 +1,4 @@
-name: changelog
+name: Generate Changelog
 
 on:
   workflow_run:
@@ -9,225 +9,218 @@ on:
   workflow_dispatch: # Allow manual triggering of this workflow
 
 jobs:
-  notify:
-    # Corrected IF condition to allow both manual and workflow_run triggers
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+  generate-changelog:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    outputs: # Define outputs if other jobs need info from this one
-      current_tag: ${{ steps.get_current_tag.outputs.tag_name }}
+    permissions:
+      contents: write
+      pull-requests: write
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for git log and tags
-          # token: ${{ secrets.PAT_FOR_CHANGELOG_COMMIT }} # Use a PAT if you need to trigger other workflows from the push
-
-      # Step 1: Determine the current tag (the one this changelog is for)
-      - name: Get current tag
-        id: get_current_tag
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get latest tag
+        id: get_latest_tag
         run: |
-          echo "Determining current tag..."
-          # Fetch all tags to ensure git describe works accurately with remote tags
-          git fetch --tags --force
-          
-          # Try to get the exact tag on HEAD. This assumes HEAD is the commit for the new release.
-          # This is usually true if "Build and Release AnymeX" created a tag on github.event.workflow_run.head_sha
-          # or if manually dispatched on a tag ref.
-          CURRENT_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null)
-          
-          if [ -z "$CURRENT_TAG" ]; then
-            echo "HEAD is not an exact tag. Falling back to the latest tag in history."
-            # This gets the most recent tag. Assumes "Build and Release AnymeX" created it.
-            CURRENT_TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null)
-          fi
-
-          if [ -z "$CURRENT_TAG" ]; then
-            # If workflow_dispatch was on a branch, or if "Build and Release AnymeX" somehow didn't result in a usable tag.
-            if [[ "${{ github.ref_name }}" == v* && "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-               echo "Using github.ref_name as current tag: ${{ github.ref_name }}"
-               CURRENT_TAG="${{ github.ref_name }}"
-            else
-              echo "::error::Could not determine the current tag for this release."
-              echo "If running via workflow_dispatch, ensure you are on a tag or that 'Build and Release AnymeX' creates a tag."
-              exit 1
-            fi
-          fi
-          echo "Current tag: $CURRENT_TAG"
-          echo "tag_name=$CURRENT_TAG" >> $GITHUB_ENV
-          echo "tag_name=$CURRENT_TAG" >> $GITHUB_OUTPUT
-        
+          # Fetch all tags
+          git fetch --tags
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "Latest tag: $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_ENV
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+    
       - name: Get previous tag
         id: get_prev_tag
         run: |
-          echo "Getting the previous tag relative to ${{ env.tag_name }}..."
-          # Get the tag before the current one
-          PREV_TAG=$(git describe --tags --abbrev=0 ${{ env.tag_name }}^ 2>/dev/null)
+          echo "Getting the previous tag..."
+          if [ -n "${{ env.latest_tag }}" ]; then
+            # Get the tag before the latest one
+            PREV_TAG=$(git describe --tags --abbrev=0 ${{ env.latest_tag }}^ 2>/dev/null || echo "")
+          else
+            PREV_TAG=""
+          fi
           
           if [ -z "$PREV_TAG" ]; then
-            echo "No tag found on ${{ env.tag_name }}^. Trying to find the second most recent tag."
-            # Fallback: get the tag before the latest tag in the list of all tags
-            PREV_TAG=$(git describe --tags $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null)
+            echo "No previous tag found, using the initial commit."
+            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
-
-          if [ -z "$PREV_TAG" ]; then
-            echo "No previous tag found. Using the initial commit as the baseline."
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD) # Get the SHA of the very first commit
-          fi
-          echo "prev_tag_ref=$PREV_TAG" >> $GITHUB_ENV
-          echo "Previous tag reference: $PREV_TAG"
           
-      - name: Generate changelog content
-        id: generate_changelog_content
+          echo "Previous tag: $PREV_TAG"
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_ENV
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          
+      - name: Get commit messages between tags
+        id: get_commits
         run: |
-          echo "Getting commit messages between ${{ env.prev_tag_ref }} and ${{ env.tag_name }} (HEAD)..."
-          # Using HEAD here, as current_tag_name points to it or is the reference for it.
-          COMMITS_LOG=$(git log ${{ env.prev_tag_ref }}..HEAD --pretty=format:'%h %s')
+          echo "Getting commit messages between ${{ env.prev_tag }} and ${{ env.latest_tag }}..."
           
-          if [ -z "$COMMITS_LOG" ]; then
-            echo "No new commits found since previous tag."
-            # Initialize CHANGELOG.md with the header and a message
-            echo "# Changelog for ${{ env.tag_name }}" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "No code changes in this version." >> CHANGELOG.md
-            exit 0 # Exit script successfully, changelog file is prepared
+          if [ -n "${{ env.latest_tag }}" ]; then
+            RANGE="${{ env.prev_tag }}..${{ env.latest_tag }}"
+          else
+            RANGE="${{ env.prev_tag }}..HEAD"
           fi
+          
+          echo "Using range: $RANGE"
+          
+          # Get commits with better formatting
+          COMMITS=$(git log $RANGE --pretty=format:'%h|%s|%an|%ad' --date=short)
+          COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
+          echo "Total commits retrieved: $COMMIT_COUNT"
+          echo "Commits retrieved (first 5 lines):"
+          echo "$COMMITS" | head -5
+          
+          # Save commits to file to handle multiline properly
+          echo "$COMMITS" > commits.txt
+          echo "commits_file=commits.txt" >> $GITHUB_ENV
 
-          # Convert multi-line commit log to an array (safer than IFS='|')
-          mapfile -t COMMIT_LINES <<< "$COMMITS_LOG"
+      - name: Generate changelog content
+        id: generate_changelog
+        run: |
+          echo "Generating changelog content..."
+          
+          # Initialize changelog with header
+          cat > CHANGELOG.md << EOF
+# Changelog for ${{ env.latest_tag }}
 
-          echo "Categorizing commits..."
+Generated on $(date '+%Y-%m-%d %H:%M:%S UTC')
+
+EOF
+
+          # Initialize category variables
           FEATURES=""
           BUG_FIXES=""
           REFACTORS=""
           STYLE_CHANGES=""
           PERFORMANCE=""
           CHORES=""
+          OTHER=""
+          
           REPO_URL="https://github.com/${{ github.repository }}"
-
-          for LINE in "${COMMIT_LINES[@]}"; do
-            [ -z "$LINE" ] && continue # Skip empty lines
-            HASH=$(echo "$LINE" | awk '{print $1}')
-            MESSAGE=$(echo "$LINE" | cut -d' ' -f2-)
+          
+          # Process commits
+          while IFS='|' read -r HASH MESSAGE AUTHOR DATE; do
+            if [ -z "$HASH" ]; then continue; fi
+            
             LINK="[$HASH]($REPO_URL/commit/$HASH)"
-            FORMATTED_COMMIT="* $LINK: $MESSAGE"
-
-            echo "Processing commit: $FORMATTED_COMMIT"
-            if [[ $MESSAGE == feat* || $MESSAGE == feature* ]]; then
-              FEATURES+="$FORMATTED_COMMIT\n"
-            elif [[ $MESSAGE == fix* || $MESSAGE == bug* || $MESSAGE == improvement* || $MESSAGE == patch* ]]; then
-              BUG_FIXES+="$FORMATTED_COMMIT\n"
-            elif [[ $MESSAGE == refactor* ]]; then
-              REFACTORS+="$FORMATTED_COMMIT\n"
-            elif [[ $MESSAGE == style* ]]; then
-              STYLE_CHANGES+="$FORMATTED_COMMIT\n"
-            elif [[ $MESSAGE == perf* ]]; then
-              PERFORMANCE+="$FORMATTED_COMMIT\n"
-            elif [[ $MESSAGE == chore* || $MESSAGE == docs* || $MESSAGE == build* || $MESSAGE == ci* || $MESSAGE == test* ]]; then
-              CHORES+="$FORMATTED_COMMIT\n"
-            fi
-          done
-
-          # Start with the header for the current tag
-          echo "# Changelog for ${{ env.tag_name }}" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          # Optional: echo "Changes since ${{ env.prev_tag_ref }}" >> CHANGELOG.md
-          # Optional: echo "" >> CHANGELOG.md
-
-          CHANGELOG_HAS_CONTENT=false
+            FORMATTED_COMMIT="* $LINK: $MESSAGE (by $AUTHOR on $DATE)"
+            
+            # Categorize based on commit message patterns
+            case "$MESSAGE" in
+              feat:* | feature:* | add:*)
+                FEATURES+="$FORMATTED_COMMIT\n"
+                ;;
+              fix:* | bug:* | hotfix:* | patch:*)
+                BUG_FIXES+="$FORMATTED_COMMIT\n"
+                ;;
+              refactor:* | refact:*)
+                REFACTORS+="$FORMATTED_COMMIT\n"
+                ;;
+              style:* | format:*)
+                STYLE_CHANGES+="$FORMATTED_COMMIT\n"
+                ;;
+              perf:* | performance:* | optimize:*)
+                PERFORMANCE+="$FORMATTED_COMMIT\n"
+                ;;
+              chore:* | docs:* | build:* | ci:* | test:*)
+                CHORES+="$FORMATTED_COMMIT\n"
+                ;;
+              *)
+                OTHER+="$FORMATTED_COMMIT\n"
+                ;;
+            esac
+          done < commits.txt
+          
+          # Add sections to changelog if they have content
           if [ -n "$FEATURES" ]; then
-            echo "### 🎉 New Features" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "## 🎉 New Features" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
             echo -e "$FEATURES" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
-          fi
-          if [ -n "$BUG_FIXES" ]; then
-            echo "### 🛠️ Bug Fixes & Improvements" >> CHANGELOG.md
-            echo -e "$BUG_FIXES" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
-          fi
-          if [ -n "$REFACTORS" ]; then
-            echo "### 🔧 Refactors" >> CHANGELOG.md
-            echo -e "$REFACTORS" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
-          fi
-          if [ -n "$STYLE_CHANGES" ]; then
-            echo "### 🎨 Style Changes" >> CHANGELOG.md
-            echo -e "$STYLE_CHANGES" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
-          fi
-          if [ -n "$PERFORMANCE" ]; then
-            echo "### 🚀 Performance Improvements" >> CHANGELOG.md
-            echo -e "$PERFORMANCE" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
-          fi
-          if [ -n "$CHORES" ]; then
-            echo "### 🧹 Chores, Docs & Tests" >> CHANGELOG.md # Renamed for clarity
-            echo -e "$CHORES" >> CHANGELOG.md
-            CHANGELOG_HAS_CONTENT=true
           fi
           
-          if [ "$CHANGELOG_HAS_CONTENT" = false ]; then
-             echo "No categorized commits found for this release. Review commit messages if changes were expected." >> CHANGELOG.md
+          if [ -n "$BUG_FIXES" ]; then
+            echo "" >> CHANGELOG.md
+            echo "## 🛠️ Bug Fixes & Improvements" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$BUG_FIXES" >> CHANGELOG.md
           fi
-          echo "Changelog content generated:"
+          
+          if [ -n "$PERFORMANCE" ]; then
+            echo "" >> CHANGELOG.md
+            echo "## 🚀 Performance Improvements" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$PERFORMANCE" >> CHANGELOG.md
+          fi
+          
+          if [ -n "$REFACTORS" ]; then
+            echo "" >> CHANGELOG.md
+            echo "## 🔧 Refactors" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$REFACTORS" >> CHANGELOG.md
+          fi
+          
+          if [ -n "$STYLE_CHANGES" ]; then
+            echo "" >> CHANGELOG.md
+            echo "## 🎨 Style Changes" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$STYLE_CHANGES" >> CHANGELOG.md
+          fi
+          
+          if [ -n "$CHORES" ]; then
+            echo "" >> CHANGELOG.md
+            echo "## 🧹 Chores & Documentation" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo -e "$CHORES" >> CHANGELOG.md
+          fi
+          
+
+          
+          # Add footer
+          echo "" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**Full Changelog**: [${{ env.prev_tag }}...${{ env.latest_tag }}]($REPO_URL/compare/${{ env.prev_tag }}...${{ env.latest_tag }})" >> CHANGELOG.md
+          
+          echo "Changelog generated successfully!"
+
+      - name: Display changelog preview
+        run: |
+          echo "=== CHANGELOG PREVIEW ==="
           cat CHANGELOG.md
+          echo "========================"
 
       - name: Commit and push changelog
-        # Only run if not a dry run or if there are changes
-        # Consider if you always want to commit, even if CHANGELOG.md is "No code changes".
-        # This example commits if CHANGELOG.md was modified from its state before generation.
+        if: env.latest_tag != ''
         run: |
+          echo "Committing and pushing changelog..."
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Check if CHANGELOG.md has uncommitted changes
-          if ! git diff --quiet CHANGELOG.md; then
-            echo "CHANGELOG.md has changes. Committing..."
-            git add CHANGELOG.md
-            # Use the determined current tag in the commit message
-            git commit -m "docs(changelog): Update changelog for ${{ env.tag_name }}"
-            # Push to the current branch. Assumes HEAD is on the correct branch (e.g., main, or the release branch)
-            # If the tag was on 'main', and checkout put HEAD on 'main', this is correct.
-            # If 'Build and Release AnymeX' tags 'main', then github.event.workflow_run.head_branch would be 'main'.
-            # The default checkout behavior of actions/checkout for workflow_run is to checkout github.event.workflow_run.head_sha in a detached HEAD state.
-            # To push, you might need to checkout the branch explicitly if you want to push to a branch.
-            # E.g., git checkout ${{ github.event.workflow_run.head_branch || github.ref_name }}
-            # Then `git push`.
-            # For simplicity now, assuming PAT allows pushing to detached HEAD's origin branch or direct push to main is fine.
-            # A common pattern:
-            TARGET_BRANCH=${{ github.event.workflow_run.head_branch || github.ref_name }}
-            echo "Attempting to push changelog to branch: $TARGET_BRANCH"
-            # Ensure we are on a branch to push, not detached HEAD
-            # If github.ref is a tag, TARGET_BRANCH might be the tag name. We need the branch the tag is on.
-            # This part can be tricky. The simplest is if Build and Release AnymeX runs on `main` and tags `main`.
-            # Then `github.event.workflow_run.head_branch` is `main`.
-            if [[ "$TARGET_BRANCH" == refs/tags/* ]]; then
-                echo "Triggered by a tag, cannot directly push to a tag ref. This commit will not be pushed by default."
-                echo "The release will be created with the generated changelog, but the CHANGELOG.md file commit might not be on a branch."
-                # Consider if this is acceptable or if you need to find the branch for the tag.
-            else
-                 # If TARGET_BRANCH is just the branch name (e.g. 'main')
-                git checkout $TARGET_BRANCH 
-                git pull # Ensure local branch is up-to-date before re-applying (if needed) or pushing
-                # Re-add and commit in case checkout discarded changes (though it shouldn't if it was already HEAD)
-                git add CHANGELOG.md 
-                # Check if there's anything to commit again after checkout and potential pull
-                if ! git diff --cached --quiet; then
-                    git commit -m "docs(changelog): Update changelog for ${{ env.tag_name }}"
-                fi
-                git push origin $TARGET_BRANCH
-                echo "Changelog pushed to $TARGET_BRANCH."
-            fi
+          # Check if there are changes to commit
+          if git diff --quiet CHANGELOG.md; then
+            echo "No changes to changelog, skipping commit"
           else
-            echo "No changes to CHANGELOG.md to commit, or no new commits found."
+            git add CHANGELOG.md
+            git commit -m "📝 Update changelog for version ${{ env.latest_tag }}"
+            git push origin HEAD:${{ github.ref_name }}
           fi
 
       - name: Create or Update Release
+        if: env.latest_tag != ''
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           bodyFile: CHANGELOG.md
-          tag: ${{ env.tag_name }} # Use the determined current tag
-          name: "Release ${{ env.tag_name }}" # Optional: for a nicer release title
+          tag: ${{ env.latest_tag }}
+          name: "Release ${{ env.latest_tag }}"
           allowUpdates: true
-          # draft: false # Set to true if you want to review before publishing
-          # prerelease: ${{ contains(env.tag_name, '-') }} # Example: mark as prerelease if tag contains '-' (e.g. v1.0.0-beta)
+          makeLatest: true
+          
+      - name: Cleanup temporary files
+        run: |
+          rm -f commits.txt
