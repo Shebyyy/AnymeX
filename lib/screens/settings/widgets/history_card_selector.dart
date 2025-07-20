@@ -33,7 +33,7 @@ void showHistoryCardStyleSelector(BuildContext context) {
         () {
           return AnymexDialog(
               padding: const EdgeInsets.all(10),
-              title: 'Card Style',
+              title: 'History Card Style',
               onConfirm: () {
                 settingsController.historyCardStyle = selectedStyle.value.index;
               },
