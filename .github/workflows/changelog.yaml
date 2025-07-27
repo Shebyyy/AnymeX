@@ -147,7 +147,9 @@ jobs:
             
             # Create the formatted commit line
             LINK="[$HASH]($REPO_URL/commit/$HASH)"
-            FORMATTED_COMMIT="* $LINK: $MESSAGE"
+            DISPLAY_MESSAGE=$(echo "$MESSAGE" | sed 's/^[^:]*:[[:space:]]*//')
+            FORMATTED_COMMIT="* $LINK: $DISPLAY_MESSAGE"
+
             
             echo "Clean message for categorization: '$CLEAN_MESSAGE'"
             
