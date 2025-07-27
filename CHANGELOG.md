@@ -1,4 +1,4 @@
-# Changelog - July 27, 2025
+# Changelog
 ### 🌟 Features
 - [֍](https://github.com/Shebyyy/AnymeX/commit/9f8370a)  sauce finder by screenshot by sgb
 - [֍](https://github.com/Shebyyy/AnymeX/commit/88eb1d8)  anime 4k upscaler support for desktop experimental
