@@ -151,28 +151,28 @@ jobs:
             # Remove prefixes and categorize based on original message
             if [[ "$MESSAGE" =~ ^feat: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^feat://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              FEATURES+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              FEATURES+="- $COMMIT_LINK $DESCR"$'\n'
             elif [[ "$MESSAGE" =~ ^fix:|^bug:|^improvement:|^patch: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^fix://' | sed 's/^bug://' | sed 's/^improvement://' | sed 's/^patch://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              BUG_FIXES+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              BUG_FIXES+="- $COMMIT_LINK $DESCR"$'\n'
             elif [[ "$MESSAGE" =~ ^refactor: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^refactor://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              REFACTORS+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              REFACTORS+="- $COMMIT_LINK $DESCR"$'\n'
             elif [[ "$MESSAGE" =~ ^style: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^style://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              STYLE_CHANGES+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              STYLE_CHANGES+="- $COMMIT_LINK $DESCR"$'\n'
             elif [[ "$MESSAGE" =~ ^perf: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^perf://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              PERFORMANCE+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              PERFORMANCE+="- $COMMIT_LINK $DESCR"$'\n'
             elif [[ "$MESSAGE" =~ ^chore:|^docs:|^build:|^ci: ]]; then
               DESCR=$(echo "$CLEAN_MESSAGE" | sed 's/^chore://' | sed 's/^docs://' | sed 's/^build://' | sed 's/^ci://')
-              COMMIT_LINK="֍($REPO_URL/commit/$HASH)"
-              CHORES+="- [$COMMIT_LINK] $DESCR"$'\n'
+              COMMIT_LINK="[֍]($REPO_URL/commit/$HASH)"
+              CHORES+="- $COMMIT_LINK $DESCR"$'\n'
             fi
           done < <(git log ${{ env.prev_tag }}..${{ env.current_tag }} --pretty=format:'%h %s')
 
