@@ -177,7 +177,7 @@ jobs:
           done < <(git log ${{ env.prev_tag }}..${{ env.current_tag }} --pretty=format:'%h %s')
 
           # Generate changelog sections with date
-          echo "# Changelog" > CHANGELOG.md
+          echo "## 🆕 Changelog" > CHANGELOG.md
           if [ -n "$FEATURES" ]; then
             echo "### 🌟 Features" >> CHANGELOG.md
             echo -e "$FEATURES" >> CHANGELOG.md
