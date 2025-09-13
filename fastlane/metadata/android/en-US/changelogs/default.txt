@@ -1,1 +1,51 @@
+### 🌟 Features
+-   hold and swipe to increase speed 2.0
+-   option for switching back to old player
+-   brought back auto skip, skip button, hold to seek
+-   online subtitle support
+-   novel library partial support
+-   source search page
+-   logger added
+-   novel support home, details, reader, settings  etc
+-   custom list editor, unified library for all services.
 
+### 🔧 Bug Fixes & Improvements
+-   fixed list editor issue with progress and library issue
+-   fix wrong chapter numbers no novel library
+-   lots of improvement for offline saving
+-   fixed source link not working from ext page
+-   fix romaji title on recom
+-   fixed double tap not using duration from settings
+-   fixed subtitle not appearing
+-   fixed a minor error causing build issues
+-   fixed session cache not working
+-   fixed too many prequel sequel
+-   fixed wrong progress percentages
+-   fixed some layout issues on search page
+-   fixed check for updates redirecting to github
+-   fixed deeplink not working properly
+-   fixed crashes on macs and player glitches on other platforms
+-   fixed not saving issue on repo dialog
+-   fixed settings unable to scroll on smaller phones
+-   fixed dupes in session history
+-   fixed unscrollable settings page
+-   fixed an issue where repo was not saving
+
+### 🔧 Refactors
+-   made service media dependent instead of service handler dependent
+
+### 🎨 Style Changes
+-   revamped double tap to seek
+-   few styling changes
+-   some ui changes
+-   some ui changes
+
+### 🚀 Performance Improvements
+-   improve ext page performance
+
+### 🧹 Chores & Documentation
+-   bump version 3.0.0 to 3.0.1
+-   bump version code
+-   bump version to v3.0.0 major release
+
+ 
