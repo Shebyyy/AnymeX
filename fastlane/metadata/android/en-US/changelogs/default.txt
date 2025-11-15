@@ -1,21 +1,22 @@
 ### 🌟 Features
--   support for player in local media
--   custom titlebar for desktops
+-   optimized list editor
+-   discord rpc support for all platforms
+-   opt out option for tracking media
+-   opt out for subtitle transition
 
 ### 🔧 Bug Fixes & Improvements
--   fixed brightness and volume jankiness
--   fixed list editor
--   fixed scroll animation causing header issues
--   improved mapper
--   fixed minor issue in progress slider on offline player
--   fixed abrupt background on desktop
--   fixed mistaking manhwa as anime
+-   fixed a grey screen error on home page
+-   fixed volume not being update realtime
+-   fixed an issue where series was showing up as manga
+-   fixed extension settings button not working
+-   fixed dropdown barrier
+-   fixed header on platforms other than windows
 
 ### 🎨 Style Changes
--   consolidated other features on separate page
--   some ui changes
+-   option for having transparent image as bg
+-   new page transition
 
 ### 🧹 Chores & Documentation
--   bump version to v3.0.2 patch release
+-   bump version to v3.0.3 patch release
 
  

@@ -1,26 +1,27 @@
 ### 🆕 Changelog
 ### 🌟 Features
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/6c83b85)  support for player in local media
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/089c6a2)  custom titlebar for desktops
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/cd4e94d)  optimized list editor
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/6b25b94)  discord rpc support for all platforms
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/204ac75)  opt out option for tracking media
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/361e1f6)  opt out for subtitle transition
 
 
 ### 🔧 Bug Fixes & Improvements
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/e646f83)  fixed brightness and volume jankiness
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/ec16080)  fixed list editor
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/bb2963f)  fixed scroll animation causing header issues
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/2c6bf1a)  improved mapper
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/93769c1)  fixed minor issue in progress slider on offline player
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/e1d45ae)  fixed abrupt background on desktop
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/8bc6dd7)  fixed mistaking manhwa as anime
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/48e3a89)  fixed a grey screen error on home page
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/683c6c6)  fixed volume not being update realtime
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/fb26719)  fixed an issue where series was showing up as manga
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/4a851a1)  fixed extension settings button not working
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/a84bece)  fixed dropdown barrier
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/06cee7c)  fixed header on platforms other than windows
 
 
 ### 🎨 Style Changes
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/8092f80)  consolidated other features on separate page
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/960b3a7)  some ui changes
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/da28e28)  option for having transparent image as bg
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/fd43a18)  new page transition
 
 
 ### 🧹 Chores & Documentation
-- [֍](https://github.com/RyanYuuki/AnymeX/commit/ebc485b)  bump version to v3.0.2 patch release
+- [֍](https://github.com/RyanYuuki/AnymeX/commit/4eadbd5)  bump version to v3.0.3 patch release
 
 
-![Total Downloads](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/v3.0.2/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)
+![Total Downloads](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/v3.0.3/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)

@@ -137,6 +137,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   build_config:
     dependency: transitive
     description:
@@ -349,10 +357,10 @@ packages:
     dependency: transitive
     description:
       name: d4rt
-      sha256: "40ecf0b73603a8268050e890eb4d037b5bdf4184f439cc18d593e83b100a19e7"
+      sha256: "1eb626145e2ed97332f9e6e842e626f973d3969ce30e2794efb4744bd8aeba63"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.9"
+    version: "0.1.7"
   dart_style:
     dependency: transitive
     description:
@@ -365,9 +373,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: b5084413439c07dae5bbd61d0d9ed056e4697ff9
-      url: "https://github.com/RyanYuuki/DartotsuExtensionBridge.git"
+      ref: HEAD
+      resolved-ref: "35399a7445fe9efa724131d9519b77ba9937231c"
+      url: "https://github.com/aayush2622/DartotsuExtensionBridge.git"
     source: git
     version: "0.0.4"
   dbus:
@@ -500,7 +508,7 @@ packages:
     source: hosted
     version: "1.3.3"
   ffi:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: ffi
       sha256: "289279317b4b16eb2bb7e271abccd4bf84ec9bdcbe999e278a94b804f5630418"
@@ -544,6 +552,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.1"
+  flutter_discord_rpc_fork:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: main
+      resolved-ref: "5032c0ac4d257b0fad8d3c6cd05f6d15889fc1e5"
+      url: "https://github.com/Schnitzel5/flutter-discord-rpc.git"
+    source: git
+    version: "1.0.5"
   flutter_dotenv:
     dependency: "direct main"
     description:
@@ -665,7 +682,7 @@ packages:
     source: hosted
     version: "2.0.28"
   flutter_qjs:
-    dependency: "direct main"
+    dependency: transitive
     description:
       path: "."
       ref: main
@@ -673,6 +690,14 @@ packages:
       url: "https://github.com/kodjodevf/flutter_qjs.git"
     source: git
     version: "0.0.1"
+  flutter_rust_bridge:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge
+      sha256: "37ef40bc6f863652e865f0b2563ea07f0d3c58d8efad803cc01933a4b2ee067e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.11.1"
   flutter_staggered_animations:
     dependency: "direct main"
     description:
@@ -963,22 +988,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
-  isar:
+  isar_community:
     dependency: "direct main"
     description:
-      name: isar
-      sha256: "99165dadb2cf2329d3140198363a7e7bff9bbd441871898a87e26914d25cf1ea"
+      name: isar_community
+      sha256: "28f59e54636c45ba0bb1b3b7f2656f1c50325f740cea6efcd101900be3fba546"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0+1"
-  isar_flutter_libs:
+    version: "3.3.0-dev.3"
+  isar_community_flutter_libs:
     dependency: "direct main"
     description:
-      name: isar_flutter_libs
-      sha256: bc6768cc4b9c61aabff77152e7f33b4b17d2fc93134f7af1c3dd51500fe8d5e8
+      name: isar_community_flutter_libs
+      sha256: c2934fe755bb3181cb67602fd5df0d080b3d3eb52799f98623aa4fc5acbea010
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.0+1"
+    version: "3.3.0-dev.3"
   js:
     dependency: transitive
     description:
@@ -1126,67 +1151,75 @@ packages:
   media_kit:
     dependency: "direct main"
     description:
-      name: media_kit
-      sha256: "52a8e989babc431db0aa242f32a4a08e55f60662477ea09759a105d7cd6410da"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.1"
+      path: media_kit
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
+    version: "1.2.0"
   media_kit_libs_android_video:
     dependency: transitive
     description:
-      name: media_kit_libs_android_video
-      sha256: "3f6274e5ab2de512c286a25c327288601ee445ed8ac319e0ef0b66148bd8f76c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.8"
+      path: "libs/android/media_kit_libs_android_video"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
+    version: "1.3.7"
   media_kit_libs_ios_video:
     dependency: transitive
     description:
-      name: media_kit_libs_ios_video
-      sha256: b5382994eb37a4564c368386c154ad70ba0cc78dacdd3fb0cd9f30db6d837991
-      url: "https://pub.dev"
-    source: hosted
+      path: "libs/ios/media_kit_libs_ios_video"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
     version: "1.1.4"
   media_kit_libs_linux:
     dependency: transitive
     description:
-      name: media_kit_libs_linux
-      sha256: "2b473399a49ec94452c4d4ae51cfc0f6585074398d74216092bf3d54aac37ecf"
-      url: "https://pub.dev"
-    source: hosted
+      path: "libs/linux/media_kit_libs_linux"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
     version: "1.2.1"
   media_kit_libs_macos_video:
     dependency: transitive
     description:
-      name: media_kit_libs_macos_video
-      sha256: f26aa1452b665df288e360393758f84b911f70ffb3878032e1aabba23aa1032d
-      url: "https://pub.dev"
-    source: hosted
+      path: "libs/macos/media_kit_libs_macos_video"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
     version: "1.1.4"
   media_kit_libs_video:
     dependency: "direct main"
     description:
-      name: media_kit_libs_video
-      sha256: "2b235b5dac79c6020e01eef5022c6cc85fedc0df1738aadc6ea489daa12a92a9"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.7"
+      path: "libs/universal/media_kit_libs_video"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
+    version: "1.0.6"
   media_kit_libs_windows_video:
     dependency: transitive
     description:
-      name: media_kit_libs_windows_video
-      sha256: dff76da2778729ab650229e6b4ec6ec111eb5151431002cbd7ea304ff1f112ab
-      url: "https://pub.dev"
-    source: hosted
+      path: "libs/windows/media_kit_libs_windows_video"
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
     version: "1.0.11"
   media_kit_video:
     dependency: "direct main"
     description:
-      name: media_kit_video
-      sha256: "813858c3fe84eb46679eb698695f60665e2bfbef757766fac4d2e683f926e15a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.3.1"
+      path: media_kit_video
+      ref: HEAD
+      resolved-ref: "62b08e33590cba8fba4797eaaa1e95b514adb437"
+      url: "https://github.com/Schnitzel5/media-kit.git"
+    source: git
+    version: "1.3.0"
   meta:
     dependency: transitive
     description:
@@ -1371,6 +1404,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.0"
+  photo_view:
+    dependency: "direct main"
+    description:
+      name: photo_view
+      sha256: "1fc3d970a91295fbd1364296575f854c9863f225505c28c46e0a03e48960c75e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.15.0"
   platform:
     dependency: transitive
     description:
@@ -1460,7 +1501,7 @@ packages:
     source: hosted
     version: "3.2.2"
   rxdart:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: rxdart
       sha256: "5c3004a4a8dbb94bd4bf5412a4def4acdaa12e12f269737a5751369e12d1a962"
@@ -1479,18 +1520,18 @@ packages:
     dependency: "direct main"
     description:
       name: screen_brightness
-      sha256: f9bcfd7029d81aa2ba960f8c67a51427c721796f7f4eea02bc2bb84c41205ad7
+      sha256: "5f70754028f169f059fdc61112a19dcbee152f8b293c42c848317854d650cba3"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.5"
+    version: "2.1.7"
   screen_brightness_android:
     dependency: transitive
     description:
       name: screen_brightness_android
-      sha256: fb5fa43cb89d0c9b8534556c427db1e97e46594ac5d66ebdcf16063b773d54ed
+      sha256: d34f5321abd03bc3474f4c381f53d189117eba0b039eac1916aa92cca5fd0a96
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.2"
+    version: "2.1.3"
   screen_brightness_ios:
     dependency: transitive
     description:
@@ -1511,10 +1552,10 @@ packages:
     dependency: transitive
     description:
       name: screen_brightness_ohos
-      sha256: "61e313e46eaee3f83dd4e85a2a91f8a81be02c154bc9e60830a7c0fd76dac286"
+      sha256: a93a263dcd39b5c56e589eb495bcd001ce65cdd96ff12ab1350683559d5c5bb7
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.0"
+    version: "2.1.2"
   screen_brightness_platform_interface:
     dependency: transitive
     description:
@@ -1579,6 +1620,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.8"
+  sensors_plus:
+    dependency: "direct main"
+    description:
+      name: sensors_plus
+      sha256: "56e8cd4260d9ed8e00ecd8da5d9fdc8a1b2ec12345a750dfa51ff83fcf12e3fa"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.0"
+  sensors_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: sensors_plus_platform_interface
+      sha256: "58815d2f5e46c0c41c40fb39375d3f127306f7742efe3b891c0b1c87e2b5cd5d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   share_plus:
     dependency: "direct main"
     description:
@@ -2041,7 +2098,7 @@ packages:
     source: hosted
     version: "3.23.0"
   win32:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: win32
       sha256: "66814138c3562338d05613a6e368ed8cfb237ad6d64a9e9334be3f309acfca03"
