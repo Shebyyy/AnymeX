@@ -172,15 +172,25 @@ jobs:
             echo "✅ Kotlin package directory moved"
           else
             echo "❌ Kotlin package directory NOT found"
+            echo "   Expected: android/app/src/main/kotlin/com/ryan/anymexbeta"
+            # Show what exists
+            if [ -d "android/app/src/main/kotlin/com/ryan/anymex" ]; then
+              echo "   Found old directory still exists: android/app/src/main/kotlin/com/ryan/anymex"
+            fi
+            ls -la android/app/src/main/kotlin/com/ryan/ 2>/dev/null || echo "   Directory structure missing"
             ERRORS=$((ERRORS + 1))
           fi
           
           # Check Kotlin files package declaration
-          if grep -q "package com.ryan.anymexbeta" android/app/src/main/kotlin/com/ryan/anymexbeta/*.kt 2>/dev/null; then
-            echo "✅ Kotlin files package declaration"
-          else
-            echo "❌ Kotlin package declaration NOT updated"
-            ERRORS=$((ERRORS + 1))
+          if [ -d "android/app/src/main/kotlin/com/ryan/anymexbeta" ]; then
+            if grep -q "package com.ryan.anymexbeta" android/app/src/main/kotlin/com/ryan/anymexbeta/*.kt 2>/dev/null; then
+              echo "✅ Kotlin files package declaration"
+            else
+              echo "❌ Kotlin package declaration NOT updated"
+              echo "   Checking file contents:"
+              head -n 1 android/app/src/main/kotlin/com/ryan/anymexbeta/*.kt 2>/dev/null || echo "   No Kotlin files found"
+              ERRORS=$((ERRORS + 1))
+            fi
           fi
           
           # ==========================================
