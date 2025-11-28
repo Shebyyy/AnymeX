@@ -25,12 +25,25 @@ jobs:
             os: macos-latest
           - platform: ios
             os: macos-latest
-    
+
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
-      
+
+      # ----------------------------------------------------
+      # 🔄 RENAME PACKAGE ONLY FOR ANDROID + IOS BUILDS
+      # ----------------------------------------------------
+      - name: Rename package for Beta (Android + iOS only)
+        if: matrix.platform == 'android' || matrix.platform == 'ios'
+        run: |
+            chmod +x scripts/rename_app.sh
+            scripts/rename_app.sh \
+            "com.ryan.anymex" \
+            "com.ryan.anymex.beta" \
+            "AnymeX β" \
+            "3.0.0+1"
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
