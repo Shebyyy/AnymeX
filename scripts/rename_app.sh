@@ -1,35 +1,36 @@
 #!/usr/bin/env bash
 set -e
 
-# Detect macOS vs Linux sed
+###############################################
+# Detect macOS BSD sed vs Linux GNU sed
+###############################################
 if [[ "$OSTYPE" == "darwin"* ]]; then
   SED="sed -i ''"
 else
   SED="sed -i"
 fi
 
-# PACKAGE IDs
+###############################################
+# Package & Directory Variables
+###############################################
 OLD_PKG="com.ryan.anymex"
 NEW_PKG="com.ryan.anymexbeta"
 
-# ANDROID FOLDER PATHS
 OLD_DIR="com/ryan/anymex"
 NEW_DIR="com/ryan/anymexbeta"
+
 ANDROID_SRC="android/app/src/main/kotlin"
 
-# FILE PATHS
 MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
 IOS_PLIST="ios/Runner/Info.plist"
 MACOS_CONFIG="macos/Runner/Configs/AppInfo.xcconfig"
 MACOS_INFO="macos/Runner/Info.plist"
-LINUX_CMAKE="linux/CMakeLists.txt"
 LINUX_MAIN="linux/my_application.cc"
+LINUX_CMAKE="linux/CMakeLists.txt"
 WINDOWS_RC="windows/runner/Runner.rc"
 
-# VERSION & NAMES
 NEW_VERSION="$1"
 NEW_APP_NAME="AnymeX β"
-NEW_FLUTTER_NAME="anymex_beta"
 
 echo "🔄 Starting FULL Cross-Platform Beta Rename..."
 
@@ -41,10 +42,11 @@ if [ -d "$ANDROID_SRC/$NEW_DIR" ]; then
   exit 0
 fi
 
+
 ###############################################
-# ANDROID
+# ANDROID — ID + Manifest + Kotlin
 ###############################################
-echo "➡ ANDROID: Updating Gradle + Manifest + Kotlin..."
+echo "➡ ANDROID: Updating Gradle, Manifest & Kotlin..."
 
 $SED "s|applicationId = \".*\"|applicationId = \"$NEW_PKG\"|g" android/app/build.gradle
 $SED "s|namespace = \".*\"|namespace = \"$NEW_PKG\"|g" android/app/build.gradle
@@ -58,23 +60,37 @@ rm -rf "$ANDROID_SRC/com/ryan/anymex"
 
 $SED "s|package $OLD_PKG|package $NEW_PKG|g" "$ANDROID_SRC/$NEW_DIR/MainActivity.kt"
 
-###############################################
-# iOS
-###############################################
-echo "➡ iOS: Updating CFBundle IDs + display name..."
 
+###############################################
+# iOS — Bundle ID + App Name
+###############################################
+echo "➡ iOS: Updating bundle ID & app name..."
+
+# 1. Update PRODUCT_BUNDLE_IDENTIFIER everywhere
 $SED "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
 $SED "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
 
-$SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
+# 2. Update PRODUCT_NAME
+$SED "s|PRODUCT_NAME = \"\\\$(TARGET_NAME)\"|PRODUCT_NAME = \"$NEW_APP_NAME\"|g" ios/Runner.xcodeproj/project.pbxproj
+
+# 3. Update TARGET_NAME → not strictly required but makes naming correct
+$SED "s|name = Runner;|name = \"$NEW_APP_NAME\";|g" ios/Runner.xcodeproj/project.pbxproj
+$SED "s|productName = Runner;|productName = \"$NEW_APP_NAME\";|g" ios/Runner.xcodeproj/project.pbxproj
+
+# 4. Update CFBundleName (always present)
+$SED 's|\(<key>CFBundleName</key>[[:space:]]*<string>\)[^<]*\(</string>\)|\1'"$NEW_APP_NAME"'\2|' ios/Runner/Info.plist
+
+# 5. Update CFBundleDisplayName (if present)
+$SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)[^<]*\(</string>\)|\1'"$NEW_APP_NAME"'\2|' ios/Runner/Info.plist
+
 
 ###############################################
-# macOS
+# macOS — Bundle ID + PRODUCT_NAME + Display
 ###############################################
-echo "➡ macOS: Updating AppInfo.xcconfig + Info.plist..."
+echo "➡ macOS: Updating xcconfig & Info.plist..."
 
 if [ -f "$MACOS_CONFIG" ]; then
-  $SED "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
+  $SED "s|PRODUCT_NAME = anymex|PRODUCT_NAME = anymex_beta|g" "$MACOS_CONFIG"
   $SED "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
 fi
 
@@ -82,10 +98,11 @@ if [ -f "$MACOS_INFO" ]; then
   $SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
 fi
 
+
 ###############################################
-# LINUX
+# Linux — Window Title + CMake project name
 ###############################################
-echo "➡ Linux: Updating window title + CMake metadata..."
+echo "➡ Linux: Updating GTK window title & metadata..."
 
 if [ -f "$LINUX_MAIN" ]; then
   $SED 's|"AnymeX"|"AnymeX β"|g' "$LINUX_MAIN"
@@ -95,8 +112,9 @@ if [ -f "$LINUX_CMAKE" ]; then
   $SED "s|AnymeX|AnymeX β|g" "$LINUX_CMAKE"
 fi
 
+
 ###############################################
-# WINDOWS
+# Windows — .rc exe metadata
 ###############################################
 echo "➡ Windows: Updating .rc metadata..."
 
@@ -105,12 +123,13 @@ if [ -f "$WINDOWS_RC" ]; then
   $SED 's|"anymex.exe"|"anymex_beta.exe"|g' "$WINDOWS_RC"
 fi
 
-###############################################
-# Flutter pubspec — name + version
-###############################################
-echo "➡ Flutter: Updating pubspec.yaml..."
 
-$SED "s|name: anymex|name: $NEW_FLUTTER_NAME|g" pubspec.yaml
+###############################################
+# Flutter — Update version ONLY
+###############################################
+echo "➡ Flutter: Updating version in pubspec.yaml (keep name same)…"
+
 $SED "s|version: .*|version: $NEW_VERSION|g" pubspec.yaml
 
-echo "🎉 FULL CROSS-PLATFORM RENAME COMPLETE!"
+
+echo "🎉 FULL CROSS-PLATFORM BETA RENAME COMPLETE!"
