@@ -1,80 +1,127 @@
 #!/usr/bin/env bash
 set -e
 
-OLD_PKG="$1"
-NEW_PKG="$2"
-NEW_APP_NAME="$3"
-NEW_VERSION="$4"
+# PACKAGE IDs
+OLD_PKG="com.ryan.anymex"
+NEW_PKG="com.ryan.anymexbeta"
 
-if [ -z "$OLD_PKG" ] || [ -z "$NEW_PKG" ]; then
-  echo "Usage: rename_app.sh OLD_PKG NEW_PKG NEW_APP_NAME NEW_VERSION"
-  exit 1
+# ANDROID FOLDER PATHS
+OLD_DIR="com/ryan/anymex"
+NEW_DIR="com/ryan/anymexbeta"
+ANDROID_SRC="android/app/src/main/kotlin"
+
+# FILE PATHS
+MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+IOS_PLIST="ios/Runner/Info.plist"
+MACOS_CONFIG="macos/Runner/Configs/AppInfo.xcconfig"
+MACOS_INFO="macos/Runner/Info.plist"
+LINUX_CMAKE="linux/CMakeLists.txt"
+LINUX_MAIN="linux/my_application.cc"
+WINDOWS_RC="windows/runner/Runner.rc"
+
+# VERSION & NAMES
+NEW_VERSION="$1"
+NEW_APP_NAME="AnymeX β"
+NEW_FLUTTER_NAME="anymex_beta"
+
+echo "🔄 Starting FULL Cross-Platform Beta Rename..."
+
+###############################################
+# 0. SKIP IF ALREADY BETA
+###############################################
+if [ -d "$ANDROID_SRC/$NEW_DIR" ]; then
+  echo "✔ Already beta — skipping rename."
+  exit 0
 fi
 
-echo "🔄 Renaming package:"
-echo "  OLD: $OLD_PKG"
-echo "  NEW: $NEW_PKG"
-
-OLD_DIR=$(echo "$OLD_PKG" | tr "." "/")
-NEW_DIR=$(echo "$NEW_PKG" | tr "." "/")
 
 ###############################################
-# ANDROID PACKAGE + NAMESPACE
+# ANDROID — rename package + app label
 ###############################################
-echo "➡️ Updating Gradle applicationId & namespace…"
+echo "➡ ANDROID: Updating Gradle + Manifest + Kotlin..."
 
-find android -type f \( -name "build.gradle" -o -name "*.gradle" \) -print0 | while IFS= read -r -d $'\0' f; do
-  sed -i "s|applicationId \".*\"|applicationId \"$NEW_PKG\"|g" "$f"
-  sed -i "s|namespace \".*\"|namespace \"$NEW_PKG\"|g" "$f"
-done
+# Update applicationId + namespace
+sed -i "s|applicationId = \".*\"|applicationId = \"$NEW_PKG\"|g" android/app/build.gradle
+sed -i "s|namespace = \".*\"|namespace = \"$NEW_PKG\"|g" android/app/build.gradle
+
+# Update manifest
+sed -i "s|package=\"$OLD_PKG\"|package=\"$NEW_PKG\"|g" "$MANIFEST_FILE"
+sed -i "s|android:label=\"AnymeX\"|android:label=\"$NEW_APP_NAME\"|g" "$MANIFEST_FILE"
+
+# Move Kotlin folders
+mkdir -p "$ANDROID_SRC/$NEW_DIR"
+mv "$ANDROID_SRC/$OLD_DIR"/* "$ANDROID_SRC/$NEW_DIR"/
+rm -rf "$ANDROID_SRC/com/ryan/anymex"
+
+# Update Kotlin package import
+sed -i "s|package $OLD_PKG|package $NEW_PKG|g" "$ANDROID_SRC/$NEW_DIR/MainActivity.kt"
+
 
 ###############################################
-# ANDROID MANIFEST
+# iOS — bundle ID + display name
 ###############################################
-echo "➡️ Updating AndroidManifest package…"
+echo "➡ iOS: Updating CFBundle IDs + display name..."
 
-find android -type f -name "AndroidManifest.xml" -print0 | while IFS= read -r -d $'\0' f; do
-  sed -i "s|package=\"${OLD_PKG}\"|package=\"${NEW_PKG}\"|g" "$f"
-  sed -i "s|android:label=\"[^\"]*\"|android:label=\"$NEW_APP_NAME\"|g" "$f"
-done
+# bundle identifiers
+sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
+sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
+
+# CFBundleDisplayName
+sed -i '' 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
+
 
 ###############################################
-# MOVE KOTLIN/JAVA SOURCE FOLDERS
+# macOS — PRODUCT_NAME + display name
 ###############################################
-echo "➡️ Moving Kotlin/Java package folders…"
+echo "➡ macOS: Updating AppInfo.xcconfig + Info.plist..."
 
-SRC="android/app/src/main/kotlin"
-if [ -d "$SRC/$OLD_DIR" ]; then
-  mkdir -p "$SRC/$NEW_DIR"
-  mv "$SRC/$OLD_DIR"/* "$SRC/$NEW_DIR"/
-  rm -rf "$SRC/${OLD_PKG%%.*}"
+# App name + bundle identifier in xcconfig
+if [ -f "$MACOS_CONFIG" ]; then
+  sed -i '' "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
+  sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
 fi
 
-# Replace package declaration inside source files
-find android/app/src/main -type f \( -name "*.kt" -o -name "*.java" \) -exec \
-  sed -i "s|package $OLD_PKG|package $NEW_PKG|g" {} +
-
-###############################################
-# iOS BUNDLE IDENTIFIER
-###############################################
-echo "➡️ Updating iOS bundle identifier…"
-
-PBX="ios/Runner.xcodeproj/project.pbxproj"
-if [ -f "$PBX" ]; then
-  sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$PBX"
+# Update macOS display name
+if [ -f "$MACOS_INFO" ]; then
+  sed -i '' 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
 fi
 
-###############################################
-# FLUTTER APP NAME + VERSION
-###############################################
-echo "➡️ Updating pubspec.yaml…"
 
-if [ -n "$NEW_APP_NAME" ]; then
-  sed -i "s|name: .*|name: $(echo "$NEW_APP_NAME" | tr ' ' '_' | tr '[:upper:]' '[:lower:]')|g" pubspec.yaml
+###############################################
+# Linux — window title + app name
+###############################################
+echo "➡ Linux: Updating window title + CMake metadata..."
+
+# Update window title in my_application.cc
+if [ -f "$LINUX_MAIN" ]; then
+  sed -i 's|"AnymeX"|"AnymeX β"|g' "$LINUX_MAIN"
 fi
 
-if [ -n "$NEW_VERSION" ]; then
-  sed -i "s|version: .*|version: $NEW_VERSION|g" pubspec.yaml
+# Update CMakeLists.txt app name
+if [ -f "$LINUX_CMAKE" ]; then
+  sed -i "s|AnymeX|AnymeX β|g" "$LINUX_CMAKE"
 fi
 
-echo "🎉 Rename completed successfully!"
+
+###############################################
+# Windows — RC metadata (lowercase style)
+###############################################
+echo "➡ Windows: Updating .rc metadata..."
+
+if [ -f "$WINDOWS_RC" ]; then
+  # Any occurrence of "anymex" → "anymex_beta"
+  sed -i "s|\"anymex\"|\"anymex_beta\"|g" "$WINDOWS_RC"
+  sed -i "s|\"anymex.exe\"|\"anymex_beta.exe\"|g" "$WINDOWS_RC"
+fi
+
+
+###############################################
+# Flutter pubspec — name + version
+###############################################
+echo "➡ Flutter: Updating pubspec.yaml..."
+
+sed -i "s|name: anymex|name: $NEW_FLUTTER_NAME|g" pubspec.yaml
+sed -i "s|version: .*|version: $NEW_VERSION|g" pubspec.yaml
+
+
+echo "🎉 FULL CROSS-PLATFORM RENAME COMPLETE!"
