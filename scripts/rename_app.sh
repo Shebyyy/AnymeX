@@ -2,6 +2,7 @@
 set -e
 
 ###############################################
+# Enhanced Cross-Platform Flutter Rename Script
 # Handles package name & app display name changes
 ###############################################
 
@@ -115,12 +116,18 @@ fi
 
 # Move Kotlin package directory
 if [ "$SKIP_PACKAGE_RENAME" = false ] && [ -d "$ANDROID_SRC/$OLD_DIR" ]; then
+  # Create new directory structure
   mkdir -p "$ANDROID_SRC/$NEW_DIR"
-  find "$ANDROID_SRC/$OLD_DIR" -type f -name "*.kt" -exec sh -c '
-    sed "${SED_INPLACE[@]}" "s|package '"$OLD_PKG"'|package '"$NEW_PKG"'|g" "$1"
-  ' _ {} \;
-  mv "$ANDROID_SRC/$OLD_DIR"/* "$ANDROID_SRC/$NEW_DIR"/ 2>/dev/null || true
-  rm -rf "$ANDROID_SRC/com"
+  
+  # Update package declarations in Kotlin files BEFORE moving
+  find "$ANDROID_SRC/$OLD_DIR" -type f -name "*.kt" -exec sed "${SED_INPLACE[@]}" "s|package $OLD_PKG|package $NEW_PKG|g" {} \;
+  
+  # Move files to new directory
+  cp -r "$ANDROID_SRC/$OLD_DIR"/* "$ANDROID_SRC/$NEW_DIR"/ 2>/dev/null || true
+  
+  # Remove old directory structure
+  rm -rf "$ANDROID_SRC/com/ryan/anymex"
+  
   log_success "Moved Kotlin files to new package"
 fi
 
@@ -154,7 +161,10 @@ if [ -f "$MACOS_CONFIG" ]; then
 fi
 
 if [ -f "$MACOS_INFO" ]; then
-  sed "${SED_INPLACE[@]}" "s|<string>$OLD_APP_NAME</string>|<string>$NEW_APP_NAME</string>|g" "$MACOS_INFO"
+  # Update CFBundleDisplayName specifically
+  sed "${SED_INPLACE[@]}" -E '/<key>CFBundleDisplayName<\/key>/{n;s|<string>[^<]*</string>|<string>'"$NEW_APP_NAME"'</string>|;}' "$MACOS_INFO"
+  # Also update CFBundleName if it exists
+  sed "${SED_INPLACE[@]}" -E '/<key>CFBundleName<\/key>/{n;s|<string>[^<]*</string>|<string>'"$NEW_APP_NAME"'</string>|;}' "$MACOS_INFO"
   log_success "Updated macOS Info.plist"
 fi
 
@@ -179,9 +189,16 @@ fi
 log_info "Windows: Updating configuration..."
 
 if [ -f "$WINDOWS_RC" ]; then
+  # Update binary names
   sed "${SED_INPLACE[@]}" "s|\"anymex\"|\"anymex_beta\"|g" "$WINDOWS_RC"
   sed "${SED_INPLACE[@]}" "s|\"anymex\.exe\"|\"anymex_beta.exe\"|g" "$WINDOWS_RC"
-  sed "${SED_INPLACE[@]}" "s|VALUE \"ProductName\", \"$OLD_APP_NAME\"|VALUE \"ProductName\", \"$NEW_APP_NAME\"|g" "$WINDOWS_RC"
+  
+  # Update ProductName in VERSIONINFO section
+  sed "${SED_INPLACE[@]}" 's|VALUE "ProductName", "[^"]*"|VALUE "ProductName", "'"$NEW_APP_NAME"'"|g' "$WINDOWS_RC"
+  
+  # Update FileDescription if it exists
+  sed "${SED_INPLACE[@]}" 's|VALUE "FileDescription", "[^"]*"|VALUE "FileDescription", "'"$NEW_APP_NAME"'"|g' "$WINDOWS_RC"
+  
   log_success "Updated Windows Runner.rc"
 fi
 
