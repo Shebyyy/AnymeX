@@ -62,26 +62,14 @@ $SED "s|package $OLD_PKG|package $NEW_PKG|g" "$ANDROID_SRC/$NEW_DIR/MainActivity
 
 
 ###############################################
-# iOS — Bundle ID + App Name
+# iOS — Bundle ID + CFBundleDisplayName
 ###############################################
-echo "➡ iOS: Updating bundle ID & app name..."
+echo "➡ iOS: Updating Xcode bundle identifiers & names..."
 
-# 1. Update PRODUCT_BUNDLE_IDENTIFIER everywhere
 $SED "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
 $SED "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
 
-# 2. Update PRODUCT_NAME
-$SED "s|PRODUCT_NAME = \"\\\$(TARGET_NAME)\"|PRODUCT_NAME = \"$NEW_APP_NAME\"|g" ios/Runner.xcodeproj/project.pbxproj
-
-# 3. Update TARGET_NAME → not strictly required but makes naming correct
-$SED "s|name = Runner;|name = \"$NEW_APP_NAME\";|g" ios/Runner.xcodeproj/project.pbxproj
-$SED "s|productName = Runner;|productName = \"$NEW_APP_NAME\";|g" ios/Runner.xcodeproj/project.pbxproj
-
-# 4. Update CFBundleName (always present)
-$SED 's|\(<key>CFBundleName</key>[[:space:]]*<string>\)[^<]*\(</string>\)|\1'"$NEW_APP_NAME"'\2|' ios/Runner/Info.plist
-
-# 5. Update CFBundleDisplayName (if present)
-$SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)[^<]*\(</string>\)|\1'"$NEW_APP_NAME"'\2|' ios/Runner/Info.plist
+$SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
 
 
 ###############################################
