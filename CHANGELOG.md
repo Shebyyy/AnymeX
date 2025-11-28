@@ -104,4 +104,4 @@
 - [֍](https://github.com/Shebyyy/AnymeX/commit/3d6c547)  bump version to v3.0.0 major release
 
 
-![Total Downloads](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/v0.0.4/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)
+![Total Downloads](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Current Release](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/v0.0.4-beta/total?style=for-the-badge&label=CURRENT%20RELEASE&labelColor=black&color=white)
