@@ -66,8 +66,8 @@ echo "➡ iOS: Updating CFBundle IDs + display name..."
 sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
 sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
 
-# CFBundleDisplayName
-sed -i '' 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
+# CFBundleDisplayName (Linux-compatible sed)
+sed -i 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
 
 
 ###############################################
@@ -75,15 +75,15 @@ sed -i '' 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</str
 ###############################################
 echo "➡ macOS: Updating AppInfo.xcconfig + Info.plist..."
 
-# App name + bundle identifier in xcconfig
+# App name + bundle identifier
 if [ -f "$MACOS_CONFIG" ]; then
-  sed -i '' "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
-  sed -i '' "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
+  sed -i "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
+  sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
 fi
 
-# Update macOS display name
+# macOS CFBundleDisplayName
 if [ -f "$MACOS_INFO" ]; then
-  sed -i '' 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
+  sed -i 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
 fi
 
 
