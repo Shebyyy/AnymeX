@@ -35,7 +35,8 @@ jobs:
       # 🔄 RENAME PACKAGE ONLY FOR ANDROID + IOS BUILDS
       # ----------------------------------------------------
       - name: Auto rename for beta build
-        if: matrix.platform == 'android' || matrix.platform == 'ios' || matrix.platform == 'macos' || matrix.platform == 'linux' || matrix.platform == 'windows'
+        shell: bash
+        if: contains(matrix.platform, 'android') || contains(matrix.platform, 'ios') || contains(matrix.platform, 'macos') || contains(matrix.platform, 'linux') || contains(matrix.platform, 'windows')
         run: |
           TAG="${GITHUB_REF_NAME}"
       
@@ -46,6 +47,7 @@ jobs:
           else
             echo "🟢 Stable tag → No rename"
           fi
+
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
