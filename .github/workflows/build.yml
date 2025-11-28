@@ -36,18 +36,16 @@ jobs:
       # ----------------------------------------------------
       - name: Auto rename for beta build
         shell: bash
-        if: contains(matrix.platform, 'android') || contains(matrix.platform, 'ios') || contains(matrix.platform, 'macos') || contains(matrix.platform, 'linux') || contains(matrix.platform, 'windows')
         run: |
           TAG="${GITHUB_REF_NAME}"
       
           if [[ "$TAG" == *"-beta" ]]; then
-            echo "🔵 Beta tag → Renaming to beta package + names"
+            echo "🔵 Beta tag → Renaming"
             chmod +x scripts/rename_app.sh
             scripts/rename_app.sh "$(echo $TAG | sed 's/v//')"
           else
             echo "🟢 Stable tag → No rename"
           fi
-
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
