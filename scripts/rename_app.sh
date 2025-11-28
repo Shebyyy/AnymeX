@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+echo "🧹 Running flutter clean..."
+flutter clean
+flutter pub get
+
 ###############################################
 # Detect macOS BSD sed vs Linux GNU sed
 ###############################################
