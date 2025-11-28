@@ -1,4 +1,5 @@
 name: Build and Release AnymeX
+
 on:
   push:
     tags:
@@ -30,6 +31,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -63,13 +65,282 @@ jobs:
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
-      
+          
+          echo "════════════════════════════════════════════"
+          echo "  Build Type Detection"
+          echo "════════════════════════════════════════════"
+          echo "Tag: $TAG"
+          echo ""
+          
           if [[ "$TAG" == *"-beta" ]]; then
-            echo "🔵 Beta tag → Renaming"
+            echo "🔵 Beta build detected"
+            echo "────────────────────────────────────────────"
+            
+            # Extract version (remove 'v' prefix and '-beta' suffix)
+            # Examples: v1.2.3-beta -> 1.2.3 | v1.2.3+45-beta -> 1.2.3+45
+            VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-beta$//')
+            echo "Extracted version: $VERSION"
+            
+            # Validate version format (semantic versioning: X.Y.Z or X.Y.Z+BUILD)
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$ ]]; then
+              echo "❌ Invalid version format: $VERSION"
+              echo "Expected format: X.Y.Z or X.Y.Z+BUILD"
+              echo "Examples: 1.0.0, 1.0.0+42"
+              exit 1
+            fi
+            
+            # Check if rename script exists
+            if [ ! -f "scripts/rename_app.sh" ]; then
+              echo "❌ Error: scripts/rename_app.sh not found"
+              echo "Expected location: scripts/rename_app.sh"
+              exit 1
+            fi
+            
+            # Make script executable and run
             chmod +x scripts/rename_app.sh
-            scripts/rename_app.sh "$(echo $TAG | sed 's/v//')"
+            echo ""
+            echo "Running rename script with version: $VERSION"
+            echo "════════════════════════════════════════════"
+            
+            if ./scripts/rename_app.sh "$VERSION"; then
+              echo ""
+              echo "✅ Beta rename completed successfully"
+              echo "   Package: com.ryan.anymex → com.ryan.anymexbeta"
+              echo "   App Name: AnymeX → AnymeX β"
+              echo "   Version: $VERSION"
+            else
+              echo ""
+              echo "❌ Beta rename failed"
+              exit 1
+            fi
+            
           else
-            echo "🟢 Stable tag → No rename"
+            echo "🟢 Stable build detected"
+            echo "────────────────────────────────────────────"
+            echo "Skipping rename (not a beta tag)"
+            echo ""
+            echo "Tag formats:"
+            echo "  • Beta:   v0.0.0-beta (triggers rename)"
+            echo "  • Stable: v0.0.0 (no rename)"
+          fi
+          
+          echo "════════════════════════════════════════════"
+
+      - name: Verify beta configuration (All Platforms)
+        if: contains(github.ref_name, '-beta')
+        shell: bash
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  Verifying Beta Configuration"
+          echo "════════════════════════════════════════════"
+          
+          ERRORS=0
+          
+          # ==========================================
+          # ANDROID
+          # ==========================================
+          echo ""
+          echo "📱 ANDROID"
+          echo "────────────────────────────────────────────"
+          
+          # Check build.gradle package name
+          if grep -q "com.ryan.anymexbeta" android/app/build.gradle* 2>/dev/null; then
+            echo "✅ Package name in build.gradle"
+          else
+            echo "❌ Package name NOT updated in build.gradle"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check AndroidManifest package
+          if grep -q 'package="com.ryan.anymexbeta"' android/app/src/main/AndroidManifest.xml 2>/dev/null; then
+            echo "✅ Package in AndroidManifest.xml"
+          else
+            echo "❌ Package NOT updated in AndroidManifest.xml"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check AndroidManifest app name
+          if grep -q 'android:label="AnymeX β"' android/app/src/main/AndroidManifest.xml 2>/dev/null; then
+            echo "✅ App name in AndroidManifest.xml"
+          else
+            echo "❌ App name NOT updated in AndroidManifest.xml"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check Kotlin package directory
+          if [ -d "android/app/src/main/kotlin/com/ryan/anymexbeta" ]; then
+            echo "✅ Kotlin package directory moved"
+          else
+            echo "❌ Kotlin package directory NOT found"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check Kotlin files package declaration
+          if grep -q "package com.ryan.anymexbeta" android/app/src/main/kotlin/com/ryan/anymexbeta/*.kt 2>/dev/null; then
+            echo "✅ Kotlin files package declaration"
+          else
+            echo "❌ Kotlin package declaration NOT updated"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # ==========================================
+          # iOS
+          # ==========================================
+          echo ""
+          echo "🍎 iOS"
+          echo "────────────────────────────────────────────"
+          
+          # Check bundle identifier in project.pbxproj
+          if grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.ryan.anymexbeta" ios/Runner.xcodeproj/project.pbxproj 2>/dev/null; then
+            echo "✅ Bundle identifier in project.pbxproj"
+          else
+            echo "❌ Bundle identifier NOT updated in project.pbxproj"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check Info.plist app name
+          if grep -q "<string>AnymeX β</string>" ios/Runner/Info.plist 2>/dev/null; then
+            echo "✅ App name in Info.plist"
+          else
+            echo "❌ App name NOT updated in Info.plist"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # ==========================================
+          # macOS
+          # ==========================================
+          echo ""
+          echo "🖥️  macOS"
+          echo "────────────────────────────────────────────"
+          
+          # Check AppInfo.xcconfig
+          if [ -f "macos/Runner/Configs/AppInfo.xcconfig" ]; then
+            if grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.ryan.anymexbeta" macos/Runner/Configs/AppInfo.xcconfig 2>/dev/null; then
+              echo "✅ Bundle identifier in AppInfo.xcconfig"
+            else
+              echo "❌ Bundle identifier NOT updated in AppInfo.xcconfig"
+              ERRORS=$((ERRORS + 1))
+            fi
+            
+            if grep -q "PRODUCT_NAME = anymex_beta" macos/Runner/Configs/AppInfo.xcconfig 2>/dev/null; then
+              echo "✅ Product name in AppInfo.xcconfig"
+            else
+              echo "❌ Product name NOT updated in AppInfo.xcconfig"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  AppInfo.xcconfig not found (skipping)"
+          fi
+          
+          # Check macOS Info.plist
+          if [ -f "macos/Runner/Info.plist" ]; then
+            if grep -q "<string>AnymeX β</string>" macos/Runner/Info.plist 2>/dev/null; then
+              echo "✅ App name in Info.plist"
+            else
+              echo "❌ App name NOT updated in Info.plist"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  Info.plist not found (skipping)"
+          fi
+          
+          # ==========================================
+          # Linux
+          # ==========================================
+          echo ""
+          echo "🐧 LINUX"
+          echo "────────────────────────────────────────────"
+          
+          # Check my_application.cc
+          if [ -f "linux/my_application.cc" ]; then
+            if grep -q '"AnymeX β"' linux/my_application.cc 2>/dev/null; then
+              echo "✅ App name in my_application.cc"
+            else
+              echo "❌ App name NOT updated in my_application.cc"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  my_application.cc not found (skipping)"
+          fi
+          
+          # Check CMakeLists.txt
+          if [ -f "linux/CMakeLists.txt" ]; then
+            if grep -q 'set(APPLICATION_ID "com.ryan.anymexbeta")' linux/CMakeLists.txt 2>/dev/null; then
+              echo "✅ Application ID in CMakeLists.txt"
+            else
+              echo "❌ Application ID NOT updated in CMakeLists.txt"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  CMakeLists.txt not found (skipping)"
+          fi
+          
+          # ==========================================
+          # Windows
+          # ==========================================
+          echo ""
+          echo "🪟 WINDOWS"
+          echo "────────────────────────────────────────────"
+          
+          # Check Runner.rc
+          if [ -f "windows/runner/Runner.rc" ]; then
+            if grep -q '"anymex_beta"' windows/runner/Runner.rc 2>/dev/null; then
+              echo "✅ Binary name in Runner.rc"
+            else
+              echo "❌ Binary name NOT updated in Runner.rc"
+              ERRORS=$((ERRORS + 1))
+            fi
+            
+            if grep -q 'VALUE "ProductName", "AnymeX β"' windows/runner/Runner.rc 2>/dev/null; then
+              echo "✅ Product name in Runner.rc"
+            else
+              echo "❌ Product name NOT updated in Runner.rc"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  Runner.rc not found (skipping)"
+          fi
+          
+          # Check Windows CMakeLists.txt
+          if [ -f "windows/CMakeLists.txt" ]; then
+            if grep -q 'set(BINARY_NAME "anymex_beta")' windows/CMakeLists.txt 2>/dev/null; then
+              echo "✅ Binary name in CMakeLists.txt"
+            else
+              echo "❌ Binary name NOT updated in CMakeLists.txt"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "⚠️  CMakeLists.txt not found (skipping)"
+          fi
+          
+          # ==========================================
+          # Flutter pubspec.yaml
+          # ==========================================
+          echo ""
+          echo "🎯 FLUTTER"
+          echo "────────────────────────────────────────────"
+          
+          VERSION=$(echo "${GITHUB_REF_NAME}" | sed 's/^v//' | sed 's/-beta$//')
+          if grep -q "version: $VERSION" pubspec.yaml 2>/dev/null; then
+            echo "✅ Version updated in pubspec.yaml: $VERSION"
+          else
+            echo "❌ Version NOT updated in pubspec.yaml"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # ==========================================
+          # Summary
+          # ==========================================
+          echo ""
+          echo "════════════════════════════════════════════"
+          if [ $ERRORS -eq 0 ]; then
+            echo "✅ ALL PLATFORMS VERIFIED SUCCESSFULLY"
+            echo "════════════════════════════════════════════"
+            exit 0
+          else
+            echo "❌ VERIFICATION FAILED: $ERRORS error(s) found"
+            echo "════════════════════════════════════════════"
+            exit 1
           fi
           
       - name: Cache Gradle
