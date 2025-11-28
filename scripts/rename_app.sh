@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+# Detect macOS vs Linux sed
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  SED="sed -i ''"
+else
+  SED="sed -i"
+fi
+
 # PACKAGE IDs
 OLD_PKG="com.ryan.anymex"
 NEW_PKG="com.ryan.anymexbeta"
@@ -34,94 +41,76 @@ if [ -d "$ANDROID_SRC/$NEW_DIR" ]; then
   exit 0
 fi
 
-
 ###############################################
-# ANDROID — rename package + app label
+# ANDROID
 ###############################################
 echo "➡ ANDROID: Updating Gradle + Manifest + Kotlin..."
 
-# Update applicationId + namespace
-sed -i "s|applicationId = \".*\"|applicationId = \"$NEW_PKG\"|g" android/app/build.gradle
-sed -i "s|namespace = \".*\"|namespace = \"$NEW_PKG\"|g" android/app/build.gradle
+$SED "s|applicationId = \".*\"|applicationId = \"$NEW_PKG\"|g" android/app/build.gradle
+$SED "s|namespace = \".*\"|namespace = \"$NEW_PKG\"|g" android/app/build.gradle
 
-# Update manifest
-sed -i "s|package=\"$OLD_PKG\"|package=\"$NEW_PKG\"|g" "$MANIFEST_FILE"
-sed -i "s|android:label=\"AnymeX\"|android:label=\"$NEW_APP_NAME\"|g" "$MANIFEST_FILE"
+$SED "s|package=\"$OLD_PKG\"|package=\"$NEW_PKG\"|g" "$MANIFEST_FILE"
+$SED "s|android:label=\"AnymeX\"|android:label=\"$NEW_APP_NAME\"|g" "$MANIFEST_FILE"
 
-# Move Kotlin folders
 mkdir -p "$ANDROID_SRC/$NEW_DIR"
 mv "$ANDROID_SRC/$OLD_DIR"/* "$ANDROID_SRC/$NEW_DIR"/
 rm -rf "$ANDROID_SRC/com/ryan/anymex"
 
-# Update Kotlin package import
-sed -i "s|package $OLD_PKG|package $NEW_PKG|g" "$ANDROID_SRC/$NEW_DIR/MainActivity.kt"
-
+$SED "s|package $OLD_PKG|package $NEW_PKG|g" "$ANDROID_SRC/$NEW_DIR/MainActivity.kt"
 
 ###############################################
-# iOS — bundle ID + display name
+# iOS
 ###############################################
 echo "➡ iOS: Updating CFBundle IDs + display name..."
 
-# bundle identifiers
-sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
-sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
+$SED "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" ios/Runner.xcodeproj/project.pbxproj
+$SED "s|PRODUCT_BUNDLE_IDENTIFIER = ${OLD_PKG}.RunnerTests|PRODUCT_BUNDLE_IDENTIFIER = ${NEW_PKG}.RunnerTests|g" ios/Runner.xcodeproj/project.pbxproj
 
-# CFBundleDisplayName (Linux-compatible sed)
-sed -i 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
-
+$SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$IOS_PLIST"
 
 ###############################################
-# macOS — PRODUCT_NAME + display name
+# macOS
 ###############################################
 echo "➡ macOS: Updating AppInfo.xcconfig + Info.plist..."
 
-# App name + bundle identifier
 if [ -f "$MACOS_CONFIG" ]; then
-  sed -i "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
-  sed -i "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
+  $SED "s|PRODUCT_NAME = anymex|PRODUCT_NAME = $NEW_FLUTTER_NAME|g" "$MACOS_CONFIG"
+  $SED "s|PRODUCT_BUNDLE_IDENTIFIER = $OLD_PKG|PRODUCT_BUNDLE_IDENTIFIER = $NEW_PKG|g" "$MACOS_CONFIG"
 fi
 
-# macOS CFBundleDisplayName
 if [ -f "$MACOS_INFO" ]; then
-  sed -i 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
+  $SED 's|\(<key>CFBundleDisplayName</key>[[:space:]]*<string>\)AnymeX\(</string>\)|\1AnymeX β\2|' "$MACOS_INFO"
 fi
-
 
 ###############################################
-# Linux — window title + app name
+# LINUX
 ###############################################
 echo "➡ Linux: Updating window title + CMake metadata..."
 
-# Update window title in my_application.cc
 if [ -f "$LINUX_MAIN" ]; then
-  sed -i 's|"AnymeX"|"AnymeX β"|g' "$LINUX_MAIN"
+  $SED 's|"AnymeX"|"AnymeX β"|g' "$LINUX_MAIN"
 fi
 
-# Update CMakeLists.txt app name
 if [ -f "$LINUX_CMAKE" ]; then
-  sed -i "s|AnymeX|AnymeX β|g" "$LINUX_CMAKE"
+  $SED "s|AnymeX|AnymeX β|g" "$LINUX_CMAKE"
 fi
-
 
 ###############################################
-# Windows — RC metadata (lowercase style)
+# WINDOWS
 ###############################################
 echo "➡ Windows: Updating .rc metadata..."
 
 if [ -f "$WINDOWS_RC" ]; then
-  # Any occurrence of "anymex" → "anymex_beta"
-  sed -i "s|\"anymex\"|\"anymex_beta\"|g" "$WINDOWS_RC"
-  sed -i "s|\"anymex.exe\"|\"anymex_beta.exe\"|g" "$WINDOWS_RC"
+  $SED 's|"anymex"|"anymex_beta"|g' "$WINDOWS_RC"
+  $SED 's|"anymex.exe"|"anymex_beta.exe"|g' "$WINDOWS_RC"
 fi
-
 
 ###############################################
 # Flutter pubspec — name + version
 ###############################################
 echo "➡ Flutter: Updating pubspec.yaml..."
 
-sed -i "s|name: anymex|name: $NEW_FLUTTER_NAME|g" pubspec.yaml
-sed -i "s|version: .*|version: $NEW_VERSION|g" pubspec.yaml
-
+$SED "s|name: anymex|name: $NEW_FLUTTER_NAME|g" pubspec.yaml
+$SED "s|version: .*|version: $NEW_VERSION|g" pubspec.yaml
 
 echo "🎉 FULL CROSS-PLATFORM RENAME COMPLETE!"
