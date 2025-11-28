@@ -338,13 +338,40 @@ jobs:
         run: |
           flutter pub get
           flutter build macos --release
-          APP_PATH="build/macos/Build/Products/Release/anymex.app"
-          [ ! -d "$APP_PATH" ] && echo "Error: anymex.app not found" && exit 1
-          mkdir -p build/macos/Release temp_dir
-          cp -r "$APP_PATH" temp_dir/
+      
+          echo "🔍 Searching for built .app..."
+      
+          APP_PATH=$(find build/macos/Build/Products/Release -maxdepth 1 -name "*.app" | head -n 1)
+      
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ Error: No .app found!"
+            ls -R build/macos/Build/Products/Release
+            exit 1
+          fi
+      
+          echo "✅ Found app: $APP_PATH"
+          
+          # Prepare DMG structure
+          mkdir -p temp_dir build/macos/Release
+          cp -R "$APP_PATH" temp_dir/
+      
+          # Applications shortcut (required for macOS DMGs)
           ln -s /Applications temp_dir/Applications
-          hdiutil create -volname "AnymeX" -srcfolder temp_dir -ov -format UDZO build/macos/Release/AnymeX.dmg
+      
+          # Extract the .app folder name to dynamically name the DMG
+          APP_NAME=$(basename "$APP_PATH" .app)
+      
+          echo "📦 Creating DMG: ${APP_NAME}.dmg"
+      
+          hdiutil create -volname "$APP_NAME" \
+            -srcfolder temp_dir \
+            -ov -format UDZO \
+            "build/macos/Release/${APP_NAME}.dmg"
+      
           rm -rf temp_dir
+      
+          echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+
       
       - uses: actions/upload-artifact@v4
         if: matrix.platform == 'android'
@@ -379,8 +406,8 @@ jobs:
         if: matrix.platform == 'macos'
         with:
           name: macos
-          path: build/macos/Release/AnymeX.dmg
-
+          path: build/macos/Release/${{ env.APP_NAME }}.dmg
+          
   release:
     needs: build-all-platforms
     runs-on: ubuntu-latest
