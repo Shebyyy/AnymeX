@@ -30,23 +30,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      # ----------------------------------------------------
-      # 🔄 RENAME PACKAGE ONLY FOR ANDROID + IOS BUILDS
-      # ----------------------------------------------------
-      - name: Auto rename for beta build
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-      
-          if [[ "$TAG" == *"-beta" ]]; then
-            echo "🔵 Beta tag → Renaming"
-            chmod +x scripts/rename_app.sh
-            scripts/rename_app.sh "$(echo $TAG | sed 's/v//')"
-          else
-            echo "🟢 Stable tag → No rename"
-          fi
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -75,7 +58,20 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
+
+      - name: Auto rename for beta build
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
       
+          if [[ "$TAG" == *"-beta" ]]; then
+            echo "🔵 Beta tag → Renaming"
+            chmod +x scripts/rename_app.sh
+            scripts/rename_app.sh "$(echo $TAG | sed 's/v//')"
+          else
+            echo "🟢 Stable tag → No rename"
+          fi
+          
       - name: Cache Gradle
         if: matrix.platform == 'android'
         uses: actions/cache@v3
