@@ -951,4 +951,4 @@ jobs:
           artifacts: "chocolatey/com.ryan.anymex.*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
-          tag: ${{ github.ref_name }};
+          tag: ${{ github.ref_name }}
