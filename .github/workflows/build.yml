@@ -490,6 +490,10 @@ jobs:
           MAL_CLIENT_SECRET=$MAL_CLIENT_SECRET
           CALLBACK_SCHEME=$CALLBACK_SCHEME
           EOF
+          
+      - name: Clean Flutter for Beta Build
+        if: env.IS_BETA_BUILD == 'true'
+        run: flutter clean
 
       - name: Build Android
         if: matrix.platform == 'android'
