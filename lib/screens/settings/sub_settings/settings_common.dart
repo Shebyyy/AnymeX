@@ -1,11 +1,10 @@
-// lib/widgets/non_widgets/settings_common.dart
-
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/data_keys/general.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/custom_widgets/custom_expansion_tile.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
+import 'package:anymex/widgets/non_widgets/settings_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
@@ -54,60 +53,64 @@ class _SettingsCommonState extends State<SettingsCommon> {
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     ),
                     const SizedBox(width: 10),
-                    const Text("Common ",
+                    const Text("Common",
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 20)),
                   ],
                 ),
                 const SizedBox(height: 30),
 
-                // ---------------- Universal Section ----------------
                 AnymexExpansionTile(
-                    initialExpanded: true,
-                    title: 'Universal',
-                    content: Column(
-                      children: [
-                        CustomSwitchTile(
-                          icon: Icons.touch_app_rounded,
-                          title: 'Ask for tracking permission',
-                          description:
-                              'If enabled, Anymex will ask for tracking permission.',
-                          switchValue: shouldAskForPermission,
-                          onChanged: (e) {
-                            setState(() {
-                              shouldAskForPermission = e;
-                              General.shouldAskForTrack.set(e);
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 14),
+                  initialExpanded: true,
+                  title: 'Universal',
+                  content: Column(
+                    children: [
+                      CustomSwitchTile(
+                        icon: Icons.touch_app_rounded,
+                        title: 'Ask for tracking permission',
+                        description:
+                            'If enabled, Anymex will ask for tracking permission.',
+                        switchValue: shouldAskForPermission,
+                        onChanged: (e) {
+                          setState(() {
+                            shouldAskForPermission = e;
+                            General.shouldAskForTrack.set(e);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-                        /// NEW — Default Start Page
-                        _buildDefaultStartPageDropdown(context),
-                      ],
-                    )),
+                      CustomTile(
+                        icon: Icons.home_filled,
+                        title: "Default Start Page",
+                        description: "Choose which tab opens first when launching the app",
+                        onTap: () => SettingsSheet().showStartPageSelector(context),
+                      ),
+                    ],
+                  ),
+                ),
 
-                // ---------------- Anilist Section ----------------
                 AnymexExpansionTile(
-                    initialExpanded: true,
-                    title: 'Anilist',
-                    content: CustomTile(
-                      icon: Icons.format_list_bulleted_sharp,
-                      title: 'Manage Anilist Lists',
-                      description: "Choose which list to show on home page",
-                      onTap: () => _showHomePageCardsDialog(context, false),
-                    )),
+                  initialExpanded: true,
+                  title: 'Anilist',
+                  content: CustomTile(
+                    icon: Icons.format_list_bulleted_sharp,
+                    title: 'Manage Anilist Lists',
+                    description: "Choose which list to show on home page",
+                    onTap: () => _showHomePageCardsDialog(context, false),
+                  ),
+                ),
 
-                // ---------------- MyAnimeList Section ----------------
                 AnymexExpansionTile(
-                    initialExpanded: true,
-                    title: 'MyAnimeList',
-                    content: CustomTile(
-                      icon: Icons.format_list_bulleted_sharp,
-                      title: 'Manage MyAnimeList Lists',
-                      description: "Choose which list to show on home page",
-                      onTap: () => _showHomePageCardsDialog(context, true),
-                    )),
+                  initialExpanded: true,
+                  title: 'MyAnimeList',
+                  content: CustomTile(
+                    icon: Icons.format_list_bulleted_sharp,
+                    title: 'Manage MyAnimeList Lists',
+                    description: "Choose which list to show on home page",
+                    onTap: () => _showHomePageCardsDialog(context, true),
+                  ),
+                ),
               ],
             ),
           ),
@@ -116,51 +119,6 @@ class _SettingsCommonState extends State<SettingsCommon> {
     );
   }
 
-  // -------- DEFAULT START PAGE DROPDOWN ----------
-  Widget _buildDefaultStartPageDropdown(BuildContext context) {
-    return Obx(() {
-      final value = settings.defaultStartTab.value;
-
-      return ListTile(
-        leading: const Icon(Icons.home_filled),
-        title: const Text("Default Start Page"),
-        subtitle: Text(_tabName(value)),
-        trailing: DropdownButton<int>(
-          value: value,
-          underline: Container(),
-          onChanged: (v) {
-            if (v != null) {
-              settings.saveDefaultStartTab(v);
-              setState(() {});
-            }
-          },
-          items: const [
-            DropdownMenuItem(value: 0, child: Text("Home")),
-            DropdownMenuItem(value: 1, child: Text("Anime")),
-            DropdownMenuItem(value: 2, child: Text("Manga")),
-            DropdownMenuItem(value: 3, child: Text("Library")),
-          ],
-        ),
-      );
-    });
-  }
-
-  String _tabName(int index) {
-    switch (index) {
-      case 0:
-        return "Home";
-      case 1:
-        return "Anime";
-      case 2:
-        return "Manga";
-      case 3:
-        return "Library";
-      default:
-        return "Home";
-    }
-  }
-
-  // -------- DIALOG FOR ANILIST/MAL HOMEPAGE CARDS ----------
   void _showHomePageCardsDialog(BuildContext context, bool isMal) {
     showDialog(
       context: context,
@@ -178,7 +136,6 @@ class _SettingsCommonState extends State<SettingsCommon> {
                 itemBuilder: (context, index) {
                   final key = homePageCards.keys.elementAt(index);
                   final value = homePageCards[key]!;
-
                   return CheckboxListTile(
                     title: Text(key),
                     value: value,
