@@ -3,7 +3,7 @@ import 'package:anymex/models/ui/ui_adaptor.dart';
 import 'package:anymex/screens/onboarding/welcome_dialog.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/shaders.dart';
-import 'package:anymex/utils/update_manager.dart'; // UPDATED
+import 'package:anymex/utils/updater.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
