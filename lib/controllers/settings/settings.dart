@@ -26,10 +26,10 @@ class Settings extends GetxController {
 
   final canShowUpdate = true.obs;
 
-  /// Beta updates toggle
+  /// NEW — Beta Updates Toggle
   RxBool enableBetaUpdates = false.obs;
 
-  ///  default start tab (0=Home, 1=Anime, 2=Manga, 3=Library)
+  /// NEW — Default Start Tab
   RxInt defaultStartTab = 0.obs;
 
   RxBool isTV = false.obs;
@@ -66,7 +66,7 @@ class Settings extends GetxController {
     selectedProfile =
         preferences.get('selected_profile', defaultValue: 'MID-END');
 
-    /// Load beta toggle
+    /// Load saved beta toggle
     enableBetaUpdates.value =
         preferences.get('enable_beta_updates', defaultValue: false);
 
@@ -74,7 +74,7 @@ class Settings extends GetxController {
     defaultStartTab.value =
         preferences.get('default_start_tab', defaultValue: 0);
 
-    /// Ensure valid index
+    /// Ensure it's within valid range
     if (defaultStartTab.value > 3) {
       defaultStartTab.value = 0;
       preferences.put('default_start_tab', 0);
@@ -90,7 +90,7 @@ class Settings extends GetxController {
     });
   }
 
-  /// Manual update check
+  /// Manual Update check
   void checkForUpdates(BuildContext context) {
     UpdateManager().checkForUpdates(
       context,
@@ -126,10 +126,6 @@ class Settings extends GetxController {
     }
   }
 
-  // -----------------------------
-  // UI Settings
-  // -----------------------------
-
   T _getUISetting<T>(T Function(UISettings settings) getter) {
     return getter(uiSettings.value);
   }
@@ -139,6 +135,17 @@ class Settings extends GetxController {
     saveUISettings();
   }
 
+  // -------------------- PLAYER HELPERS (FIXED) --------------------
+  T _getPlayerSetting<T>(T Function(PlayerSettings settings) getter) {
+    return getter(playerSettings.value);
+  }
+
+  void _setPlayerSetting<T>(void Function(PlayerSettings? settings) setter) {
+    playerSettings.update(setter);
+    savePlayerSettings();
+  }
+
+  // -------------------- UI SETTINGS --------------------
   bool get usePosterColor => _getUISetting((s) => s.usePosterColor);
   set usePosterColor(bool value) =>
       _setUISetting((s) => s?.usePosterColor = value);
@@ -206,8 +213,7 @@ class Settings extends GetxController {
       _setUISetting((s) => s?.tabBarHeight = value);
 
   double get tabBarWidth => _getUISetting((s) => s.tabBarWidth);
-  set tabBarWidth(double value) =>
-      _setUISetting((s) => s?.tabBarWidth = value);
+  set tabBarWidth(double value) => _setUISetting((s) => s?.tabBarWidth = value);
 
   double get tabBarRoundness => _getUISetting((s) => s.tabBarRoundness);
   set tabBarRoundness(double value) =>
@@ -220,10 +226,7 @@ class Settings extends GetxController {
   set animationDuration(int value) =>
       _setUISetting((s) => s?.animationDuration = value);
 
-  // -----------------------------
-  // Player settings
-  // -----------------------------
-
+  // -------------------- PLAYER SETTINGS --------------------
   bool get defaultPortraitMode =>
       _getPlayerSetting((s) => s.defaultPortraitMode);
   set defaultPortraitMode(bool value) =>
@@ -270,7 +273,8 @@ class Settings extends GetxController {
   set seekDuration(int value) =>
       _setPlayerSetting((s) => s?.seekDuration = value);
 
-  bool get transitionSubtitle => _getPlayerSetting((s) => s.transitionSubtitle);
+  bool get transitionSubtitle =>
+      _getPlayerSetting((s) => s.transitionSubtitle);
   set transitionSubtitle(bool value) =>
       _setPlayerSetting((s) => s?.transitionSubtitle = value);
 
@@ -288,12 +292,10 @@ class Settings extends GetxController {
       _setPlayerSetting((s) => s?.subtitleOutlineWidth = value);
 
   bool get autoSkipOP => _getPlayerSetting((s) => s.autoSkipOP);
-  set autoSkipOP(bool value) =>
-      _setPlayerSetting((s) => s?.autoSkipOP = value);
+  set autoSkipOP(bool value) => _setPlayerSetting((s) => s?.autoSkipOP = value);
 
   bool get autoSkipED => _getPlayerSetting((s) => s.autoSkipED);
-  set autoSkipED(bool value) =>
-      _setPlayerSetting((s) => s?.autoSkipED = value);
+  set autoSkipED(bool value) => _setPlayerSetting((s) => s?.autoSkipED = value);
 
   bool get autoSkipOnce => _getPlayerSetting((s) => s.autoSkipOnce);
   set autoSkipOnce(bool value) =>
