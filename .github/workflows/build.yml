@@ -75,15 +75,33 @@ jobs:
           java-version: "17"
 
       # =================================================================
-      # MODIFIED: Use an expression to disable Flutter's internal cache for betas
+      # MODIFIED: Disable Flutter cache only for beta builds
       # =================================================================
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: ${{ env.IS_BETA_BUILD != 'true' }}
 
-      - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      # =================================================================
+      # Install ImageMagick depending on runner OS
+      # =================================================================
+      - name: Install ImageMagick (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Install ImageMagick (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install imagemagick
+
+      - name: Install ImageMagick (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          choco install imagemagick --force -y
+
 
       - name: Auto rename for beta build
         shell: bash
