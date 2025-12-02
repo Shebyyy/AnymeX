@@ -250,9 +250,23 @@ fi
 ###############################################
 log_info "Generating beta icons for Android / iOS / macOS / Windows..."
 
+# Detect ImageMagick and set command variables
+CONVERT_CMD=""
+IDENTIFY_CMD=""
+
+if command -v magick >/dev/null 2>&1; then
+  # Prefer modern ImageMagick CLI (avoids Windows convert.exe conflict)
+  CONVERT_CMD="magick convert"
+  IDENTIFY_CMD="magick identify"
+elif command -v convert >/dev/null 2>&1 && convert -version 2>/dev/null | grep -qi "ImageMagick"; then
+  # Fallback to legacy 'convert' / 'identify' if they are actually ImageMagick
+  CONVERT_CMD="convert"
+  IDENTIFY_CMD="identify"
+fi
+
 # We require ImageMagick (convert + identify)
-if ! command -v convert >/dev/null 2>&1; then
-  log_warn "ImageMagick 'convert' not found. Skipping icon generation."
+if [ -z "$CONVERT_CMD" ] || [ -z "$IDENTIFY_CMD" ]; then
+  log_warn "ImageMagick (magick/convert) not found or not ImageMagick. Skipping icon generation."
 else
   ########################
   # ANDROID (mipmap-* + TV)
