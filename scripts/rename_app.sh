@@ -217,6 +217,44 @@ if [ -f "pubspec.yaml" ]; then
   log_success "Updated version to $NEW_VERSION"
 fi
 
+
+###############################################
+# 🔥 APPLY BETA LOGOS HERE
+###############################################
+log_info "Applying Beta Logos..."
+
+BETA_LOGO="assets/images/logo_beta.png"
+MAIN_LOGO="assets/images/logo.png"
+
+BETA_LOGO_TRANSPARENT="assets/images/logo_transparent_beta.png"
+MAIN_LOGO_TRANSPARENT="assets/images/logo_transparent.png"
+
+# Override logo.png
+if [ -f "$BETA_LOGO" ]; then
+  cp "$BETA_LOGO" "$MAIN_LOGO"
+  log_success "Beta logo applied → logo.png"
+else
+  log_warn "Missing beta logo: $BETA_LOGO"
+fi
+
+# Override logo_transparent.png
+if [ -f "$BETA_LOGO_TRANSPARENT" ]; then
+  cp "$BETA_LOGO_TRANSPARENT" "$MAIN_LOGO_TRANSPARENT"
+  log_success "Beta transparent logo applied → logo_transparent.png"
+else
+  log_warn "Missing beta transparent logo: $BETA_LOGO_TRANSPARENT"
+fi
+
+
+###############################################
+# Clean Flutter build cache
+###############################################
+log_info "Cleaning Flutter build cache..."
+flutter clean > /dev/null 2>&1 || true
+rm -rf .dart_tool/
+log_success "Build cache cleaned"
+
+
 ###############################################
 # Clean Flutter build cache
 ###############################################
