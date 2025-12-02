@@ -245,15 +245,117 @@ else
   log_warn "Missing beta transparent logo: $BETA_LOGO_TRANSPARENT"
 fi
 
-
 ###############################################
-# Clean Flutter build cache
+# Auto-generate Beta Icons for ALL Platforms
 ###############################################
-log_info "Cleaning Flutter build cache..."
-flutter clean > /dev/null 2>&1 || true
-rm -rf .dart_tool/
-log_success "Build cache cleaned"
+log_info "Generating beta icons for Android / iOS / macOS / Windows..."
 
+# We require ImageMagick (convert + identify)
+if ! command -v convert >/dev/null 2>&1; then
+  log_warn "ImageMagick 'convert' not found. Skipping icon generation."
+else
+  ########################
+  # ANDROID (mipmap-* + TV)
+  ########################
+  BASE_ICON="$BETA_LOGO"
+  TRANSPARENT_ICON="$BETA_LOGO_TRANSPARENT"
+
+  declare -A DPI_SIZES=(
+    ["mipmap-mdpi"]=48
+    ["mipmap-hdpi"]=72
+    ["mipmap-xhdpi"]=96
+    ["mipmap-xxhdpi"]=144
+    ["mipmap-xxxhdpi"]=192
+  )
+
+  declare -A BANNER_SIZES=(
+    ["mipmap-mdpi"]="320x180"
+    ["mipmap-hdpi"]="480x270"
+    ["mipmap-xhdpi"]="640x360"
+    ["mipmap-xxhdpi"]="960x540"
+    ["mipmap-xxxhdpi"]="1280x720"
+  )
+
+  for folder in "${!DPI_SIZES[@]}"; do
+    SIZE=${DPI_SIZES[$folder]}
+    DIR="android/app/src/main/res/$folder"
+
+    if [ -d "$DIR" ]; then
+      log_info "Android: $folder ($SIZE px)"
+
+      convert "$BASE_ICON" -resize "${SIZE}x${SIZE}" "$DIR/ic_launcher.png"
+      convert "$BASE_ICON" -resize "${SIZE}x${SIZE}" "$DIR/ic_rounded_launcher.png"
+      convert "$TRANSPARENT_ICON" -resize "${SIZE}x${SIZE}" "$DIR/ic_launcher_foreground.png"
+      convert "$TRANSPARENT_ICON" -resize "${SIZE}x${SIZE}" -monochrome "$DIR/ic_launcher_monochrome.png"
+      convert -size "${SIZE}x${SIZE}" canvas:black "$DIR/ic_launcher_background.png"
+
+      BANNER="${BANNER_SIZES[$folder]}"
+      convert "$BASE_ICON" -resize "$BANNER" "$DIR/tv_banner.png"
+      convert "$BASE_ICON" -resize "$BANNER" "$DIR/tv_banner_adaptive_fore.png"
+      convert -size "$BANNER" canvas:black "$DIR/tv_banner_adaptive_back.png"
+
+      log_success "Android icons updated in $DIR"
+    fi
+  done
+
+  ########################
+  # iOS (AppIcon.appiconset)
+  ########################
+  IOS_ICONSET="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+  if [ -d "$IOS_ICONSET" ]; then
+    log_info "iOS: Updating $IOS_ICONSET"
+    for ICON in "$IOS_ICONSET"/*.png; do
+      if [ -f "$ICON" ]; then
+        SIZE=$(identify -format "%wx%h" "$ICON" 2>/dev/null || echo "")
+        if [ -n "$SIZE" ]; then
+          convert "$BETA_LOGO_TRANSPARENT" -resize "$SIZE" "$ICON"
+        fi
+      fi
+    done
+    log_success "iOS AppIcon.appiconset updated from beta logo"
+  else
+    log_warn "iOS iconset not found at $IOS_ICONSET (skipping)"
+  fi
+
+  ########################
+  # macOS (AppIcon.appiconset)
+  ########################
+  MACOS_ICONSET="macos/Runner/Assets.xcassets/AppIcon.appiconset"
+  if [ -d "$MACOS_ICONSET" ]; then
+    log_info "macOS: Updating $MACOS_ICONSET"
+    for ICON in "$MACOS_ICONSET"/*.png; do
+      if [ -f "$ICON" ]; then
+        SIZE=$(identify -format "%wx%h" "$ICON" 2>/dev/null || echo "")
+        if [ -n "$SIZE" ]; then
+          convert "$BETA_LOGO_TRANSPARENT" -resize "$SIZE" "$ICON"
+        fi
+      fi
+    done
+    log_success "macOS AppIcon.appiconset updated from beta logo"
+  else
+    log_warn "macOS iconset not found at $MACOS_ICONSET (skipping)"
+  fi
+
+  ########################
+  # Windows (.ico)
+  ########################
+  WIN_ICO="windows/runner/resources/app_icon.ico"
+  if [ -f "$WIN_ICO" ]; then
+    log_info "Windows: Updating $WIN_ICO"
+    # multi-size ICO from one PNG
+    convert "$BETA_LOGO" -resize 256x256 -define icon:auto-resize=16,24,32,48,64,128,256 "$WIN_ICO"
+    log_success "Windows app_icon.ico updated from beta logo"
+  else
+    log_warn "Windows ICO not found at $WIN_ICO (skipping)"
+  fi
+
+  ########################
+  # Linux
+  ########################
+  # Linux already uses assets/images/logo.png in your packaging,
+  # and we've already overwritten that with beta, so nothing extra needed.
+  log_info "Linux: using updated assets/images/logo.png for icons."
+fi
 
 ###############################################
 # Clean Flutter build cache
