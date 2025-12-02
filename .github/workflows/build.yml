@@ -543,6 +543,33 @@ jobs:
           MAL_CLIENT_SECRET=$MAL_CLIENT_SECRET
           CALLBACK_SCHEME=$CALLBACK_SCHEME
           EOF
+
+      # =================================================================
+      # NEW STEP: Prepare Assets for Build
+      # =================================================================
+      - name: Prepare Assets for Build
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
+            echo "🔵 Beta build detected. Applying beta assets..."
+            if [ -f "assets/images/logo_beta.png" ]; then
+              cp assets/images/logo_beta.png assets/images/logo.png
+              echo "✅ Copied logo_beta.png to logo.png"
+            else
+              echo "❌ Error: assets/images/logo_beta.png not found!"
+              exit 1
+            fi
+            if [ -f "assets/images/logo_transparent_beta.png" ]; then
+              cp assets/images/logo_transparent_beta.png assets/images/logo_transparent.png
+              echo "✅ Copied logo_transparent_beta.png to logo_transparent.png"
+            else
+              echo "❌ Error: assets/images/logo_transparent_beta.png not found!"
+              exit 1
+            fi
+            echo "✅ Beta assets applied."
+          else
+            echo "🟢 Stable build detected. Using default assets."
+          fi
           
       - name: Clean Flutter for Beta Build
         if: env.IS_BETA_BUILD == 'true'
@@ -600,9 +627,16 @@ jobs:
           cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
           cp assets/images/logo.png AppDir/usr/share/icons/hicolor/256x256/apps/anymex.png
           cp assets/images/logo.png AppDir/anymex.png
-          cat > AppDir/anymex.desktop << 'EOF'
+          
+          # Set the app name for the .desktop file
+          APP_NAME="AnymeX"
+          if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
+            APP_NAME="AnymeX β" # <-- MODIFIED: Set beta name
+          fi
+          
+          cat > AppDir/anymex.desktop << EOF
           [Desktop Entry]
-          Name=AnymeX
+          Name=${APP_NAME} # <-- MODIFIED: Use the variable
           Exec=usr/bin/anymex
           Icon=anymex
           Type=Application
@@ -678,6 +712,22 @@ jobs:
               Write-Error "ISS file not found: $issFile"
               exit 1
           }
+          
+          # <-- MODIFIED START: Fix Inno Setup script for beta builds -->
+          if ("${{ github.ref_name }}" -like "*-beta") {
+            Write-Host "Fixing installer for beta build..."
+            $content = Get-Content $issFile -Raw
+            # Fix the executable name the shortcut points to
+            $content = $content -replace 'AnymeX\.exe', 'anymex_beta.exe'
+            # Fix the name of the shortcut itself
+            $content = $content -replace '"AnymeX"', '"AnymeX β"'
+            # Fix the default app name in the registry
+            $content = $content -replace 'AppName=AnymeX', 'AppName=AnymeX β'
+            Set-Content $issFile -Value $content -NoNewline
+            Write-Host "Updated Inno Setup script for beta build"
+          }
+          # <-- MODIFIED END -->
+
           $content = Get-Content $issFile -Raw
           $content = $content -replace '.*Icelandic\.isl.*\r?\n', ''
           Set-Content $issFile -Value $content -NoNewline
@@ -718,10 +768,17 @@ jobs:
 
           # Extract the .app folder name to dynamically name the DMG
           APP_NAME=$(basename "$APP_PATH" .app)
+          
+          # <-- MODIFIED START: Set DMG volume name for beta builds -->
+          DMG_VOL_NAME="$APP_NAME"
+          if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
+            DMG_VOL_NAME="AnymeX β"
+          fi
+          # <-- MODIFIED END -->
 
-          echo "📦 Creating DMG: ${APP_NAME}.dmg"
+          echo "📦 Creating DMG: ${APP_NAME}.dmg with volume name: ${DMG_VOL_NAME}"
 
-          hdiutil create -volname "$APP_NAME" \
+          hdiutil create -volname "$DMG_VOL_NAME" \
             -srcfolder temp_dir \
             -ov -format UDZO \
             "build/macos/Release/${APP_NAME}.dmg"
