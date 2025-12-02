@@ -211,6 +211,21 @@ jobs:
           ERRORS=0
 
           # ==========================================
+          # DART CODE
+          # ==========================================
+          echo ""
+          echo "🎯 DART"
+          echo "────────────────────────────────────────────"
+
+          # Check main.dart for the app title
+          if grep -q 'title: "AnymeX β"' lib/main.dart 2>/dev/null; then
+            echo "✅ MaterialApp title in lib/main.dart"
+          else
+            echo "❌ MaterialApp title NOT updated in lib/main.dart"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # ==========================================
           # ANDROID
           # ==========================================
           echo ""
