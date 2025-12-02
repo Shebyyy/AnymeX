@@ -217,6 +217,20 @@ if [ -f "pubspec.yaml" ]; then
   log_success "Updated version to $NEW_VERSION"
 fi
 
+###############################################
+# FLUTTER (Dart Code)
+###############################################
+log_info "Flutter: Updating Dart code..."
+
+DART_MAIN_FILE="lib/main.dart"
+
+if [ -f "$DART_MAIN_FILE" ]; then
+  # Update the MaterialApp title. This handles both single and double quotes and optional whitespace.
+  sed "${SED_INPLACE[@]}" -E "s|title:[[:space:]]*['\"]AnymeX['\"]|title: \"AnymeX β\"|g" "$DART_MAIN_FILE"
+  log_success "Updated MaterialApp title in $DART_MAIN_FILE"
+else
+  log_warn "Main Dart file not found at $DART_MAIN_FILE. Skipping Dart title update."
+fi
 
 ###############################################
 # 🔥 APPLY BETA LOGOS HERE
