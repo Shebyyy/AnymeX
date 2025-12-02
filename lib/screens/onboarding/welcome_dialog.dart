@@ -1,6 +1,5 @@
 import 'package:anymex/utils/logger.dart';
 import 'dart:io';
-
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_accounts.dart';
@@ -18,7 +17,6 @@ import 'package:iconly/iconly.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// STORAGE PERMISSIONS
 Future<bool> _requestStoragePermissions() async {
   if (!Platform.isAndroid) return true;
 
@@ -30,40 +28,30 @@ Future<bool> _requestStoragePermissions() async {
     Logger.i('Android SDK version: $sdkInt');
 
     if (sdkInt >= 33) {
-      final permissions = [
-        Permission.photos,
-        Permission.videos,
-      ];
-
-      Map<Permission, PermissionStatus> statuses = await permissions.request();
+      final permissions = [Permission.photos, Permission.videos];
+      final statuses = await permissions.request();
 
       if (await Permission.manageExternalStorage.isDenied) {
-        final manageStorageStatus =
-            await Permission.manageExternalStorage.request();
+        final manageStorageStatus = await Permission.manageExternalStorage.request();
         if (manageStorageStatus.isPermanentlyDenied) {
           await openAppSettings();
           return false;
         }
       }
 
-      return statuses.values.every((s) =>
-          s == PermissionStatus.granted || s == PermissionStatus.limited);
+      return statuses.values.every((s) => s == PermissionStatus.granted || s == PermissionStatus.limited);
     } else if (sdkInt >= 30) {
       final status = await Permission.manageExternalStorage.request();
-
       if (status.isPermanentlyDenied) {
         await openAppSettings();
         return false;
       }
-
       return status.isGranted;
     } else if (sdkInt >= 23) {
-      final permissions = [Permission.storage];
-      final statuses = await permissions.request();
-      bool allGranted = statuses.values.every((s) => s.isGranted);
+      final statuses = await [Permission.storage].request();
+      final allGranted = statuses.values.every((s) => s.isGranted);
 
-      if (!allGranted &&
-          statuses.values.any((s) => s.isPermanentlyDenied)) {
+      if (!allGranted && statuses.values.any((s) => s.isPermanentlyDenied)) {
         await openAppSettings();
         return false;
       }
@@ -78,7 +66,6 @@ Future<bool> _requestStoragePermissions() async {
   }
 }
 
-// MAIN DIALOG
 void showWelcomeDialogg(BuildContext context) {
   showGeneralDialog(
     context: context,
@@ -86,25 +73,19 @@ void showWelcomeDialogg(BuildContext context) {
     barrierLabel: "Welcome To AnymeX",
     pageBuilder: (context, animation1, animation2) {
       final settings = Get.find<Settings>();
-      final serviceHandler = Get.find<ServiceHandler>();
-
       final RxBool storagePermissionGranted = false.obs;
       final RxBool installPermissionGranted = false.obs;
 
       Future<void> requestStoragePermission() async {
         final status = await _requestStoragePermissions();
         storagePermissionGranted.value = status;
-        if (!status) {
-          snackBar("Storage permission is required to download updates");
-        }
+        if (!status) snackBar("Storage permission is required to download updates");
       }
 
       Future<void> requestInstallPermission() async {
         final status = await Permission.requestInstallPackages.request();
         installPermissionGranted.value = status.isGranted;
-        if (!status.isGranted) {
-          snackBar("Install permission is required to update the app");
-        }
+        if (!status.isGranted) snackBar("Install permission is required to update the app");
       }
 
       return Obx(() {
@@ -122,17 +103,12 @@ void showWelcomeDialogg(BuildContext context) {
                 color: Theme.of(context).dialogBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black54,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
-                  ),
+                  BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 4)),
                 ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // TITLE BAR
                   Container(
                     height: 50,
                     width: double.infinity,
@@ -144,47 +120,36 @@ void showWelcomeDialogg(BuildContext context) {
                       color: Theme.of(context).colorScheme.surfaceContainer,
                     ),
                     child: const Center(
-                      child: Text(
-                        'Welcome To AnymeX',
-                        style: TextStyle(fontFamily: 'Poppins-SemiBold'),
-                      ),
+                      child: Text('Welcome To AnymeX', style: TextStyle(fontFamily: 'Poppins-SemiBold')),
                     ),
                   ),
 
-                  // CONTENT
                   Flexible(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(6.0),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // PERFORMANCE MODE
                           CustomSwitchTile(
                             icon: HugeIcons.strokeRoundedCpu,
                             title: "Performance Mode",
-                            description:
-                                "Disable animations to improve performance",
+                            description: "Disable animations to improve performance",
                             switchValue: !settings.enableAnimation,
                             onChanged: (v) => settings.enableAnimation = !v,
                           ),
 
-                          // DISABLE GRADIENT
                           CustomSwitchTile(
                             icon: HugeIcons.strokeRoundedBounceRight,
                             title: "Disable Gradient",
-                            description:
-                                "Disable gradients for smoother experience",
+                            description: "Disable gradients for smoother experience",
                             switchValue: settings.disableGradient,
                             onChanged: (v) => settings.disableGradient = v,
                           ),
 
-                          // PERMISSIONS
                           if (Platform.isAndroid) ...[
                             CustomSwitchTile(
                               icon: HugeIcons.strokeRoundedFolderSecurity,
                               title: "Storage Permission",
-                              description:
-                                  "Needed for downloading and saving updates",
+                              description: "Needed for downloading and saving updates",
                               switchValue: storagePermissionGranted.value,
                               onChanged: (val) {
                                 if (val) requestStoragePermission();
@@ -193,8 +158,7 @@ void showWelcomeDialogg(BuildContext context) {
                             CustomSwitchTile(
                               icon: HugeIcons.strokeRoundedDownload01,
                               title: "Install Permission",
-                              description:
-                                  "Needed for installing app updates",
+                              description: "Needed for installing app updates",
                               switchValue: installPermissionGranted.value,
                               onChanged: (val) {
                                 if (val) requestInstallPermission();
@@ -202,10 +166,8 @@ void showWelcomeDialogg(BuildContext context) {
                             ),
                           ],
 
-                          // CHANGE SERVICE
                           CustomTile(
-                            description:
-                                'Choose your preferred service: AniList, MAL, or Simkl',
+                            description: 'Choose your preferred service: AniList, MAL, or Simkl',
                             icon: HugeIcons.strokeRoundedAiSetting,
                             title: 'Change Service',
                             onTap: () {
@@ -213,57 +175,43 @@ void showWelcomeDialogg(BuildContext context) {
                             },
                           ),
 
-                          // NEW — DEFAULT START PAGE PICKER
                           CustomTile(
-                            description:
-                                'Choose which tab opens first when launching the app',
+                            description: 'Choose which tab opens first when launching the app',
                             icon: IconlyBold.home,
                             title: 'Default Start Page',
-                            onTap: () => _showStartPagePicker(context),
+                            onTap: () => SettingsSheet().showStartPageSelector(context),
                           ),
 
                           const SizedBox(height: 12),
 
-                          // LOGIN AND SKIP BUTTONS
                           Container(
                             height: 50,
                             padding: const EdgeInsets.symmetric(horizontal: 5),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLowest,
+                              color: Theme.of(context).colorScheme.surfaceContainerLowest,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
-                                // LOGIN BUTTON
                                 Expanded(
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainer,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
+                                      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                     ),
                                     onPressed: () {
-                                      Hive.box('themeData')
-                                          .put('isFirstTime', false);
+                                      Hive.box('themeData').put('isFirstTime', false);
                                       Navigator.of(context).pop();
                                       navigate(() => const SettingsAccounts());
                                     },
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           'Login',
                                           style: TextStyle(
                                             fontFamily: 'Poppins-SemiBold',
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .inverseSurface,
+                                            color: Theme.of(context).colorScheme.inverseSurface,
                                           ),
                                         ),
                                         const Spacer(),
@@ -274,38 +222,26 @@ void showWelcomeDialogg(BuildContext context) {
                                     ),
                                   ),
                                 ),
-
                                 const SizedBox(width: 10),
-
-                                // SKIP BUTTON
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainer,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                    backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
                                   onPressed: () {
-                                    Hive.box('themeData')
-                                        .put('isFirstTime', false);
+                                    Hive.box('themeData').put('isFirstTime', false);
                                     Get.back();
                                   },
                                   label: Text(
                                     'Skip',
                                     style: TextStyle(
                                       fontFamily: 'Poppins-SemiBold',
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .inverseSurface,
+                                      color: Theme.of(context).colorScheme.inverseSurface,
                                     ),
                                   ),
                                   icon: Icon(
                                     IconlyBold.arrow_right,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .inverseSurface,
+                                    color: Theme.of(context).colorScheme.inverseSurface,
                                   ),
                                   iconAlignment: IconAlignment.end,
                                 ),
@@ -326,7 +262,6 @@ void showWelcomeDialogg(BuildContext context) {
   );
 }
 
-// ICON BUILDER
 Widget _buildIcon(BuildContext context, String url) {
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -338,88 +273,5 @@ Widget _buildIcon(BuildContext context, String url) {
         color: Theme.of(context).colorScheme.primary,
       ),
     ),
-  );
-}
-
-// ----------------------
-// DEFAULT START PAGE PICKER
-// ----------------------
-void _showStartPagePicker(BuildContext context) {
-  final settings = Get.find<Settings>();
-  final isSimkl = Get.find<ServiceHandler>().serviceType.value == ServicesType.simkl;
-
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (_) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "Select Default Start Page",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            _startPageOption(
-              context,
-              settings,
-              0,
-              "Home",
-              const Icon(IconlyBold.home),
-            ),
-            _startPageOption(
-              context,
-              settings,
-              1,
-              "Anime",
-              const Icon(Icons.movie_filter_rounded),
-            ),
-            _startPageOption(
-              context,
-              settings,
-              2,
-              "Manga",
-              Icon(isSimkl ? Iconsax.monitor5 : Iconsax.book),
-            ),
-            _startPageOption(
-              context,
-              settings,
-              3,
-              "Library",
-              const Icon(HugeIcons.strokeRoundedLibrary),
-            ),
-
-            const SizedBox(height: 10),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-Widget _startPageOption(
-    BuildContext context,
-    Settings settings,
-    int index,
-    String label,
-    Widget icon,
-    ) {
-  final selected = settings.defaultStartTab.value == index;
-
-  return ListTile(
-    leading: icon,
-    title: Text(label),
-    trailing: selected
-        ? const Icon(Icons.check_circle, color: Colors.green)
-        : null,
-    onTap: () {
-      settings.saveDefaultStartTab(index);
-      Navigator.pop(context);
-    },
   );
 }
