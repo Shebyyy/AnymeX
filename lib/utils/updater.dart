@@ -374,7 +374,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
 
   void _showErrorDialog(String message) {
     showDialog(
-      context,
+      context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.error_outline, size: 32, color: Colors.red),
         title: const Text('Download Failed'),
@@ -391,7 +391,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
 
   void _showSuccessDialog({String? filePath}) {
     showDialog(
-      context,
+      context: context,
       builder: (context) => AlertDialog(
         icon: Icon(
           Icons.check_circle_outline,
