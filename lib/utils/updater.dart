@@ -16,9 +16,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 class UpdateManager {
-  static const String _repoUrl =
-      'https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest';
+  static const String _stableRepoUrl =
+    'https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest';
 
+static const String _betaRepoUrl =
+    'https://api.github.com/repos/Shebyyy/AnymeX/releases/latest';
+  
   String getDownloadUrlByArch(List<dynamic> assets, String arch) {
     for (var asset in assets) {
       if (asset['name']?.contains(arch) == true) {
@@ -29,13 +32,14 @@ class UpdateManager {
   }
 
   Future<void> checkForUpdates(
-      BuildContext context, RxBool canShowUpdate) async {
+      BuildContext context, RxBool canShowUpdate,
+      {bool isBeta = false}) async {
     if (canShowUpdate.value) {
       canShowUpdate.value = false;
 
       try {
         final currentVersion = await _getCurrentVersion();
-        final latestRelease = await _fetchLatestRelease();
+        final latestRelease = await _fetchLatestRelease(isBeta: isBeta);
 
         if (latestRelease == null) {
           snackBar("Failed to check for updates");
@@ -132,10 +136,12 @@ class UpdateManager {
     return packageInfo.version;
   }
 
-  Future<Map<String, dynamic>?> _fetchLatestRelease() async {
+  Future<Map<String, dynamic>?> _fetchLatestRelease({bool isBeta = false}) async {
     try {
-      final response = await http.get(
-        Uri.parse(_repoUrl),
+      final url = isBeta ? _betaRepoUrl : _stableRepoUrl;
+
+       final response = await http.get(
+        Uri.parse(url),,
         headers: {'Accept': 'application/vnd.github.v3+json'},
       );
 
