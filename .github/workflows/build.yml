@@ -150,18 +150,22 @@ jobs:
             echo "🔵 Beta build detected"
             echo "────────────────────────────────────────────"
 
-            # Extract version (remove 'v' prefix and '-beta' suffix)
-            # Examples: v1.2.3-beta -> 1.2.3 | v1.2.3+45-beta -> 1.2.3+45
-            VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-beta$//')
-            echo "Extracted version: $VERSION"
+            # Extract base version (remove v and -beta)
+              BASE_VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-beta$//')
 
-            # Validate version format (semantic versioning: X.Y.Z or X.Y.Z+BUILD)
-            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$ ]]; then
-              echo "❌ Invalid version format: $VERSION"
-              echo "Expected format: X.Y.Z or X.Y.Z+BUILD"
-              echo "Examples: 1.0.0, 1.0.0+42"
-              exit 1
-            fi
+              echo "Base version: $BASE_VERSION"
+
+              # Append build number for beta builds
+              BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+              VERSION="${BASE_VERSION}+${BUILD_NUMBER}"
+
+              echo "Final beta version: $VERSION"
+
+              # Validate final version
+              if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
+                echo "❌ Version format invalid after adding build number: $VERSION"
+                exit 1
+              fi
 
             # Check if rename script exists
             if [ ! -f "scripts/rename_app.sh" ]; then
