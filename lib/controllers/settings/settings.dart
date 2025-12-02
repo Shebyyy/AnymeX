@@ -23,11 +23,15 @@ class Settings extends GetxController {
   late Rx<UISettings> uiSettings;
   late Rx<PlayerSettings> playerSettings;
   late Box preferences;
-  
+
   final canShowUpdate = true.obs;
 
   /// NEW — Beta Updates Toggle
   RxBool enableBetaUpdates = false.obs;
+
+  /// ⭐ NEW — Default Start Tab
+  /// 0 = Home, 1 = Anime, 2 = Manga, 3 = Library
+  RxInt defaultStartTab = 0.obs;
 
   RxBool isTV = false.obs;
   final _selectedShader = ''.obs;
@@ -66,6 +70,10 @@ class Settings extends GetxController {
     enableBetaUpdates.value =
         preferences.get('enable_beta_updates', defaultValue: false);
 
+    /// ⭐ Load saved default tab (NEW)
+    defaultStartTab.value =
+        preferences.get('default_start_tab', defaultValue: 0);
+
     isTv().then((e) {
       isTV.value = e;
     });
@@ -76,16 +84,16 @@ class Settings extends GetxController {
     });
   }
 
-  /// 🔥 UPDATED — manual update check
+  /// 🔥 Manual update check
   void checkForUpdates(BuildContext context) {
     UpdateManager().checkForUpdates(
       context,
-      RxBool(true), // always show popup manually
+      RxBool(true),
       isBeta: enableBetaUpdates.value,
     );
   }
 
-  /// 🔥 OPTIONAL — auto update check (if you use it)
+  /// 🔥 Auto update check
   void autoCheckForUpdates(BuildContext context) {
     UpdateManager().checkForUpdates(
       context,
@@ -100,11 +108,19 @@ class Settings extends GetxController {
     preferences.put('enable_beta_updates', value);
   }
 
+  /// ⭐ Save default start tab (NEW)
+  void saveDefaultStartTab(int index) {
+    defaultStartTab.value = index;
+    preferences.put('default_start_tab', index);
+  }
+
   void showWelcomeDialog(BuildContext context) {
     if (Hive.box('themeData').get('isFirstTime', defaultValue: true)) {
       showWelcomeDialogg(context);
     }
   }
+
+  // ----- UI + PLAYER SETTINGS (unchanged) -----
 
   T _getUISetting<T>(T Function(UISettings settings) getter) {
     return getter(uiSettings.value);
@@ -204,7 +220,6 @@ class Settings extends GetxController {
   set animationDuration(int value) =>
       _setUISetting((s) => s?.animationDuration = value);
 
-  // Player Settings...
   bool get defaultPortraitMode =>
       _getPlayerSetting((s) => s.defaultPortraitMode);
   set defaultPortraitMode(bool value) =>
