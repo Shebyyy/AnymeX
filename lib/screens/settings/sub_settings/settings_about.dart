@@ -242,7 +242,7 @@ class AboutPage extends StatelessWidget {
                       () => Switch(
                         value: settingsController.enableBetaUpdates.value,
                         onChanged: (value) {
-                          settingsController.enableBetaUpdates.value = value;
+                          settingsController.saveBetaUpdateToggle(value);
                         },
                       ),
                     ),
