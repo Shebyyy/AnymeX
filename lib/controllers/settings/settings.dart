@@ -23,11 +23,14 @@ class Settings extends GetxController {
   late Rx<UISettings> uiSettings;
   late Rx<PlayerSettings> playerSettings;
   late Box preferences;
-  
+
   final canShowUpdate = true.obs;
 
-  /// NEW — Beta Updates Toggle
+  /// Beta updates toggle
   RxBool enableBetaUpdates = false.obs;
+
+  ///  default start tab (0=Home, 1=Anime, 2=Manga, 3=Library)
+  RxInt defaultStartTab = 0.obs;
 
   RxBool isTV = false.obs;
   final _selectedShader = ''.obs;
@@ -60,11 +63,22 @@ class Settings extends GetxController {
     preferences = Hive.box('preferences');
 
     selectedShader = preferences.get('selected_shader', defaultValue: '');
-    selectedProfile = preferences.get('selected_profile', defaultValue: 'MID-END');
+    selectedProfile =
+        preferences.get('selected_profile', defaultValue: 'MID-END');
 
-    /// Load saved beta toggle
+    /// Load beta toggle
     enableBetaUpdates.value =
         preferences.get('enable_beta_updates', defaultValue: false);
+
+    /// Load default start tab
+    defaultStartTab.value =
+        preferences.get('default_start_tab', defaultValue: 0);
+
+    /// Ensure valid index
+    if (defaultStartTab.value > 3) {
+      defaultStartTab.value = 0;
+      preferences.put('default_start_tab', 0);
+    }
 
     isTv().then((e) {
       isTV.value = e;
@@ -76,16 +90,16 @@ class Settings extends GetxController {
     });
   }
 
-  /// 🔥 UPDATED — manual update check
+  /// Manual update check
   void checkForUpdates(BuildContext context) {
     UpdateManager().checkForUpdates(
       context,
-      RxBool(true), // always show popup manually
+      RxBool(true),
       isBeta: enableBetaUpdates.value,
     );
   }
 
-  /// 🔥 OPTIONAL — auto update check (if you use it)
+  /// Auto update check
   void autoCheckForUpdates(BuildContext context) {
     UpdateManager().checkForUpdates(
       context,
@@ -100,11 +114,21 @@ class Settings extends GetxController {
     preferences.put('enable_beta_updates', value);
   }
 
+  /// Save default start tab
+  void saveDefaultStartTab(int value) {
+    defaultStartTab.value = value;
+    preferences.put('default_start_tab', value);
+  }
+
   void showWelcomeDialog(BuildContext context) {
     if (Hive.box('themeData').get('isFirstTime', defaultValue: true)) {
       showWelcomeDialogg(context);
     }
   }
+
+  // -----------------------------
+  // UI Settings
+  // -----------------------------
 
   T _getUISetting<T>(T Function(UISettings settings) getter) {
     return getter(uiSettings.value);
@@ -113,15 +137,6 @@ class Settings extends GetxController {
   void _setUISetting<T>(void Function(UISettings? settings) setter) {
     uiSettings.update(setter);
     saveUISettings();
-  }
-
-  T _getPlayerSetting<T>(T Function(PlayerSettings settings) getter) {
-    return getter(playerSettings.value);
-  }
-
-  void _setPlayerSetting<T>(void Function(PlayerSettings? settings) setter) {
-    playerSettings.update(setter);
-    savePlayerSettings();
   }
 
   bool get usePosterColor => _getUISetting((s) => s.usePosterColor);
@@ -191,7 +206,8 @@ class Settings extends GetxController {
       _setUISetting((s) => s?.tabBarHeight = value);
 
   double get tabBarWidth => _getUISetting((s) => s.tabBarWidth);
-  set tabBarWidth(double value) => _setUISetting((s) => s?.tabBarWidth = value);
+  set tabBarWidth(double value) =>
+      _setUISetting((s) => s?.tabBarWidth = value);
 
   double get tabBarRoundness => _getUISetting((s) => s.tabBarRoundness);
   set tabBarRoundness(double value) =>
@@ -204,7 +220,10 @@ class Settings extends GetxController {
   set animationDuration(int value) =>
       _setUISetting((s) => s?.animationDuration = value);
 
-  // Player Settings...
+  // -----------------------------
+  // Player settings
+  // -----------------------------
+
   bool get defaultPortraitMode =>
       _getPlayerSetting((s) => s.defaultPortraitMode);
   set defaultPortraitMode(bool value) =>
@@ -269,10 +288,12 @@ class Settings extends GetxController {
       _setPlayerSetting((s) => s?.subtitleOutlineWidth = value);
 
   bool get autoSkipOP => _getPlayerSetting((s) => s.autoSkipOP);
-  set autoSkipOP(bool value) => _setPlayerSetting((s) => s?.autoSkipOP = value);
+  set autoSkipOP(bool value) =>
+      _setPlayerSetting((s) => s?.autoSkipOP = value);
 
   bool get autoSkipED => _getPlayerSetting((s) => s.autoSkipED);
-  set autoSkipED(bool value) => _setPlayerSetting((s) => s?.autoSkipED = value);
+  set autoSkipED(bool value) =>
+      _setPlayerSetting((s) => s?.autoSkipED = value);
 
   bool get autoSkipOnce => _getPlayerSetting((s) => s.autoSkipOnce);
   set autoSkipOnce(bool value) =>
@@ -285,7 +306,7 @@ class Settings extends GetxController {
 
   int get markAsCompleted => _getPlayerSetting((s) => s.markAsCompleted);
   set markAsCompleted(int value) =>
-      _getPlayerSetting((s) => s.markAsCompleted = value);
+      _setPlayerSetting((s) => s?.markAsCompleted = value);
 
   void updateHomePageCard(String key, bool value) {
     final currentCards = Map<String, bool>.from(uiSettings.value.homePageCards);

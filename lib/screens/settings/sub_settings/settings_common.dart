@@ -1,3 +1,5 @@
+// lib/widgets/non_widgets/settings_common.dart
+
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/data_keys/general.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
@@ -34,9 +36,8 @@ class _SettingsCommonState extends State<SettingsCommon> {
         body: SingleChildScrollView(
           child: Padding(
             padding: getResponsiveValue(context,
-                mobileValue: const EdgeInsets.fromLTRB(10.0, 50.0, 10.0, 20.0),
-                desktopValue:
-                    const EdgeInsets.fromLTRB(25.0, 50.0, 25.0, 20.0)),
+                mobileValue: const EdgeInsets.fromLTRB(10, 50, 10, 20),
+                desktopValue: const EdgeInsets.fromLTRB(25, 50, 25, 20)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -49,9 +50,7 @@ class _SettingsCommonState extends State<SettingsCommon> {
                             .surfaceContainer
                             .withOpacity(0.5),
                       ),
-                      onPressed: () {
-                        Get.back();
-                      },
+                      onPressed: () => Get.back(),
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     ),
                     const SizedBox(width: 10),
@@ -61,61 +60,54 @@ class _SettingsCommonState extends State<SettingsCommon> {
                   ],
                 ),
                 const SizedBox(height: 30),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AnymexExpansionTile(
-                        initialExpanded: true,
-                        title: 'Universal',
-                        content: CustomSwitchTile(
-                            icon: Icons.touch_app_rounded,
-                            title: 'Ask for tracking permission',
-                            description:
-                                'If enabled, Anymex will ask for tracking permission if not then it will track by default.',
-                            switchValue: shouldAskForPermission,
-                            onChanged: (e) {
-                              setState(() {
-                                shouldAskForPermission = e;
-                                General.shouldAskForTrack.set(e);
-                              });
-                            })),
-                    AnymexExpansionTile(
-                        initialExpanded: true,
-                        title: 'Anilist',
-                        content: CustomTile(
-                          icon: Icons.format_list_bulleted_sharp,
-                          title: 'Manage Anilist Lists',
-                          description: "Choose which list to show on home page",
-                          onTap: () => _showHomePageCardsDialog(context, false),
-                        )),
-                    AnymexExpansionTile(
-                        initialExpanded: true,
-                        title: 'MyAnimeList',
-                        content: CustomTile(
-                          icon: Icons.format_list_bulleted_sharp,
-                          title: 'Manage MyAnimeList Lists',
-                          description: "Choose which list to show on home page",
-                          onTap: () => _showHomePageCardsDialog(context, true),
-                        )),
-                    // AnymexExpansionTile(
-                    //     initialExpanded: true,
-                    //     title: 'Experimental',
-                    //     content: CustomSwitchTile(
-                    //       switchValue: uniScrapper,
-                    //       icon: Iconsax.global,
-                    //       title: 'Use Universal Scrapper',
-                    //       description:
-                    //           "it could be really slow depending on the site, might not work for all sites its in testing stages.",
-                    //       onChanged: (v) {
-                    //         setState(() {
-                    //           uniScrapper = v;
-                    //         });
-                    //         settingsController.preferences
-                    //             .put('universal_scrapper', v);
-                    //       },
-                    //     )),
-                  ],
-                )
+
+                // ---------------- Universal Section ----------------
+                AnymexExpansionTile(
+                    initialExpanded: true,
+                    title: 'Universal',
+                    content: Column(
+                      children: [
+                        CustomSwitchTile(
+                          icon: Icons.touch_app_rounded,
+                          title: 'Ask for tracking permission',
+                          description:
+                              'If enabled, Anymex will ask for tracking permission.',
+                          switchValue: shouldAskForPermission,
+                          onChanged: (e) {
+                            setState(() {
+                              shouldAskForPermission = e;
+                              General.shouldAskForTrack.set(e);
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        /// NEW — Default Start Page
+                        _buildDefaultStartPageDropdown(context),
+                      ],
+                    )),
+
+                // ---------------- Anilist Section ----------------
+                AnymexExpansionTile(
+                    initialExpanded: true,
+                    title: 'Anilist',
+                    content: CustomTile(
+                      icon: Icons.format_list_bulleted_sharp,
+                      title: 'Manage Anilist Lists',
+                      description: "Choose which list to show on home page",
+                      onTap: () => _showHomePageCardsDialog(context, false),
+                    )),
+
+                // ---------------- MyAnimeList Section ----------------
+                AnymexExpansionTile(
+                    initialExpanded: true,
+                    title: 'MyAnimeList',
+                    content: CustomTile(
+                      icon: Icons.format_list_bulleted_sharp,
+                      title: 'Manage MyAnimeList Lists',
+                      description: "Choose which list to show on home page",
+                      onTap: () => _showHomePageCardsDialog(context, true),
+                    )),
               ],
             ),
           ),
@@ -124,6 +116,51 @@ class _SettingsCommonState extends State<SettingsCommon> {
     );
   }
 
+  // -------- DEFAULT START PAGE DROPDOWN ----------
+  Widget _buildDefaultStartPageDropdown(BuildContext context) {
+    return Obx(() {
+      final value = settings.defaultStartTab.value;
+
+      return ListTile(
+        leading: const Icon(Icons.home_filled),
+        title: const Text("Default Start Page"),
+        subtitle: Text(_tabName(value)),
+        trailing: DropdownButton<int>(
+          value: value,
+          underline: Container(),
+          onChanged: (v) {
+            if (v != null) {
+              settings.saveDefaultStartTab(v);
+              setState(() {});
+            }
+          },
+          items: const [
+            DropdownMenuItem(value: 0, child: Text("Home")),
+            DropdownMenuItem(value: 1, child: Text("Anime")),
+            DropdownMenuItem(value: 2, child: Text("Manga")),
+            DropdownMenuItem(value: 3, child: Text("Library")),
+          ],
+        ),
+      );
+    });
+  }
+
+  String _tabName(int index) {
+    switch (index) {
+      case 0:
+        return "Home";
+      case 1:
+        return "Anime";
+      case 2:
+        return "Manga";
+      case 3:
+        return "Library";
+      default:
+        return "Home";
+    }
+  }
+
+  // -------- DIALOG FOR ANILIST/MAL HOMEPAGE CARDS ----------
   void _showHomePageCardsDialog(BuildContext context, bool isMal) {
     showDialog(
       context: context,
