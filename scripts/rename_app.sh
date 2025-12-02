@@ -114,32 +114,6 @@ if [ -f "$MANIFEST_FILE" ]; then
   log_success "Updated AndroidManifest.xml"
 fi
 
-log_info "Fixing Android version mapping (use pubspec.yaml values)..."
-
-if [ -f "android/app/build.gradle" ] || [ -f "android/app/build.gradle.kts" ]; then
-  TARGET_FILE="android/app/build.gradle"
-  [ -f "android/app/build.gradle.kts" ] && TARGET_FILE="android/app/build.gradle.kts"
-
-  # Replace versionName and versionCode with pubspec-driven values
-  sed "${SED_INPLACE[@]}" \
-    -E 's/versionCode[[:space:]]*=.*/versionCode flutterVersionCode.toInteger()/g' \
-    "$TARGET_FILE"
-
-  sed "${SED_INPLACE[@]}" \
-    -E 's/versionName[[:space:]]*=.*/versionName flutterVersionName/g' \
-    "$TARGET_FILE"
-
-  # Ensure property definitions exist
-  if ! grep -q "flutterVersionCode" "$TARGET_FILE"; then
-    sed "${SED_INPLACE[@]}" \
-      '/defaultConfig {/a \
-        def flutterVersionCode = project.hasProperty('"'"'flutterVersionCode'"'"') ? project.flutterVersionCode : 1\n        def flutterVersionName = project.hasProperty('"'"'flutterVersionName'"'"') ? project.flutterVersionName : "1.0.0"' \
-      "$TARGET_FILE"
-  fi
-
-  log_success "Android now fully reads version from pubspec.yaml"
-fi
-
 # Move Kotlin package directory
 if [ "$SKIP_PACKAGE_RENAME" = false ] && [ -d "$ANDROID_SRC/$OLD_DIR" ]; then
   # Create new directory structure
