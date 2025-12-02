@@ -646,12 +646,12 @@ jobs:
           # Set the app name for the .desktop file
           APP_NAME="AnymeX"
           if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
-            APP_NAME="AnymeX β" # <-- MODIFIED: Set beta name
+            APP_NAME="AnymeX β"
           fi
           
           cat > AppDir/anymex.desktop << EOF
           [Desktop Entry]
-          Name=${APP_NAME} # <-- MODIFIED: Use the variable
+          Name=${APP_NAME}
           Exec=usr/bin/anymex
           Icon=anymex
           Type=Application
@@ -666,8 +666,10 @@ jobs:
           exec "${HERE}/usr/bin/anymex" "$@"
           EOF
           chmod +x AppDir/AppRun
-          /usr/local/bin/appimagetool AppDir
-          mv AnymeX-x86_64.AppImage build/linux/x64/release/AnymeX-Linux.AppImage
+          
+          # <-- MODIFIED: Explicitly set the output filename for appimagetool -->
+          /usr/local/bin/appimagetool AppDir build/linux/x64/release/AnymeX-Linux.AppImage
+          
           mkdir -p rpm_build/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
           cp -r build/linux/x64/release/bundle rpm_build/SOURCES/anymex-1.0.0
           tar czf rpm_build/SOURCES/anymex-1.0.0.tar.gz -C rpm_build/SOURCES anymex-1.0.0
