@@ -3,7 +3,7 @@ import 'package:anymex/models/ui/ui_adaptor.dart';
 import 'package:anymex/screens/onboarding/welcome_dialog.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/shaders.dart';
-import 'package:anymex/utils/updater.dart';
+import 'package:anymex/utils/update_manager.dart'; // UPDATED
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
@@ -23,21 +23,24 @@ class Settings extends GetxController {
   late Rx<UISettings> uiSettings;
   late Rx<PlayerSettings> playerSettings;
   late Box preferences;
+  
   final canShowUpdate = true.obs;
+
+  /// NEW — Beta Updates Toggle
+  RxBool enableBetaUpdates = false.obs;
+
   RxBool isTV = false.obs;
   final _selectedShader = ''.obs;
   final _selectedProfile = 'MID-END'.obs;
   final mpvPath = ''.obs;
 
   String get selectedShader => _selectedShader.value;
-
   set selectedShader(String value) {
     _selectedShader.value = value;
     preferences.put('selected_shader', value);
   }
 
   String get selectedProfile => _selectedProfile.value;
-
   set selectedProfile(String value) {
     _selectedProfile.value = value;
     preferences.put('selected_profile', value);
@@ -46,28 +49,55 @@ class Settings extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
     var uiBox = Hive.box<UISettings>("UiSettings");
     var playerBox = Hive.box<PlayerSettings>("PlayerSettings");
+
     uiSettings = Rx<UISettings>(uiBox.get('settings') ?? UISettings());
     playerSettings =
         Rx<PlayerSettings>(playerBox.get('settings') ?? PlayerSettings());
+
     preferences = Hive.box('preferences');
+
     selectedShader = preferences.get('selected_shader', defaultValue: '');
-    selectedProfile =
-        preferences.get('selected_profile', defaultValue: 'MID-END');
+    selectedProfile = preferences.get('selected_profile', defaultValue: 'MID-END');
+
+    /// Load saved beta toggle
+    enableBetaUpdates.value =
+        preferences.get('enable_beta_updates', defaultValue: false);
+
     isTv().then((e) {
       isTV.value = e;
     });
+
     PlayerShaders.createMpvConfigFolder();
     PlayerShaders.getMpvPath().then((e) {
       mpvPath.value = e;
     });
   }
 
+  /// 🔥 UPDATED — manual update check
   void checkForUpdates(BuildContext context) {
-    canShowUpdate.value
-        ? UpdateManager().checkForUpdates(context, canShowUpdate)
-        : null;
+    UpdateManager().checkForUpdates(
+      context,
+      RxBool(true), // always show popup manually
+      isBeta: enableBetaUpdates.value,
+    );
+  }
+
+  /// 🔥 OPTIONAL — auto update check (if you use it)
+  void autoCheckForUpdates(BuildContext context) {
+    UpdateManager().checkForUpdates(
+      context,
+      canShowUpdate,
+      isBeta: enableBetaUpdates.value,
+    );
+  }
+
+  /// Save beta toggle
+  void saveBetaUpdateToggle(bool value) {
+    enableBetaUpdates.value = value;
+    preferences.put('enable_beta_updates', value);
   }
 
   void showWelcomeDialog(BuildContext context) {
@@ -122,7 +152,8 @@ class Settings extends GetxController {
       _setUISetting((s) => s?.historyCardStyle = value);
 
   double get glowDensity => _getUISetting((s) => s.glowDensity);
-  set glowDensity(double value) => _setUISetting((s) => s?.glowDensity = value);
+  set glowDensity(double value) =>
+      _setUISetting((s) => s?.glowDensity = value);
 
   bool get enableAnimation => _getUISetting((s) => s.enableAnimation);
   set enableAnimation(bool value) =>
@@ -173,7 +204,7 @@ class Settings extends GetxController {
   set animationDuration(int value) =>
       _setUISetting((s) => s?.animationDuration = value);
 
-  // Player Settings
+  // Player Settings...
   bool get defaultPortraitMode =>
       _getPlayerSetting((s) => s.defaultPortraitMode);
   set defaultPortraitMode(bool value) =>
