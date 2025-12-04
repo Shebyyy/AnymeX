@@ -361,44 +361,34 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                           )),
                       // Picture-in-Picture Settings (Always show the section)
                       AnymexExpansionTile(
-                        title: 'Picture-in-Picture',
-                        content: Column(
-                          children: [
-                            if (PipService.isPipAvailable)
-                              CustomSwitchTile(
-                                padding: const EdgeInsets.all(10),
-                                icon: Icons.picture_in_picture_alt_rounded,
-                                title: "Auto-enable on Home Button",
-                                description:
-                                    "Automatically enter PIP mode when pressing the home button during playback",
-                                switchValue: PipService.autoPipEnabled,
-                                onChanged: (val) async {
-                                  await PipService.setAutoPipEnabled(val);
-                                  setState(() {});
-                                },
-                              )
-                            else
-                              CustomTile(
-                                padding: 10,
-                                icon: Icons.info_outline_rounded,
-                                title: "Picture-in-Picture Not Supported",
-                                description:
-                                    "Your device or OS does not support Picture-in-Picture.",
-                                descColor: Theme.of(context).colorScheme.primary,
-                              ),
-                      
+                      title: 'Picture-in-Picture',
+                      content: Column(
+                        children: [
+                          if (PipService.isPipAvailable)
+                            CustomSwitchTile(
+                              padding: const EdgeInsets.all(10),
+                              icon: Icons.picture_in_picture_alt_rounded,
+                              title: "Auto-enable on Home Button",
+                              description:
+                                  "Automatically enter PIP mode when pressing the home button during playback",
+                              switchValue: PipService.autoPipEnabled,
+                              onChanged: (val) async {
+                                await PipService.setAutoPipEnabled(val);
+                                setState(() {});
+                              },
+                            )
+                          else
                             CustomTile(
                               padding: 10,
-                              icon: Icons.smart_display_rounded,
-                              title: 'Manual PIP',
+                              icon: Icons.info_outline_rounded,
+                              title: "Picture-in-Picture Not Supported",
                               description:
-                                  'Use the PIP button in video controls anytime.',
-                              isDescBold: false,
+                                  "Your device or OS does not support Picture-in-Picture.",
                               descColor: Theme.of(context).colorScheme.primary,
                             ),
-                          ],
-                        ),
+                        ],
                       ),
+                    ),
 
                       // Subtitle Color
                       AnymexExpansionTile(
