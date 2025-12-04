@@ -368,9 +368,9 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                             CustomSwitchTile(
                               padding: const EdgeInsets.all(10),
                               icon: Icons.picture_in_picture_alt_rounded,
-                              title: "Auto-enable on Home Button",
+                              title: "Enable PiP on Home Button",
                               description:
-                                  "Automatically enter PIP mode when pressing the home button during playback",
+                                  "Enable PiP when pressing the Home button during playback",
                               switchValue: PipService.autoPipEnabled,
                               onChanged: (val) async {
                                 await PipService.setAutoPipEnabled(val);
