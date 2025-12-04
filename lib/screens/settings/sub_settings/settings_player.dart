@@ -1,5 +1,6 @@
 import 'package:anymex/constants/contants.dart';
 import 'package:anymex/controllers/settings/settings.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // Added for PIP
 import 'package:anymex/widgets/common/checkmark_tile.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/common/glow.dart';
@@ -358,6 +359,35 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                               ),
                             ],
                           )),
+                      // Picture-in-Picture Settings
+                      if (PipService.isPipAvailable)
+                        AnymexExpansionTile(
+                            title: 'Picture-in-Picture',
+                            content: Column(
+                              children: [
+                                CustomSwitchTile(
+                                    padding: const EdgeInsets.all(10),
+                                    icon: Icons.picture_in_picture_alt,
+                                    title: "Auto-enable on Home Button",
+                                    description:
+                                        "Automatically enter PIP mode when pressing home button during playback",
+                                    switchValue: PipService.autoPipEnabled,
+                                    onChanged: (val) async {
+                                      await PipService.setAutoPipEnabled(val);
+                                      setState(() {});
+                                    }),
+                                CustomTile(
+                                  padding: 10,
+                                  icon: Icons.info_outline,
+                                  title: 'Manual PIP',
+                                  description:
+                                      'You can always use the PIP button in video controls regardless of this setting',
+                                  isDescBold: false,
+                                  descColor:
+                                      Theme.of(context).colorScheme.primary,
+                                ),
+                              ],
+                            )),
                       // Subtitle Color
                       AnymexExpansionTile(
                           title: 'Subtitles',
@@ -368,7 +398,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                                   icon: Icons.lightbulb,
                                   title: 'Transition Subtitle',
                                   description:
-                                      'By disabling this you can avoid the transition between subtitles.',
+                                      'By disabling this you can avoid to transition between subtitles.',
                                   switchValue: settings.transitionSubtitle,
                                   onChanged: (e) {
                                     settings.transitionSubtitle = e;
