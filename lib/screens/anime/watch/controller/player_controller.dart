@@ -11,6 +11,7 @@ import 'package:anymex/models/Offline/Hive/episode.dart';
 import 'package:anymex/models/Offline/Hive/video.dart' as model;
 import 'package:anymex/models/player/player_adaptor.dart';
 import 'package:anymex/screens/anime/watch/controller/player_utils.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // Added for PIP
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/subtitles/model/online_subtitle.dart';
 import 'package:anymex/utils/aniskip.dart' as aniskip;
@@ -60,6 +61,10 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   final String? folderName;
   final String? itemName;
   final String? offlineVideoPath;
+
+  // PIP related variables
+  bool isPipAvailable = false;
+  bool isPipMode = false;
 
   PlayerController(model.Video video, Episode episode, this.episodeList,
       this.anilistData, List<model.Video> episodes,
@@ -201,6 +206,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     }
     _initializeSwipeStuffs();
     _initializeControlsAutoHide();
+    _initializePip(); // Initialize PIP
     updateNavigatorState();
     ever(selectedVideo, (_) {
       final audios = selectedVideo.value?.audios ?? [];
@@ -228,6 +234,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    PipService.dispose(); // Dispose PIP service
     super.onClose();
   }
 
@@ -239,6 +246,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.inactive) {
       _trackLocally();
+    }
+    
+    // Handle PIP on app lifecycle changes
+    if (state == AppLifecycleState.inactive) {
+      if (PipService.autoPipEnabled && 
+          isPlaying.value && 
+          PipService.isPipAvailable) {
+        togglePip();
+      }
     }
   }
 
@@ -980,6 +996,39 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           'Online tracking completed for episode ${currentEpisode.value.number}, progress: ${hasCrossedLimit ? currEpisodeNum : currEpisodeNum - 1}');
     } catch (e) {
       Logger.i('Failed to track online: $e');
+    }
+  }
+
+  // PIP related methods
+  Future<void> _initializePip() async {
+    isPipAvailable = await PipService.initialize();
+    
+    if (!isPipAvailable) {
+      debugPrint('PIP not supported on this device');
+      return;
+    }
+  }
+
+  Future<void> togglePip() async {
+    if (!isPipAvailable) {
+      Get.snackbar(
+        'Picture-in-Picture',
+        'PIP mode requires Android 8.0 or higher',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    final success = await PipService.enterPipMode();
+    
+    if (!success) {
+      Get.snackbar(
+        'Picture-in-Picture',
+        'Could not enter PIP mode',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
     }
   }
 }
