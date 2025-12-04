@@ -46,6 +46,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart'; // Added for PIP
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -81,6 +82,9 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
 void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize GetStorage for PIP settings
+    await GetStorage.init();
 
     await Logger.init();
     await dotenv.load(fileName: ".env");
