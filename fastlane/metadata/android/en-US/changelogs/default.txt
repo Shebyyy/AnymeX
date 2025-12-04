@@ -1,1 +1,7 @@
+### 🌟 Features
+-   add beta update channel toggle
+
+### 🔧 Bug Fixes & Improvements
+-   fix about page update popup
+
  
