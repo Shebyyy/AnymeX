@@ -14,7 +14,7 @@ import 'package:anymex/screens/anime/widgets/media_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // <-- REQUIRED FIX
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart';
 
 class WatchScreen extends StatefulWidget {
   final model.Video episodeSrc;
@@ -41,6 +41,7 @@ class WatchScreen extends StatefulWidget {
 class _WatchScreenState extends State<WatchScreen>
     with WidgetsBindingObserver {
   late PlayerController controller;
+  final _videoKey = UniqueKey();
 
   @override
   void initState() {
@@ -71,18 +72,11 @@ class _WatchScreenState extends State<WatchScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    /// ─────────────────────────────────────────────────────────────
-    ///        AUTO PICTURE-IN-PICTURE ON HOME BUTTON EXIT
-    /// ─────────────────────────────────────────────────────────────
     if (state == AppLifecycleState.inactive) {
-      // Conditions:
-      // 1. Auto-PIP setting enabled
-      // 2. Device supports PiP
-      // 3. Player is currently playing
       if (PipService.autoPipEnabled &&
           PipService.isPipAvailable &&
           controller.isPlaying.value) {
-        PipService.enterPipMode(); // <-- FIX
+        PipService.enterPipMode();
       }
     }
   }
@@ -94,6 +88,7 @@ class _WatchScreenState extends State<WatchScreen>
         children: [
           Obx(() {
             return Video(
+              key: _videoKey,
               filterQuality: FilterQuality.medium,
               controls: null,
               controller: controller.playerController,
@@ -104,7 +99,6 @@ class _WatchScreenState extends State<WatchScreen>
             );
           }),
 
-          // Overlays, controls, and panes
           PlayerOverlay(controller: controller),
           SubtitleText(controller: controller),
           DoubleTapSeekWidget(controller: controller),
