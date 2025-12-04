@@ -5,6 +5,7 @@ import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/settings/settings.dart';
 import 'package:anymex/screens/local_source/local_source_view.dart';
 import 'package:anymex/utils/function.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
@@ -20,6 +21,7 @@ class SettingsSheet extends StatelessWidget {
   SettingsSheet({super.key});
 
   final serviceHandler = Get.find<ServiceHandler>();
+  final sourceController = Get.find<SourceController>();
 
   static void show(BuildContext context) {
     AnymexSheet(
@@ -29,145 +31,169 @@ class SettingsSheet extends StatelessWidget {
 
   void showServiceSelector(BuildContext context) {
     final services = [
-      {
-        'type': ServicesType.anilist,
-        'name': "AniList",
-        'icon': 'anilist-icon.png',
-      },
-      {
-        'type': ServicesType.mal,
-        'name': "MyAnimeList",
-        'icon': 'mal-icon.png',
-      },
-      {
-        'type': ServicesType.simkl,
-        'name': "Simkl",
-        'icon': 'simkl-icon.png',
-      },
+      {'type': ServicesType.anilist, 'name': "AniList", 'icon': 'anilist-icon.png'},
+      {'type': ServicesType.mal, 'name': "MyAnimeList", 'icon': 'mal-icon.png'},
+      {'type': ServicesType.simkl, 'name': "Simkl", 'icon': 'simkl-icon.png'},
       if (serviceHandler.extensionService.installedExtensions.length > 2 &&
           serviceHandler.extensionService.installedMangaExtensions.length > 2)
-        {
-          'type': ServicesType.extensions,
-          'name': "Extensions",
-          'icon': null,
-        },
+        {'type': ServicesType.extensions, 'name': "Extensions", 'icon': null},
     ];
 
     AnymexSheet.custom(
-        Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const AnymexText(
-                text: "Select Service",
-                size: 16,
-                variant: TextVariant.semiBold,
+      Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AnymexText(text: "Select Service", size: 16, variant: TextVariant.semiBold),
+            ...services.map(
+              (service) => ListTile(
+                leading: service['icon'] != null
+                    ? Image.asset('assets/images/${service['icon']}',
+                        color: Theme.of(context).colorScheme.primary, width: 30)
+                    : Icon(Icons.extension,
+                        size: 30, color: Theme.of(context).colorScheme.primary),
+                title: AnymexText(
+                  text: service['name'] as String,
+                  variant: TextVariant.semiBold,
+                  color: serviceHandler.serviceType.value == service['type']
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                onTap: () {
+                  serviceHandler.changeService(service['type'] as ServicesType);
+                  Get.back();
+                },
               ),
-              ...services.map((service) => ListTile(
-                    leading: service['icon'] != null
-                        ? Image.asset(
-                            color: Theme.of(context).colorScheme.primary,
-                            'assets/images/${service['icon']}',
-                            width: 30,
-                          )
-                        : Icon(
-                            Icons.extension,
-                            size: 30,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    title: AnymexText(
-                      text: service['name'] as String,
-                      variant: TextVariant.semiBold,
-                      color: serviceHandler.serviceType.value == service['type']
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    onTap: () {
-                      serviceHandler
-                          .changeService(service['type'] as ServicesType);
-                      Get.back();
-                    },
-                  )),
-            ],
-          ),
+            ),
+          ],
         ),
-        context);
+      ),
+      context,
+    );
+  }
+
+  void showStartPageSelector(BuildContext context) {
+    final settings = Get.find<Settings>();
+    final isSimkl = serviceHandler.serviceType.value == ServicesType.simkl;
+
+    final pages = [
+      {'index': 0, 'label': 'Home', 'icon': const Icon(IconlyBold.home)},
+      {'index': 1, 'label': 'Anime', 'icon': const Icon(Icons.movie_filter_rounded)},
+      {'index': 2, 'label': 'Manga', 'icon': Icon(isSimkl ? Iconsax.monitor5 : Iconsax.book)},
+      {'index': 3, 'label': 'Library', 'icon': const Icon(HugeIcons.strokeRoundedLibrary)},
+    ];
+
+    AnymexSheet.custom(
+      Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AnymexText(
+                text: "Select Default Start Page",
+                size: 16,
+                variant: TextVariant.semiBold),
+            const SizedBox(height: 12),
+            ...pages.map((page) {
+              final selected = settings.defaultStartTab.value == page['index'];
+              return ListTile(
+                leading: page['icon'] as Widget,
+                title: AnymexText(
+                  text: page['label'] as String,
+                  variant: TextVariant.semiBold,
+                  color: selected ? Theme.of(context).colorScheme.primary : null,
+                ),
+                trailing: selected
+                    ? Icon(Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  settings.saveDefaultStartTab(page['index'] as int);
+                  Get.back();
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+      context,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Row(children: [
-              const SizedBox(width: 5),
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-                child: serviceHandler.isLoggedIn.value
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(50),
-                        child: CachedNetworkImage(
+            Row(
+              children: [
+                const SizedBox(width: 5),
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                  child: serviceHandler.isLoggedIn.value
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(50),
+                          child: CachedNetworkImage(
                             fit: BoxFit.cover,
                             width: 45,
                             height: 45,
                             errorWidget: (context, url, error) =>
                                 const Icon(IconlyBold.profile),
-                            imageUrl:
-                                serviceHandler.profileData.value.avatar ?? ''),
-                      )
-                    : Icon(
-                        Icons.person,
-                        color: Theme.of(context).colorScheme.inverseSurface,
-                      ),
-              ),
-              const SizedBox(width: 15),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(serviceHandler.profileData.value.name ?? 'Guest'),
-                  if (serviceHandler.serviceType.value !=
-                      ServicesType.extensions)
-                    AnymexOnTap(
-                      onTap: () {
-                        if (serviceHandler.isLoggedIn.value) {
-                          serviceHandler.logout();
-                        } else {
-                          serviceHandler.login();
-                        }
-                        Get.back();
-                      },
-                      child: Text(
-                        serviceHandler.isLoggedIn.value ? 'Logout' : 'Login',
-                        style: TextStyle(
+                            imageUrl: serviceHandler.profileData.value.avatar ?? '',
+                          ),
+                        )
+                      : Icon(Icons.person,
+                          color: Theme.of(context).colorScheme.inverseSurface),
+                ),
+                const SizedBox(width: 15),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(serviceHandler.profileData.value.name ?? 'Guest'),
+                    if (serviceHandler.serviceType.value != ServicesType.extensions)
+                      AnymexOnTap(
+                        onTap: () {
+                          if (serviceHandler.isLoggedIn.value) {
+                            serviceHandler.logout();
+                          } else {
+                            serviceHandler.login();
+                          }
+                          Get.back();
+                        },
+                        child: Text(
+                          serviceHandler.isLoggedIn.value ? 'Logout' : 'Login',
+                          style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                ],
-              ),
-              const Expanded(
-                child: SizedBox.shrink(),
-              ),
-              AnymexOnTap(
-                child: IconButton(
+                  ],
+                ),
+                const Expanded(child: SizedBox.shrink()),
+                AnymexOnTap(
+                  child: IconButton(
                     onPressed: () {
                       snackBar('This feature is not available yet.');
                     },
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20))),
-                    icon: const Icon(Iconsax.notification)),
-              )
-            ]),
+                      backgroundColor:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                    icon: const Icon(Iconsax.notification),
+                  ),
+                )
+              ],
+            ),
             const SizedBox(height: 10),
             if (serviceHandler.isLoggedIn.value &&
                 serviceHandler.serviceType.value == ServicesType.anilist)
@@ -182,8 +208,7 @@ class SettingsSheet extends StatelessWidget {
                 ),
               ),
             Obx(() {
-              final shouldShowExts =
-                  sourceController.shouldShowExtensions.value;
+              final shouldShowExts = sourceController.shouldShowExtensions.value;
               return isMobile && shouldShowExts
                   ? ListTile(
                       leading: const Icon(Icons.extension),
@@ -202,6 +227,16 @@ class SettingsSheet extends StatelessWidget {
                 onTap: () {
                   Get.back();
                   showServiceSelector(context);
+                },
+              ),
+            ),
+            AnymexOnTap(
+              child: ListTile(
+                leading: const Icon(IconlyBold.home),
+                title: const Text('Default Start Page'),
+                onTap: () {
+                  Get.back();
+                  showStartPageSelector(context);
                 },
               ),
             ),

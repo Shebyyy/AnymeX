@@ -25,6 +25,8 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final settingsController = Get.find<Settings>();
+
     return Glow(
       child: Scaffold(
         body: SuperListView(
@@ -32,6 +34,8 @@ class AboutPage extends StatelessWidget {
           children: [
             const HeaderSection(),
             const SizedBox(height: 16),
+
+            // PROFILE SECTION
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -42,8 +46,7 @@ class AboutPage extends StatelessWidget {
                       width: double.infinity,
                       margin: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.surfaceContainer.withOpacity(0.5),
+                        color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -59,9 +62,7 @@ class AboutPage extends StatelessWidget {
                           FutureBuilder<PackageInfo>(
                             future: PackageInfo.fromPlatform(),
                             builder: (context, snapshot) {
-                              final version = snapshot.hasData
-                                  ? snapshot.data!.version
-                                  : '';
+                              final version = snapshot.hasData ? snapshot.data!.version : '';
                               return ProfileInfo(
                                 username: "AnymeX",
                                 version: "v$version",
@@ -71,8 +72,7 @@ class AboutPage extends StatelessWidget {
                           ),
                           InfoCard(
                             onTap: () async {
-                              await launchUrlHelper(
-                                  'https://github.com/RyanYuuki');
+                              await launchUrlHelper('https://github.com/RyanYuuki');
                             },
                             leading: const CircleAvatar(
                               backgroundImage: NetworkImage(
@@ -82,8 +82,7 @@ class AboutPage extends StatelessWidget {
                             subtitle: "RyanYuuki",
                             trailing: IconButton(
                               onPressed: () async {
-                                await launchUrlHelper(
-                                    'https://github.com/RyanYuuki');
+                                await launchUrlHelper('https://github.com/RyanYuuki');
                               },
                               icon: const Icon(Iconsax.code5),
                               color: theme.colorScheme.primary,
@@ -100,42 +99,44 @@ class AboutPage extends StatelessWidget {
                   right: 0,
                   child: Center(
                     child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: theme.colorScheme.primary,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.primary,
+                          width: 3,
                         ),
-                        child: CircleAvatar(
-                          backgroundColor: theme.colorScheme.surfaceContainer,
-                          child: Image.asset(
-                            'assets/images/logo_transparent.png',
-                            fit: BoxFit.cover,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
                           ),
-                        )),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        backgroundColor: theme.colorScheme.surfaceContainer,
+                        child: Image.asset(
+                          'assets/images/logo_transparent.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
+
+            // SOCIAL SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainer
-                      .withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12)),
+                color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: CustomSection(
                 icon: Iconsax.link_circle,
                 title: "Social",
@@ -157,8 +158,7 @@ class AboutPage extends StatelessWidget {
                   ),
                   CustomListTile(
                     onTap: () async {
-                      await launchUrlHelper(
-                          'https://www.reddit.com/r/AnymeX_/');
+                      await launchUrlHelper('https://www.reddit.com/r/AnymeX_/');
                     },
                     leading: const Icon(HugeIcons.strokeRoundedReddit),
                     title: "Reddit",
@@ -166,7 +166,10 @@ class AboutPage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
+
+            // DEVELOPMENT SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
@@ -180,8 +183,7 @@ class AboutPage extends StatelessWidget {
                 items: [
                   CustomListTile(
                     onTap: () async {
-                      await launchUrlHelper(
-                          'https://github.com/RyanYuuki/AnymeX');
+                      await launchUrlHelper('https://github.com/RyanYuuki/AnymeX');
                     },
                     leading: const Icon(HugeIcons.strokeRoundedGithub),
                     title: "GitHub",
@@ -193,23 +195,23 @@ class AboutPage extends StatelessWidget {
                     },
                     leading: const Icon(HugeIcons.strokeRoundedCoffee01),
                     title: "Ko-fi",
-                    subtitle:
-                        "Consider donating to support the maintainer of AnymeX",
+                    subtitle: "Consider donating to support the maintainer of AnymeX",
                   ),
                   CustomListTile(
                     onTap: () async {
-                      await launchUrlHelper(
-                          'https://github.com/RyanYuuki/AnymeX/issues');
+                      await launchUrlHelper('https://github.com/RyanYuuki/AnymeX/issues');
                     },
                     leading: const Icon(Icons.bug_report),
                     title: "Features/Issues",
-                    subtitle:
-                        'if you have an issue or any suggestion please make an issue at github.',
+                    subtitle: 'If you have an issue or any suggestion please make an issue at GitHub.',
                   ),
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
+
+            // OTHERS SECTION (with Beta Toggle)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
@@ -221,17 +223,34 @@ class AboutPage extends StatelessWidget {
                 title: "Others",
                 subtitle: "Other Stuffs",
                 items: [
+                  // Check for Updates
                   CustomListTile(
                     onTap: () async {
                       snackBar('Checking for updates!');
-                      Get.find<Settings>().checkForUpdates(context);
+                      settingsController.checkForUpdates(context);
                     },
                     leading: const Icon(Icons.system_update),
                     title: "Check for Updates",
                   ),
+
+                  // Enable Beta Updates (Toggle)
+                  CustomListTile(
+                    leading: const Icon(Iconsax.toggle_on),
+                    title: "Enable Beta Updates",
+                    subtitle: "Check updates from beta channel",
+                    trailing: Obx(
+                      () => Switch(
+                        value: settingsController.enableBetaUpdates.value,
+                        onChanged: (value) {
+                          settingsController.saveBetaUpdateToggle(value);
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
           ],
         ),

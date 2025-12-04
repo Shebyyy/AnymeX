@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -21,6 +23,7 @@ import 'package:anymex/models/Offline/Hive/episode.dart';
 import 'package:anymex/models/Offline/Hive/offline_storage.dart';
 import 'package:anymex/models/Offline/Hive/video.dart';
 import 'package:anymex/screens/anime/home_page.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // <-- added automatically
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/library/my_library.dart';
 import 'package:anymex/screens/manga/home_page.dart';
@@ -44,6 +47,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -79,25 +83,28 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
 void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize GetStorage for PIP & settings
+    await GetStorage.init();
+
+    // ⭐ Initialize Picture-in-Picture
+    await PipService.initialize();
 
     await Logger.init();
     await dotenv.load(fileName: ".env");
-
-    // TODO: For all the contributors just make a supabase account and then change this
-    // await Supabase.initialize(
-    //     url: dotenv.env['SUPABASE_URL']!,
-    //     anonKey: dotenv.env['SUPABASE_ANON_KEY']!);
 
     if (Platform.isWindows) {
       ['dar', 'anymex', 'sugoireads', 'mangayomi']
           .forEach(registerProtocolHandler);
     }
+
     initDeepLinkListener();
     HttpOverrides.global = MyHttpoverrides();
     await initializeHive();
     _initializeGetxController();
     initializeDateFormatting();
     MediaKit.ensureInitialized();
+
     if (!Platform.isAndroid && !Platform.isIOS) {
       await windowManager.ensureInitialized();
       await AnymexTitleBar.initialize();
@@ -123,11 +130,13 @@ void main(List<String> args) async {
     );
   }, (error, stackTrace) async {
     Logger.e("CRASH: $error");
+
     if (error.toString().contains('PathAccessException: lock failed')) {
       Hive.deleteFromDisk();
       await Hive.initFlutter('AnymeX');
       Hive.deleteFromDisk();
     }
+
     Logger.e("STACK: $stackTrace");
   }, zoneSpecification: ZoneSpecification(
     print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
@@ -184,7 +193,6 @@ void _initializeGetxController() async {
   Get.put(ServiceHandler());
   Get.put(GreetingController());
   Get.lazyPut(() => CacheController());
-  // DownloadManagerBinding.initializeDownloadManager();
 }
 
 class MainApp extends StatelessWidget {
@@ -208,6 +216,7 @@ class MainApp extends StatelessWidget {
                     .contains(LogicalKeyboardKey.altLeft) ||
                 HardwareKeyboard.instance.logicalKeysPressed
                     .contains(LogicalKeyboardKey.altRight);
+
             if (isAltPressed) {
               bool isFullScreen = await windowManager.isFullScreen();
               AnymexTitleBar.setFullScreen(!isFullScreen);
@@ -231,6 +240,7 @@ class MainApp extends StatelessWidget {
           if (PlatformDispatcher.instance.views.length > 1) {
             return child!;
           }
+
           final isDesktop = Platform.isWindows;
 
           if (isDesktop) {
@@ -249,6 +259,7 @@ class MainApp extends StatelessWidget {
               ],
             );
           }
+
           return child!;
         },
         enableLog: true,
@@ -268,19 +279,27 @@ class FilterScreen extends StatefulWidget {
 }
 
 class _FilterScreenState extends State<FilterScreen> {
-  int _selectedIndex = 1;
-  int _mobileSelectedIndex = 0;
+  final settings = Get.find<Settings>();
+
+  late int _selectedIndex;
+  late int _mobileSelectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final saved = settings.defaultStartTab.value;
+
+    _selectedIndex = saved == 0 ? 1 : saved + 1;
+    _mobileSelectedIndex = saved;
+  }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   void _onMobileItemTapped(int index) {
-    setState(() {
-      _mobileSelectedIndex = index;
-    });
+    setState(() => _mobileSelectedIndex = index);
   }
 
   final routes = [
@@ -310,10 +329,12 @@ class _FilterScreenState extends State<FilterScreen> {
     final authService = Get.find<ServiceHandler>();
     final isSimkl =
         Get.find<ServiceHandler>().serviceType.value == ServicesType.simkl;
+
     return Glow(
       child: PlatformBuilder(
         strictMode: false,
-        desktopBuilder: _buildDesktopLayout(context, authService, isSimkl),
+        desktopBuilder:
+            _buildDesktopLayout(context, authService, isSimkl),
         androidBuilder: _buildAndroidLayout(isSimkl),
       ),
     );
@@ -323,84 +344,81 @@ class _FilterScreenState extends State<FilterScreen> {
       BuildContext context, ServiceHandler authService, bool isSimkl) {
     return Scaffold(
       extendBody: true,
-      backgroundColor: Provider.of<ThemeProvider>(context).isOled
-          ? Colors.black
-          : Colors.transparent,
+      backgroundColor:
+          Provider.of<ThemeProvider>(context).isOled ? Colors.black : Colors.transparent,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Obx(() => SizedBox(
-              width: 120,
-              child: SuperListView(
-                children: [
-                  ResponsiveNavBar(
-                    isDesktop: true,
-                    currentIndex: _selectedIndex,
-                    margin: const EdgeInsets.fromLTRB(20, 30, 15, 10),
-                    items: [
-                      NavItem(
-                          unselectedIcon: IconlyBold.profile,
-                          selectedIcon: IconlyBold.profile,
-                          onTap: (index) {
-                            return SettingsSheet.show(context);
-                          },
-                          label: 'Profile',
-                          altIcon: CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainer
-                                  .withValues(alpha: 0.3),
-                              child: authService.isLoggedIn.value
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(59),
-                                      child: CachedNetworkImage(
-                                          width: 40,
-                                          height: 40,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (context, url, error) =>
-                                              const Icon(IconlyBold.profile),
-                                          imageUrl: authService
-                                                  .profileData.value.avatar ??
-                                              ''),
-                                    )
-                                  : const Icon((IconlyBold.profile)))),
-                      NavItem(
-                        unselectedIcon: IconlyLight.home,
-                        selectedIcon: IconlyBold.home,
-                        onTap: _onItemTapped,
-                        label: 'Home',
-                      ),
-                      NavItem(
-                        unselectedIcon: Icons.movie_filter_outlined,
-                        selectedIcon: Icons.movie_filter_rounded,
-                        onTap: _onItemTapped,
-                        label: 'Anime',
-                      ),
-                      NavItem(
-                        unselectedIcon:
-                            isSimkl ? Iconsax.monitor : Iconsax.book,
-                        selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
-                        onTap: _onItemTapped,
-                        label: 'Manga',
-                      ),
-                      NavItem(
-                        unselectedIcon: HugeIcons.strokeRoundedLibrary,
-                        selectedIcon: HugeIcons.strokeRoundedLibrary,
-                        onTap: _onItemTapped,
-                        label: 'Library',
-                      ),
-                      if (sourceController.shouldShowExtensions.value)
+                width: 120,
+                child: SuperListView(
+                  children: [
+                    ResponsiveNavBar(
+                      isDesktop: true,
+                      currentIndex: _selectedIndex,
+                      margin: const EdgeInsets.fromLTRB(20, 30, 15, 10),
+                      items: [
                         NavItem(
-                          unselectedIcon: Icons.extension_outlined,
-                          selectedIcon: Icons.extension_rounded,
+                            unselectedIcon: IconlyBold.profile,
+                            selectedIcon: IconlyBold.profile,
+                            onTap: (index) {
+                              return SettingsSheet.show(context);
+                            },
+                            label: 'Profile',
+                            altIcon: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainer
+                                    .withValues(alpha: 0.3),
+                                child: authService.isLoggedIn.value
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(59),
+                                        child: CachedNetworkImage(
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                            errorWidget: (context, url, error) =>
+                                                const Icon(IconlyBold.profile),
+                                            imageUrl: authService.profileData.value.avatar ?? ''),
+                                      )
+                                    : const Icon((IconlyBold.profile)))),
+                        NavItem(
+                          unselectedIcon: IconlyLight.home,
+                          selectedIcon: IconlyBold.home,
                           onTap: _onItemTapped,
-                          label: "Extensions",
+                          label: 'Home',
                         ),
-                    ],
-                  ),
-                ],
-              ))),
+                        NavItem(
+                          unselectedIcon: Icons.movie_filter_outlined,
+                          selectedIcon: Icons.movie_filter_rounded,
+                          onTap: _onItemTapped,
+                          label: 'Anime',
+                        ),
+                        NavItem(
+                          unselectedIcon: isSimkl ? Iconsax.monitor : Iconsax.book,
+                          selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
+                          onTap: _onItemTapped,
+                          label: 'Manga',
+                        ),
+                        NavItem(
+                          unselectedIcon: HugeIcons.strokeRoundedLibrary,
+                          selectedIcon: HugeIcons.strokeRoundedLibrary,
+                          onTap: _onItemTapped,
+                          label: 'Library',
+                        ),
+                        if (sourceController.shouldShowExtensions.value)
+                          NavItem(
+                            unselectedIcon: Icons.extension_outlined,
+                            selectedIcon: Icons.extension_rounded,
+                            onTap: _onItemTapped,
+                            label: "Extensions",
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              )),
           Expanded(
               child: SmoothPageEntrance(
                   style: PageEntranceStyle.slideUpGentle,
@@ -421,7 +439,8 @@ class _FilterScreenState extends State<FilterScreen> {
         bottomNavigationBar: ResponsiveNavBar(
           isDesktop: false,
           currentIndex: _mobileSelectedIndex,
-          margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 40),
+          margin:
+              const EdgeInsets.symmetric(vertical: 40, horizontal: 40),
           items: [
             NavItem(
               unselectedIcon: IconlyBold.home,

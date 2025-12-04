@@ -14,6 +14,7 @@ import 'package:anymex/screens/anime/widgets/media_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // <-- REQUIRED FIX
 
 class WatchScreen extends StatefulWidget {
   final model.Video episodeSrc;
@@ -22,6 +23,7 @@ class WatchScreen extends StatefulWidget {
   final anymex.Media anilistData;
   final List<model.Video> episodeTracks;
   final bool shouldTrack;
+
   const WatchScreen({
     super.key,
     required this.episodeSrc,
@@ -36,83 +38,110 @@ class WatchScreen extends StatefulWidget {
   State<WatchScreen> createState() => _WatchScreenState();
 }
 
-class _WatchScreenState extends State<WatchScreen> {
+class _WatchScreenState extends State<WatchScreen>
+    with WidgetsBindingObserver {
   late PlayerController controller;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
-    controller = Get.put(PlayerController(
+
+    WidgetsBinding.instance.addObserver(this);
+
+    controller = Get.put(
+      PlayerController(
         widget.episodeSrc,
         widget.currentEpisode,
         widget.episodeList,
         widget.anilistData,
-        widget.episodeTracks));
+        widget.episodeTracks,
+      ),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller.delete();
     Get.delete<PlayerController>(force: true);
     super.dispose();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    /// ─────────────────────────────────────────────────────────────
+    ///        AUTO PICTURE-IN-PICTURE ON HOME BUTTON EXIT
+    /// ─────────────────────────────────────────────────────────────
+    if (state == AppLifecycleState.inactive) {
+      // Conditions:
+      // 1. Auto-PIP setting enabled
+      // 2. Device supports PiP
+      // 3. Player is currently playing
+      if (PipService.autoPipEnabled &&
+          PipService.isPipAvailable &&
+          controller.isPlaying.value) {
+        PipService.enterPipMode(); // <-- FIX
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Stack(
-      children: [
-        Obx(() {
-          return Video(
-            filterQuality: FilterQuality.medium,
-            controls: null,
-            controller: controller.playerController,
-            fit: controller.videoFit.value,
-            resumeUponEnteringForegroundMode: true,
-            subtitleViewConfiguration:
-                const SubtitleViewConfiguration(visible: false),
-          );
-        }),
-        PlayerOverlay(controller: controller),
-        SubtitleText(controller: controller),
-        DoubleTapSeekWidget(
-          controller: controller,
-        ),
-        const Align(
-          alignment: Alignment.center,
-          child: CenterControls(),
-        ),
-        const Align(
-          alignment: Alignment.topCenter,
-          child: TopControls(),
-        ),
-        const Align(
-          alignment: Alignment.bottomCenter,
-          child: BottomControls(),
-        ),
-        MediaIndicatorBuilder(
-          isVolumeIndicator: false,
-          controller: controller,
-        ),
-        MediaIndicatorBuilder(
-          isVolumeIndicator: true,
-          controller: controller,
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: SubtitleSearchBottomSheet(controller: controller),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: EpisodesPane(controller: controller),
-        ),
-      ],
-    ));
+      body: Stack(
+        children: [
+          Obx(() {
+            return Video(
+              filterQuality: FilterQuality.medium,
+              controls: null,
+              controller: controller.playerController,
+              fit: controller.videoFit.value,
+              resumeUponEnteringForegroundMode: true,
+              subtitleViewConfiguration:
+                  const SubtitleViewConfiguration(visible: false),
+            );
+          }),
+
+          // Overlays, controls, and panes
+          PlayerOverlay(controller: controller),
+          SubtitleText(controller: controller),
+          DoubleTapSeekWidget(controller: controller),
+
+          const Align(
+            alignment: Alignment.center,
+            child: CenterControls(),
+          ),
+
+          const Align(
+            alignment: Alignment.topCenter,
+            child: TopControls(),
+          ),
+
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: BottomControls(),
+          ),
+
+          MediaIndicatorBuilder(
+            isVolumeIndicator: false,
+            controller: controller,
+          ),
+          MediaIndicatorBuilder(
+            isVolumeIndicator: true,
+            controller: controller,
+          ),
+
+          Positioned.fill(
+            child: SubtitleSearchBottomSheet(controller: controller),
+          ),
+
+          Positioned.fill(
+            child: EpisodesPane(controller: controller),
+          ),
+        ],
+      ),
+    );
   }
 }

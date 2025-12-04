@@ -29,6 +29,7 @@ dependencies:
   flutter_native_splash: ^2.4.4
   flutter_web_auth_2: ^4.0.2
   get: ^4.6.6
+  get_storage: ^2.1.1           # For PIP settings storage
   grouped_list: ^6.0.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
@@ -41,6 +42,7 @@ dependencies:
   install_plugin: ^2.1.0
   intl: ^0.20.1
   kenburns_nullsafety: ^1.0.1
+  pip: ^0.0.3
   dartotsu_extension_bridge:
     git:
       url: https://github.com/aayush2622/DartotsuExtensionBridge.git

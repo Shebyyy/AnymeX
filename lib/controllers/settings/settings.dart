@@ -23,21 +23,27 @@ class Settings extends GetxController {
   late Rx<UISettings> uiSettings;
   late Rx<PlayerSettings> playerSettings;
   late Box preferences;
+
   final canShowUpdate = true.obs;
+
+  /// NEW — Beta Updates Toggle
+  RxBool enableBetaUpdates = false.obs;
+
+  /// NEW — Default Start Tab
+  RxInt defaultStartTab = 0.obs;
+
   RxBool isTV = false.obs;
   final _selectedShader = ''.obs;
   final _selectedProfile = 'MID-END'.obs;
   final mpvPath = ''.obs;
 
   String get selectedShader => _selectedShader.value;
-
   set selectedShader(String value) {
     _selectedShader.value = value;
     preferences.put('selected_shader', value);
   }
 
   String get selectedProfile => _selectedProfile.value;
-
   set selectedProfile(String value) {
     _selectedProfile.value = value;
     preferences.put('selected_profile', value);
@@ -46,28 +52,72 @@ class Settings extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
     var uiBox = Hive.box<UISettings>("UiSettings");
     var playerBox = Hive.box<PlayerSettings>("PlayerSettings");
+
     uiSettings = Rx<UISettings>(uiBox.get('settings') ?? UISettings());
     playerSettings =
         Rx<PlayerSettings>(playerBox.get('settings') ?? PlayerSettings());
+
     preferences = Hive.box('preferences');
+
     selectedShader = preferences.get('selected_shader', defaultValue: '');
     selectedProfile =
         preferences.get('selected_profile', defaultValue: 'MID-END');
+
+    /// Load saved beta toggle
+    enableBetaUpdates.value =
+        preferences.get('enable_beta_updates', defaultValue: false);
+
+    /// Load default start tab
+    defaultStartTab.value =
+        preferences.get('default_start_tab', defaultValue: 0);
+
+    /// Ensure it's within valid range
+    if (defaultStartTab.value > 3) {
+      defaultStartTab.value = 0;
+      preferences.put('default_start_tab', 0);
+    }
+
     isTv().then((e) {
       isTV.value = e;
     });
+
     PlayerShaders.createMpvConfigFolder();
     PlayerShaders.getMpvPath().then((e) {
       mpvPath.value = e;
     });
   }
 
+  /// Manual Update check
   void checkForUpdates(BuildContext context) {
-    canShowUpdate.value
-        ? UpdateManager().checkForUpdates(context, canShowUpdate)
-        : null;
+    UpdateManager().checkForUpdates(
+      context,
+      RxBool(true),
+      isBeta: enableBetaUpdates.value,
+    );
+  }
+
+  /// Auto update check
+  void autoCheckForUpdates(BuildContext context) {
+    UpdateManager().checkForUpdates(
+      context,
+      canShowUpdate,
+      isBeta: enableBetaUpdates.value,
+    );
+  }
+
+  /// Save beta toggle
+  void saveBetaUpdateToggle(bool value) {
+    enableBetaUpdates.value = value;
+    preferences.put('enable_beta_updates', value);
+  }
+
+  /// Save default start tab
+  void saveDefaultStartTab(int value) {
+    defaultStartTab.value = value;
+    preferences.put('default_start_tab', value);
   }
 
   void showWelcomeDialog(BuildContext context) {
@@ -85,6 +135,7 @@ class Settings extends GetxController {
     saveUISettings();
   }
 
+  // -------------------- PLAYER HELPERS (FIXED) --------------------
   T _getPlayerSetting<T>(T Function(PlayerSettings settings) getter) {
     return getter(playerSettings.value);
   }
@@ -94,6 +145,7 @@ class Settings extends GetxController {
     savePlayerSettings();
   }
 
+  // -------------------- UI SETTINGS --------------------
   bool get usePosterColor => _getUISetting((s) => s.usePosterColor);
   set usePosterColor(bool value) =>
       _setUISetting((s) => s?.usePosterColor = value);
@@ -122,7 +174,8 @@ class Settings extends GetxController {
       _setUISetting((s) => s?.historyCardStyle = value);
 
   double get glowDensity => _getUISetting((s) => s.glowDensity);
-  set glowDensity(double value) => _setUISetting((s) => s?.glowDensity = value);
+  set glowDensity(double value) =>
+      _setUISetting((s) => s?.glowDensity = value);
 
   bool get enableAnimation => _getUISetting((s) => s.enableAnimation);
   set enableAnimation(bool value) =>
@@ -173,7 +226,7 @@ class Settings extends GetxController {
   set animationDuration(int value) =>
       _setUISetting((s) => s?.animationDuration = value);
 
-  // Player Settings
+  // -------------------- PLAYER SETTINGS --------------------
   bool get defaultPortraitMode =>
       _getPlayerSetting((s) => s.defaultPortraitMode);
   set defaultPortraitMode(bool value) =>
@@ -220,7 +273,8 @@ class Settings extends GetxController {
   set seekDuration(int value) =>
       _setPlayerSetting((s) => s?.seekDuration = value);
 
-  bool get transitionSubtitle => _getPlayerSetting((s) => s.transitionSubtitle);
+  bool get transitionSubtitle =>
+      _getPlayerSetting((s) => s.transitionSubtitle);
   set transitionSubtitle(bool value) =>
       _setPlayerSetting((s) => s?.transitionSubtitle = value);
 
@@ -254,7 +308,7 @@ class Settings extends GetxController {
 
   int get markAsCompleted => _getPlayerSetting((s) => s.markAsCompleted);
   set markAsCompleted(int value) =>
-      _getPlayerSetting((s) => s.markAsCompleted = value);
+      _setPlayerSetting((s) => s?.markAsCompleted = value);
 
   void updateHomePageCard(String key, bool value) {
     final currentCards = Map<String, bool>.from(uiSettings.value.homePageCards);
