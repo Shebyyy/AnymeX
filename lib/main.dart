@@ -23,6 +23,7 @@ import 'package:anymex/models/Offline/Hive/episode.dart';
 import 'package:anymex/models/Offline/Hive/offline_storage.dart';
 import 'package:anymex/models/Offline/Hive/video.dart';
 import 'package:anymex/screens/anime/home_page.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // <-- added automatically
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/library/my_library.dart';
 import 'package:anymex/screens/manga/home_page.dart';
@@ -46,7 +47,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart'; // Added for PIP
+import 'package:get_storage/get_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconly/iconly.dart';
@@ -83,8 +84,11 @@ void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Initialize GetStorage for PIP settings
+    // Initialize GetStorage for PIP & settings
     await GetStorage.init();
+
+    // ⭐ Initialize Picture-in-Picture
+    await PipService.initialize();
 
     await Logger.init();
     await dotenv.load(fileName: ".env");
@@ -284,11 +288,10 @@ class _FilterScreenState extends State<FilterScreen> {
   void initState() {
     super.initState();
 
-    /// LOAD SAVED START TAB
     final saved = settings.defaultStartTab.value;
 
-    _selectedIndex = saved == 0 ? 1 : saved + 1;   // desktop index shift
-    _mobileSelectedIndex = saved;                 // mobile index uses exact
+    _selectedIndex = saved == 0 ? 1 : saved + 1;
+    _mobileSelectedIndex = saved;
   }
 
   void _onItemTapped(int index) {
@@ -300,7 +303,7 @@ class _FilterScreenState extends State<FilterScreen> {
   }
 
   final routes = [
-    const SizedBox.shrink(), // desktop index 0 = profile
+    const SizedBox.shrink(),
     const HomePage(),
     const AnimeHomePage(),
     const MangaHomePage(),
@@ -330,13 +333,12 @@ class _FilterScreenState extends State<FilterScreen> {
     return Glow(
       child: PlatformBuilder(
         strictMode: false,
-        desktopBuilder: _buildDesktopLayout(context, authService, isSimkl),
+        desktopBuilder:
+            _buildDesktopLayout(context, authService, isSimkl),
         androidBuilder: _buildAndroidLayout(isSimkl),
       ),
     );
   }
-
-  // ---------------- DESKTOP NAVIGATION ----------------
 
   Scaffold _buildDesktopLayout(
       BuildContext context, ServiceHandler authService, bool isSimkl) {
@@ -378,8 +380,7 @@ class _FilterScreenState extends State<FilterScreen> {
                                             fit: BoxFit.cover,
                                             errorWidget: (context, url, error) =>
                                                 const Icon(IconlyBold.profile),
-                                            imageUrl: authService.profileData.value.avatar ??
-                                                ''),
+                                            imageUrl: authService.profileData.value.avatar ?? ''),
                                       )
                                     : const Icon((IconlyBold.profile)))),
                         NavItem(
@@ -428,8 +429,6 @@ class _FilterScreenState extends State<FilterScreen> {
     );
   }
 
-  // ---------------- MOBILE NAVIGATION ----------------
-
   Scaffold _buildAndroidLayout(bool isSimkl) {
     return Scaffold(
         body: SmoothPageEntrance(
@@ -440,7 +439,8 @@ class _FilterScreenState extends State<FilterScreen> {
         bottomNavigationBar: ResponsiveNavBar(
           isDesktop: false,
           currentIndex: _mobileSelectedIndex,
-          margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 40),
+          margin:
+              const EdgeInsets.symmetric(vertical: 40, horizontal: 40),
           items: [
             NavItem(
               unselectedIcon: IconlyBold.home,
