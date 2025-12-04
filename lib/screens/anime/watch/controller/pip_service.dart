@@ -6,70 +6,71 @@ import 'package:get_storage/get_storage.dart';
 
 class PipService {
   static final Pip _pip = Pip();
+
   static bool _isPipAvailable = false;
   static bool _isPipActive = false;
   static int? _androidVersion;
-  
+
   // Storage keys
   static const String _autoPipKey = 'pip_auto_enable';
   static final _storage = GetStorage();
 
-  // Check if PIP is available (Android 8.0+ or iOS 14+)
+  // ---- INITIALIZATION ----
   static Future<bool> initialize() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
       return false;
     }
-    
+
     try {
-      // Check Android version
+      // Check minimum Android version
       if (Platform.isAndroid) {
         final deviceInfo = DeviceInfoPlugin();
         final androidInfo = await deviceInfo.androidInfo;
         _androidVersion = androidInfo.version.sdkInt;
-        
-        // PIP requires Android 8.0 (API 26) or higher
+
         if (_androidVersion! < 26) {
-          debugPrint('PIP not available: Android $_androidVersion < 26');
+          debugPrint('Device API too low for PiP ($_androidVersion)');
           return false;
         }
       }
-      
-      // Check if device supports PIP
-      _isPipAvailable = await _pip.isAvailable ?? false;
-      
+
+      // 👉 REAL API: isSupported()
+      _isPipAvailable = await _pip.isSupported();
+
       if (_isPipAvailable) {
-        // Setup PIP with options
+        // 👉 PipOptions depends on platform
         PipOptions options;
+
         if (Platform.isAndroid) {
           options = PipOptions(
-            autoEnterEnabled: false, // We'll control this manually
+            autoEnterEnabled: false,
             aspectRatioX: 16,
             aspectRatioY: 9,
             seamlessResizeEnabled: true,
           );
         } else {
-          // iOS
+          // iOS options
           options = PipOptions(
             autoEnterEnabled: false,
             preferredContentWidth: 480,
             preferredContentHeight: 270,
           );
         }
-        
+
         await _pip.setup(options);
-        
-        // Register state observer
+
+        // ---- STATE OBSERVER ----
         await _pip.registerStateChangedObserver(
           PipStateChangedObserver(
             onPipStateChanged: (state, error) {
               _isPipActive = (state == PipState.pipStateStarted);
-              debugPrint('PIP state changed: $state');
+              debugPrint('PiP state changed: $state');
             },
           ),
         );
       }
-      
-      debugPrint('PIP available: $_isPipAvailable (Android: $_androidVersion)');
+
+      debugPrint('PiP available: $_isPipAvailable');
       return _isPipAvailable;
     } catch (e) {
       debugPrint('PIP initialization error: $e');
@@ -77,47 +78,53 @@ class PipService {
     }
   }
 
-  // Enter PIP mode
+  // ---- ENTER PIP ----
   static Future<bool> enterPipMode() async {
     if (!_isPipAvailable) {
-      debugPrint('PIP not available on this device');
+      debugPrint('Cannot enter PiP: device unsupported');
       return false;
     }
 
     try {
-      await _pip.enterPipMode();
-      return true;
+      // 👉 REAL API: start()
+      final ok = await _pip.start();
+      debugPrint('PiP start result: $ok');
+      return ok;
     } catch (e) {
-      debugPrint('Failed to enter PIP: $e');
+      debugPrint('Failed to enter PiP: $e');
       return false;
     }
   }
 
-  // Exit PIP mode (works automatically when user taps PIP window)
+  // ---- EXIT PIP ----
   static Future<void> exitPipMode() async {
-    // PIP exits automatically when user taps window
-    // No explicit exit needed for pip package
-    debugPrint('PIP will exit when user taps window');
+    // pip package exits automatically — only stop() exists
+    try {
+      await _pip.stop();
+    } catch (_) {
+      // ignore
+    }
   }
 
-  // Clean up
+  // ---- CLEAN UP ----
   static Future<void> dispose() async {
     try {
       await _pip.unregisterStateChangedObserver();
       await _pip.dispose();
     } catch (e) {
-      debugPrint('PIP dispose error: $e');
+      debugPrint('PiP dispose error: $e');
     }
   }
 
-  // Settings: Auto-enable PIP on home button
+  // ---- SETTINGS ----
   static bool get autoPipEnabled => _storage.read(_autoPipKey) ?? true;
-  
+
   static Future<void> setAutoPipEnabled(bool enabled) async {
     await _storage.write(_autoPipKey, enabled);
-    debugPrint('Auto-PIP ${enabled ? "enabled" : "disabled"}');
+    debugPrint('Auto PiP: ${enabled ? "Enabled" : "Disabled"}');
   }
 
+  // ---- GETTERS ----
   static bool get isPipActive => _isPipActive;
   static bool get isPipAvailable => _isPipAvailable;
   static int? get androidVersion => _androidVersion;
