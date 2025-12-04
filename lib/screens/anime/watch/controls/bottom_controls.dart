@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
+import 'package:anymex/screens/anime/watch/controller/pip_service.dart'; // Added for PIP
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -54,8 +55,7 @@ class BottomControls extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ));
+          ));
   }
 
   Widget _buildLayout(BuildContext context) {
@@ -229,6 +229,16 @@ class BottomControls extends StatelessWidget {
                           tooltip: 'Aspect Ratio',
                           compact: true,
                         ),
+                        // PIP Button - Only show on Android 8.0+ devices
+                        if (PipService.isPipAvailable)
+                          ControlButton(
+                            icon: Icons.picture_in_picture,
+                            onPressed: () async {
+                              await controller.togglePip();
+                            },
+                            tooltip: 'Picture in Picture',
+                            compact: true,
+                          ),
                       ],
                     ),
                   ),
