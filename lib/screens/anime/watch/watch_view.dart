@@ -36,12 +36,13 @@ class WatchScreen extends StatefulWidget {
   State<WatchScreen> createState() => _WatchScreenState();
 }
 
-class _WatchScreenState extends State<WatchScreen> {
+class _WatchScreenState extends State<WatchScreen> with WidgetsBindingObserver {
   late PlayerController controller;
 
   @override
-  initState() {
+  void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     controller = Get.put(PlayerController(
         widget.episodeSrc,
         widget.currentEpisode,
@@ -52,9 +53,25 @@ class _WatchScreenState extends State<WatchScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     controller.delete();
     Get.delete<PlayerController>(force: true);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Auto-enable PIP when user presses home button
+    // Only if setting is enabled AND device supports PIP
+    if (state == AppLifecycleState.inactive) {
+      if (PipService.autoPipEnabled && 
+          controller.isPlaying.value && 
+          PipService.isPipAvailable) {
+        controller.togglePip();
+      }
+    }
   }
 
   @override
