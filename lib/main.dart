@@ -26,8 +26,11 @@ import 'package:anymex/screens/library/my_library.dart';
 import 'package:anymex/screens/manga/home_page.dart';
 import 'package:anymex/controllers/services/anilist/anilist_data.dart';
 import 'package:anymex/screens/home_page.dart';
+import 'package:anymex/utils/config.dart';
 import 'package:anymex/utils/deeplink.dart';
+import 'package:anymex/utils/error_handler.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:anymex/utils/performance.dart';
 import 'package:anymex/utils/register_protocol/register_protocol.dart';
 import 'package:anymex/widgets/adaptive_wrapper.dart';
 import 'package:anymex/widgets/animation/more_page_transitions.dart';
@@ -83,6 +86,9 @@ void main(List<String> args) async {
     await Logger.init();
     await dotenv.load(fileName: ".env");
 
+    // Initialize global error handler
+    ErrorHandler.instance;
+
     // TODO: For all the contributors just make a supabase account and then change this
     // await Supabase.initialize(
     //     url: dotenv.env['SUPABASE_URL']!,
@@ -110,9 +116,13 @@ void main(List<String> args) async {
     }
 
     FlutterError.onError = (FlutterErrorDetails details) async {
-      FlutterError.presentError(details);
-      Logger.e("FLUTTER ERROR: ${details.exceptionAsString()}");
-      Logger.e("STACK: ${details.stack}");
+      ErrorHandler.instance.handleError(
+        error: details.exception,
+        stackTrace: details.stack,
+        type: ErrorType.unknown,
+        severity: ErrorSeverity.high,
+        customMessage: "Flutter framework error occurred",
+      );
     };
 
     runApp(
@@ -122,13 +132,20 @@ void main(List<String> args) async {
       ),
     );
   }, (error, stackTrace) async {
-    Logger.e("CRASH: $error");
+    ErrorHandler.instance.handleError(
+      error: error,
+      stackTrace: stackTrace,
+      type: ErrorType.unknown,
+      severity: ErrorSeverity.critical,
+      customMessage: "Application crash occurred",
+    );
+    
+    // Handle Hive lock failure specifically
     if (error.toString().contains('PathAccessException: lock failed')) {
       Hive.deleteFromDisk();
       await Hive.initFlutter('AnymeX');
       Hive.deleteFromDisk();
     }
-    Logger.e("STACK: $stackTrace");
   }, zoneSpecification: ZoneSpecification(
     print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
       Logger.i(line);
@@ -144,12 +161,22 @@ void initDeepLinkListener() async {
     final initialUri = await appLinks.getInitialLink();
     if (initialUri != null) Deeplink.handleDeepLink(initialUri);
   } catch (err) {
-    errorSnackBar('Error getting initial deep link: $err');
+    ErrorHandler.instance.handleError(
+      error: err,
+      type: ErrorType.unknown,
+      severity: ErrorSeverity.medium,
+      customMessage: 'Error getting initial deep link',
+    );
   }
 
   appLinks.uriLinkStream.listen(
     (uri) => Deeplink.handleDeepLink(uri),
-    onError: (err) => errorSnackBar('Error Opening link: $err'),
+    onError: (err) => ErrorHandler.instance.handleError(
+      error: err,
+      type: ErrorType.unknown,
+      severity: ErrorSeverity.medium,
+      customMessage: 'Error opening deep link',
+    ),
   );
 }
 
@@ -173,6 +200,10 @@ Future<void> initializeHive() async {
 }
 
 void _initializeGetxController() async {
+  // Initialize core utilities first
+  Get.put(RuntimeConfig());
+  
+  // Initialize controllers
   Get.put(OfflineStorageController());
   Get.put(AnilistAuth());
   Get.put(AnilistData());

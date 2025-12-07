@@ -15,6 +15,7 @@ import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/subtitles/model/online_subtitle.dart';
 import 'package:anymex/utils/aniskip.dart' as aniskip;
 import 'package:anymex/utils/color_profiler.dart';
+import 'package:anymex/utils/error_handler.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/utils/string_extensions.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
@@ -227,8 +228,31 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   @override
   void onClose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.onClose();
+    try {
+      // Cancel all timers
+      _autoHideTimer?.cancel();
+      _seekDebounce?.cancel();
+      _volumeTimer?.cancel();
+      _brightnessTimer?.cancel();
+      _controlsTimer?.cancel();
+      
+      // Dispose player resources
+      player.dispose();
+      
+      // Remove observers
+      WidgetsBinding.instance.removeObserver(this);
+      
+      super.onClose();
+    } catch (e, stackTrace) {
+      ErrorHandler.instance.handleError(
+        error: e,
+        stackTrace: stackTrace,
+        type: ErrorType.player,
+        severity: ErrorSeverity.medium,
+        customMessage: 'Error during player cleanup',
+        showToUser: false,
+      );
+    }
   }
 
   @override
@@ -319,14 +343,32 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     try {
       VolumeController.instance.showSystemUI = false;
       volume.value = await VolumeController.instance.getVolume();
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      ErrorHandler.instance.handleError(
+        error: e,
+        stackTrace: stackTrace,
+        type: ErrorType.player,
+        severity: ErrorSeverity.low,
+        customMessage: 'Failed to initialize volume controls',
+        showToUser: false,
+      );
+    }
 
     try {
       brightness.value = await ScreenBrightness.instance.application;
       ScreenBrightness.instance.onCurrentBrightnessChanged.listen((value) {
         brightness.value = value;
       });
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      ErrorHandler.instance.handleError(
+        error: e,
+        stackTrace: stackTrace,
+        type: ErrorType.player,
+        severity: ErrorSeverity.low,
+        customMessage: 'Failed to initialize brightness controls',
+        showToUser: false,
+      );
+    }
   }
 
   void _initializePlayer() {
@@ -363,8 +405,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     aniskip.AniSkipApi().getSkipTimes(skipQuery).then((skipTimeResult) {
       skipTimes = skipTimeResult;
     }).onError((error, stackTrace) {
-      debugPrint("An error occurred: $error");
-      debugPrint("Stack trace: $stackTrace");
+      ErrorHandler.instance.handleError(
+        error: error,
+        stackTrace: stackTrace,
+        type: ErrorType.network,
+        severity: ErrorSeverity.low,
+        customMessage: 'Failed to load skip times',
+        showToUser: false,
+      );
     });
   }
 
@@ -453,10 +501,10 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     });
 
     player.stream.error.listen((e) {
-      Logger.i(e);
-      if (e.toString().contains('Failed to open')) {
-        snackBar('Failed, Dont Bother..');
-      }
+      ErrorHandler.instance.handlePlayerError(
+        e,
+        stackTrace: StackTrace.current,
+      );
     });
 
     player.stream.subtitle.listen((e) {

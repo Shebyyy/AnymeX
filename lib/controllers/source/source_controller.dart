@@ -3,6 +3,8 @@
 import 'package:anymex/screens/search/source_search_page.dart';
 import 'package:anymex/utils/extension_utils.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:anymex/utils/error_handler.dart';
+import 'package:anymex/utils/resource_manager.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:anymex/controllers/cacher/cache_controller.dart';
@@ -26,7 +28,7 @@ import 'package:hive/hive.dart';
 
 final sourceController = Get.put(SourceController());
 
-class SourceController extends GetxController implements BaseService {
+class SourceController extends GetxController with ResourceMixin implements BaseService {
   var availableExtensions = <Source>[].obs;
   var availableMangaExtensions = <Source>[].obs;
   var availableNovelExtensions = <Source>[].obs;
@@ -290,8 +292,11 @@ class SourceController extends GetxController implements BaseService {
       ].any((e) => (e as dynamic).isNotEmpty);
 
       Logger.i('Extensions initialized.');
-    } catch (e) {
-      Logger.i('Error initializing extensions: $e');
+    } catch (e, stackTrace) {
+      ErrorHandler.instance.handleExtensionError(
+        e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
