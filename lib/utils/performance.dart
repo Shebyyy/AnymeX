@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -59,7 +60,7 @@ class PerformanceMonitor {
     // This is a simplified memory monitoring
     // In a real implementation, you'd use platform-specific APIs
     try {
-      final info = ProcessInfo.currentRss;
+      final info = ProcessInfo.currentRss ?? 0;
       _memoryUsage.value = info;
     } catch (e) {
       // Memory monitoring not available on this platform
