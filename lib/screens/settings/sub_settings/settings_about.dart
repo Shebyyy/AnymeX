@@ -9,6 +9,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:package_info_plus/package_info_plus.dart' show PackageInfo;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_contributors.dart';
 
 Future<void> launchUrlHelper(String link) async {
   final url = Uri.parse(link);
@@ -32,6 +33,8 @@ class AboutPage extends StatelessWidget {
           children: [
             const HeaderSection(),
             const SizedBox(height: 16),
+
+            // HEADER CARD
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -59,9 +62,8 @@ class AboutPage extends StatelessWidget {
                           FutureBuilder<PackageInfo>(
                             future: PackageInfo.fromPlatform(),
                             builder: (context, snapshot) {
-                              final version = snapshot.hasData
-                                  ? snapshot.data!.version
-                                  : '';
+                              final version =
+                                  snapshot.hasData ? snapshot.data!.version : '';
                               return ProfileInfo(
                                 username: "AnymeX",
                                 version: "v$version",
@@ -100,42 +102,44 @@ class AboutPage extends StatelessWidget {
                   right: 0,
                   child: Center(
                     child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: theme.colorScheme.primary,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.primary,
+                          width: 3,
                         ),
-                        child: CircleAvatar(
-                          backgroundColor: theme.colorScheme.surfaceContainer,
-                          child: Image.asset(
-                            'assets/images/logo_transparent.png',
-                            fit: BoxFit.cover,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
                           ),
-                        )),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        backgroundColor: theme.colorScheme.surfaceContainer,
+                        child: Image.asset(
+                          'assets/images/logo_transparent.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
+
+            // SOCIAL SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainer
-                      .withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12)),
+                color: theme.colorScheme.surfaceContainer.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: CustomSection(
                 icon: Iconsax.link_circle,
                 title: "Social",
@@ -166,7 +170,10 @@ class AboutPage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
+
+            // DEVELOPMENT SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
@@ -187,6 +194,22 @@ class AboutPage extends StatelessWidget {
                     title: "GitHub",
                     subtitle: 'View Source code on github.',
                   ),
+
+                  // ⭐ ADDED CONTRIBUTORS ITEM HERE
+                  CustomListTile(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ContributorsPage(),
+                        ),
+                      );
+                    },
+                    leading: const Icon(Icons.group),
+                    title: "Contributors",
+                    subtitle: "Team & community members",
+                  ),
+
                   CustomListTile(
                     onTap: () async {
                       await launchUrlHelper('https://ko-fi.com/ryanyuuki7');
@@ -209,7 +232,10 @@ class AboutPage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
+
+            // OTHER SECTION
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
@@ -232,6 +258,7 @@ class AboutPage extends StatelessWidget {
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
           ],
         ),
