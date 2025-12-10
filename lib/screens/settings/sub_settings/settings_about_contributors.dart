@@ -40,11 +40,79 @@ class _ContributorsPageState extends State<ContributorsPage> {
             itemBuilder: (context, i) {
               final c = list[i];
 
-              return ListTile(
-                leading: CircleAvatar(backgroundImage: NetworkImage(c.avatar)),
-                title: Text(c.name),
-                subtitle: Text(c.role ?? "Contributor"),
-                onTap: () => _openContributor(c),
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: GestureDetector(
+                  onTap: () => _openContributor(c),
+                  child: Container(
+                    height: 110,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      image: DecorationImage(
+                        image: NetworkImage(
+                          (c.banner != null && c.banner!.isNotEmpty)
+                              ? c.banner!
+                              : defaultBannerUrl,
+                        ),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: Colors.black.withOpacity(0.45),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          // Avatar
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundImage: NetworkImage(c.avatar),
+                          ),
+                          const SizedBox(width: 14),
+
+                          // Name + role + contributions
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  c.name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (c.role != null)
+                                  Text(
+                                    c.role!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color:
+                                          Colors.white.withOpacity(0.85),
+                                    ),
+                                  ),
+                                if (c.contributions != null)
+                                  Text(
+                                    "${c.contributions} contributions",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color:
+                                          Colors.white.withOpacity(0.75),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               );
             },
           );
@@ -82,7 +150,8 @@ class _ContributorsPageState extends State<ContributorsPage> {
         spacing: 6,
         children: c.badges!.map((badge) {
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: _badgeColor(badge).withOpacity(0.25),
               borderRadius: BorderRadius.circular(12),
@@ -103,7 +172,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
   }
 
   // ---------------------------------------------------------
-  //  FULLSCREEN AVATAR (ZOOMABLE)
+  //  Fullscreen Avatar Preview
   // ---------------------------------------------------------
   void _openAvatarFullscreen(String imageUrl, BuildContext context) {
     Navigator.push(
@@ -132,7 +201,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
   }
 
   // ---------------------------------------------------------
-  //  Contributor Popup Sheet
+  //  Contributor Bottom Sheet
   // ---------------------------------------------------------
   void _openContributor(Contributor c) {
     AnymexSheet.custom(
@@ -151,7 +220,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             const SizedBox(height: 16),
 
-            // Avatar → Fullscreen zoom on tap
+            // Avatar (zoomable)
             GestureDetector(
               onTap: () => _openAvatarFullscreen(c.avatar, context),
               child: Hero(
@@ -176,28 +245,19 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             // Role
             if (c.role != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  c.role!,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+              Text(
+                c.role!,
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
 
             // Badges
             _buildBadges(c),
 
-            // GitHub commits
+            // Contributions
             if (c.contributions != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  "${c.contributions} commits",
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
+              Text(
+                "${c.contributions} commits",
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
               ),
 
             const SizedBox(height: 16),
@@ -210,13 +270,11 @@ class _ContributorsPageState extends State<ContributorsPage> {
                   c.about!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                      fontSize: 14, color: Colors.white70),
                 ),
               ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // MESSAGE
             if (c.isCustom && c.message != null && c.message!.isNotEmpty)
@@ -226,35 +284,27 @@ class _ContributorsPageState extends State<ContributorsPage> {
                   c.message!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 15,
-                    color: Colors.white,
-                  ),
+                      fontSize: 15, color: Colors.white),
                 ),
               ),
 
             const SizedBox(height: 20),
 
             // Open Profile Button
-            SizedBox(
-              width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ElevatedButton(
-                  onPressed: () {
-                    final url = Uri.parse(c.profileUrl);
-                    launchUrl(url, mode: LaunchMode.externalApplication);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "View Profile",
-                    style: TextStyle(fontSize: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ElevatedButton(
+                onPressed: () {
+                  final url = Uri.parse(c.profileUrl);
+                  launchUrl(url, mode: LaunchMode.externalApplication);
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: const Text("View Profile"),
               ),
             ),
 
