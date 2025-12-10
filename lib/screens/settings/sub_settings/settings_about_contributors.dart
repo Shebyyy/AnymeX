@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../models/contributor.dart';
-import '../../../controllers/contributors/contributor_controller.dart';
-import '../../../widgets/anymex_bottomsheet.dart';
+import 'package:anymex/models/contributor.dart';
+import 'package:anymex/controllers/contributors/contributor_controller.dart';
+import 'package:anymex/widgets/anymex_bottomsheet.dart';
+
+const String defaultBannerUrl = "https://yoururl.com/default_banner.png";
 
 class ContributorsPage extends StatefulWidget {
   @override
@@ -52,31 +54,28 @@ class _ContributorsPageState extends State<ContributorsPage> {
       context,
       child: Column(
         children: [
-          if (c.banner != null && c.banner!.isNotEmpty)
-            Image.network(c.banner!, height: 120, fit: BoxFit.cover),
-
+          Image.network(
+            (c.banner != null && c.banner!.isNotEmpty) ? c.banner! : defaultBannerUrl,
+            height: 120,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
           const SizedBox(height: 16),
-
           CircleAvatar(
             radius: 40,
             backgroundImage: NetworkImage(c.avatar),
           ),
-
           const SizedBox(height: 12),
-
           Text(
             c.name,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-
           if (c.role != null)
             Text(
               c.role!,
               style: const TextStyle(color: Colors.grey),
             ),
-
           const SizedBox(height: 20),
-
           ElevatedButton(
             onPressed: () {
               final url = Uri.parse(c.profileUrl);
