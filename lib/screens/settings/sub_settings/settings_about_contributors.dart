@@ -51,6 +51,56 @@ class _ContributorsPageState extends State<ContributorsPage> {
     );
   }
 
+  // Badge color system
+  Color _badgeColor(String badge) {
+    switch (badge.toLowerCase()) {
+      case "owner":
+        return Colors.redAccent;
+      case "lead developer":
+        return Colors.blueAccent;
+      case "admin":
+        return Colors.orangeAccent;
+      case "moderator":
+        return Colors.greenAccent;
+      case "github contributor":
+        return Colors.purpleAccent;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildBadges(Contributor c) {
+    if (c.badges == null || c.badges!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: c.badges!.map((badge) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _badgeColor(badge).withOpacity(0.25),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _badgeColor(badge)),
+            ),
+            child: Text(
+              badge,
+              style: TextStyle(
+                fontSize: 12,
+                color: _badgeColor(badge),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   void _openContributor(Contributor c) {
     AnymexSheet.custom(
       SingleChildScrollView(
@@ -87,43 +137,53 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             // Role
             if (c.role != null)
-              Text(
-                c.role!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  c.role!,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ),
+
+            // ⭐ BADGES
+            _buildBadges(c),
+
+            // ⭐ GitHub commit count
+            if (c.contributions != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  "${c.contributions} commits",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.white70,
+                  ),
                 ),
               ),
 
             const SizedBox(height: 16),
 
-            // ABOUT — only for custom contributors
+            // ABOUT — only custom contributors
             if (c.isCustom && c.about != null && c.about!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   c.about!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ),
 
             const SizedBox(height: 12),
 
-            // MESSAGE — only for custom contributors
+            // MESSAGE — only custom contributors
             if (c.isCustom && c.message != null && c.message!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   c.message!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Colors.white,
-                  ),
+                  style: const TextStyle(fontSize: 15, color: Colors.white),
                 ),
               ),
 
