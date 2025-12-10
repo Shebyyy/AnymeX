@@ -132,9 +132,10 @@ flutter_native_splash:
 flutter:
   uses-material-design: true
 
-  assets:
-    - assets/images/
-    - .env
+assets:
+  - assets/images/
+  - assets/data/custom_contributors.json
+  - .env
 
   fonts:
     - family: Poppins
