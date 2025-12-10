@@ -7,6 +7,10 @@ class Contributor {
   final String profileUrl;
   final bool isCustom;
 
+  // Custom-only fields
+  final String? about;
+  final String? message;
+
   Contributor({
     required this.username,
     required this.name,
@@ -15,8 +19,11 @@ class Contributor {
     this.banner,
     required this.profileUrl,
     this.isCustom = false,
+    this.about,
+    this.message,
   });
 
+  /// GitHub contributors (API result)
   factory Contributor.fromGitHub(Map<String, dynamic> json) {
     return Contributor(
       username: json["login"],
@@ -24,10 +31,14 @@ class Contributor {
       role: "Contributor",
       avatar: json["avatar_url"],
       profileUrl: json["html_url"],
+      banner: null,
       isCustom: false,
+      about: null,     // GitHub has no custom data
+      message: null,   // GitHub has no custom message
     );
   }
 
+  /// Custom contributors (local JSON)
   factory Contributor.fromCustom(Map<String, dynamic> json) {
     return Contributor(
       username: json["username"],
@@ -37,6 +48,8 @@ class Contributor {
       banner: json["banner"],
       profileUrl: json["profileUrl"],
       isCustom: true,
+      about: json["about"],
+      message: json["message"],
     );
   }
 }
