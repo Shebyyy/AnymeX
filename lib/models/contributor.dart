@@ -11,6 +11,10 @@ class Contributor {
   final String? about;
   final String? message;
 
+  // New fields
+  final int? contributions;     // GitHub commit count
+  final List<String>? badges;   // Role badges (custom only)
+
   Contributor({
     required this.username,
     required this.name,
@@ -21,6 +25,8 @@ class Contributor {
     this.isCustom = false,
     this.about,
     this.message,
+    this.contributions,
+    this.badges,
   });
 
   /// GitHub contributors (API result)
@@ -33,8 +39,10 @@ class Contributor {
       profileUrl: json["html_url"],
       banner: null,
       isCustom: false,
-      about: null,     // GitHub has no custom data
-      message: null,   // GitHub has no custom message
+      about: null,
+      message: null,
+      contributions: json["contributions"], // NEW
+      badges: ["GitHub Contributor"],       // default badge
     );
   }
 
@@ -50,6 +58,10 @@ class Contributor {
       isCustom: true,
       about: json["about"],
       message: json["message"],
+      contributions: null,                    // Custom users don't use GitHub commit count
+      badges: json["badges"] != null
+          ? List<String>.from(json["badges"])
+          : null,                             // NEW
     );
   }
 }
