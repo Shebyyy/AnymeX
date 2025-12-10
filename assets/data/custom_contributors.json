@@ -1,0 +1,42 @@
+[
+  {
+    "username": "RyanYuuki",
+    "name": "Ryan Yuuki",
+    "role": "Lead Developer",
+    "avatar": "https://avatars.githubusercontent.com/u/123456",
+    "banner": "",
+    "profileUrl": "https://github.com/RyanYuuki"
+  },
+  {
+    "username": "Shebyyy",
+    "name": "Sheby",
+    "role": "Admin & Moderator",
+    "avatar": "https://yoururl/avatar.png",
+    "banner": "https://yoururl/banner.png",
+    "profileUrl": "https://yourwebsite.com"
+  },
+  {
+    "username": "itsmechinmoy",
+    "name": "itsmechinmoy",
+    "role": "Admin & Moderator",
+    "avatar": "https://avatars.githubusercontent.com/itsmechinmoy",
+    "banner": "",
+    "profileUrl": "https://github.com/itsmechinmoy"
+  },
+  {
+    "username": "NotSap",
+    "name": "NotSap",
+    "role": "Discord Moderator",
+    "avatar": "https://avatars.githubusercontent.com/NotSap",
+    "banner": "",
+    "profileUrl": "https://github.com/NotSap"
+  },
+  {
+    "username": "kusokohei",
+    "name": "kusokohei",
+    "role": "Discord Moderator",
+    "avatar": "https://avatars.githubusercontent.com/kusokohei",
+    "banner": "",
+    "profileUrl": "https://github.com/kusokohei"
+  }
+]
