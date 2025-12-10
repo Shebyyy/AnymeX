@@ -325,7 +325,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
                                 c.telegram!.isNotEmpty)
                               IconButton(
                                 icon: Image.network(
-                                  "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg",
+                                  "https://files.catbox.moe/8quut6.png",
                                   width: 32,
                                   height: 32,
                                 ),
@@ -341,7 +341,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
                                 c.discord!.isNotEmpty)
                               IconButton(
                                 icon: Image.network(
-                                  "https://upload.wikimedia.org/wikipedia/en/9/98/Discord_logo.svg",
+                                  "https://files.catbox.moe/n69e8g.png",
                                   width: 32,
                                   height: 32,
                                 ),
