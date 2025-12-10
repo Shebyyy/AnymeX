@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:photo_view/photo_view.dart';
+
 import 'package:anymex/models/contributor.dart';
 import 'package:anymex/controllers/contributors/contributor_controller.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
@@ -51,7 +53,9 @@ class _ContributorsPageState extends State<ContributorsPage> {
     );
   }
 
-  // Badge color system
+  // ---------------------------------------------------------
+  //  Badge Colors
+  // ---------------------------------------------------------
   Color _badgeColor(String badge) {
     switch (badge.toLowerCase()) {
       case "owner":
@@ -70,15 +74,12 @@ class _ContributorsPageState extends State<ContributorsPage> {
   }
 
   Widget _buildBadges(Contributor c) {
-    if (c.badges == null || c.badges!.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (c.badges == null || c.badges!.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Wrap(
         spacing: 6,
-        runSpacing: 4,
         children: c.badges!.map((badge) {
           return Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -101,6 +102,38 @@ class _ContributorsPageState extends State<ContributorsPage> {
     );
   }
 
+  // ---------------------------------------------------------
+  //  FULLSCREEN AVATAR (ZOOMABLE)
+  // ---------------------------------------------------------
+  void _openAvatarFullscreen(String imageUrl, BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          body: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Center(
+              child: Hero(
+                tag: imageUrl,
+                child: PhotoView(
+                  imageProvider: NetworkImage(imageUrl),
+                  backgroundDecoration:
+                      const BoxDecoration(color: Colors.transparent),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 3,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------
+  //  Contributor Popup Sheet
+  // ---------------------------------------------------------
   void _openContributor(Contributor c) {
     AnymexSheet.custom(
       SingleChildScrollView(
@@ -118,10 +151,16 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             const SizedBox(height: 16),
 
-            // Avatar
-            CircleAvatar(
-              radius: 40,
-              backgroundImage: NetworkImage(c.avatar),
+            // Avatar → Fullscreen zoom on tap
+            GestureDetector(
+              onTap: () => _openAvatarFullscreen(c.avatar, context),
+              child: Hero(
+                tag: c.avatar,
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundImage: NetworkImage(c.avatar),
+                ),
+              ),
             ),
 
             const SizedBox(height: 12),
@@ -145,10 +184,10 @@ class _ContributorsPageState extends State<ContributorsPage> {
                 ),
               ),
 
-            // ⭐ BADGES
+            // Badges
             _buildBadges(c),
 
-            // ⭐ GitHub commit count
+            // GitHub commits
             if (c.contributions != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -163,33 +202,39 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             const SizedBox(height: 16),
 
-            // ABOUT — only custom contributors
+            // ABOUT
             if (c.isCustom && c.about != null && c.about!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   c.about!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
                 ),
               ),
 
             const SizedBox(height: 12),
 
-            // MESSAGE — only custom contributors
+            // MESSAGE
             if (c.isCustom && c.message != null && c.message!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   c.message!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
                 ),
               ),
 
             const SizedBox(height: 20),
 
-            // View Profile Button
+            // Open Profile Button
             SizedBox(
               width: double.infinity,
               child: Padding(
