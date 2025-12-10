@@ -11,9 +11,13 @@ class Contributor {
   final String? about;
   final String? message;
 
-  // New fields
-  final int? contributions;     // GitHub commit count
-  final List<String>? badges;   // Role badges (custom only)
+  // Social links (custom only)
+  final String? telegram;
+  final String? discord;
+
+  // GitHub fields
+  final int? contributions;
+  final List<String>? badges;
 
   Contributor({
     required this.username,
@@ -25,6 +29,8 @@ class Contributor {
     this.isCustom = false,
     this.about,
     this.message,
+    this.telegram,
+    this.discord,
     this.contributions,
     this.badges,
   });
@@ -39,10 +45,15 @@ class Contributor {
       profileUrl: json["html_url"],
       banner: null,
       isCustom: false,
+
       about: null,
       message: null,
-      contributions: json["contributions"], // NEW
-      badges: ["GitHub Contributor"],       // default badge
+
+      telegram: null,
+      discord: null,
+
+      contributions: json["contributions"],
+      badges: ["GitHub Contributor"],
     );
   }
 
@@ -56,12 +67,18 @@ class Contributor {
       banner: json["banner"],
       profileUrl: json["profileUrl"],
       isCustom: true,
+
       about: json["about"],
       message: json["message"],
-      contributions: null,                    // Custom users don't use GitHub commit count
+
+      telegram: json["telegram"],
+      discord: json["discord"],
+
+      contributions: null,
+
       badges: json["badges"] != null
           ? List<String>.from(json["badges"])
-          : null,                             // NEW
+          : null,
     );
   }
 }
