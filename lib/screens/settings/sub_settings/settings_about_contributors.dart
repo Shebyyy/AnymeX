@@ -53,40 +53,109 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
   void _openContributor(Contributor c) {
     AnymexSheet.custom(
-      Column(
-        children: [
-          Image.network(
-            (c.banner != null && c.banner!.isNotEmpty)
-                ? c.banner!
-                : defaultBannerUrl,
-            height: 120,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-          const SizedBox(height: 16),
-          CircleAvatar(
-            radius: 40,
-            backgroundImage: NetworkImage(c.avatar),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            c.name,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          if (c.role != null)
-            Text(
-              c.role!,
-              style: const TextStyle(color: Colors.grey),
+      SingleChildScrollView(
+        child: Column(
+          children: [
+            // Banner
+            Image.network(
+              (c.banner != null && c.banner!.isNotEmpty)
+                  ? c.banner!
+                  : defaultBannerUrl,
+              height: 140,
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              final url = Uri.parse(c.profileUrl);
-              launchUrl(url, mode: LaunchMode.externalApplication);
-            },
-            child: const Text("View Profile"),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            // Avatar
+            CircleAvatar(
+              radius: 40,
+              backgroundImage: NetworkImage(c.avatar),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Name
+            Text(
+              c.name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            // Role
+            if (c.role != null)
+              Text(
+                c.role!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
+            // ABOUT — only for custom contributors
+            if (c.isCustom && c.about != null && c.about!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  c.about!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 12),
+
+            // MESSAGE — only for custom contributors
+            if (c.isCustom && c.message != null && c.message!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  c.message!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // View Profile Button
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ElevatedButton(
+                  onPressed: () {
+                    final url = Uri.parse(c.profileUrl);
+                    launchUrl(url, mode: LaunchMode.externalApplication);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "View Profile",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
       context,
     );
