@@ -9,7 +9,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:package_info_plus/package_info_plus.dart' show PackageInfo;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
-import 'package:anymex/screens/settings/sub_settings/settings_contributors.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_about_contributors.dart';
 
 Future<void> launchUrlHelper(String link) async {
   final url = Uri.parse(link);
