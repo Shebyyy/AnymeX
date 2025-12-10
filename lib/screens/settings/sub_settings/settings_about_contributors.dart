@@ -41,8 +41,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
               final c = list[i];
 
               return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: GestureDetector(
                   onTap: () => _openContributor(c),
                   child: Container(
@@ -92,8 +91,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
                                     c.role!,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color:
-                                          Colors.white.withOpacity(0.85),
+                                      color: Colors.white.withOpacity(0.85),
                                     ),
                                   ),
                                 if (c.contributions != null)
@@ -101,8 +99,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
                                     "${c.contributions} contributions",
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color:
-                                          Colors.white.withOpacity(0.75),
+                                      color: Colors.white.withOpacity(0.75),
                                     ),
                                   ),
                               ],
@@ -150,8 +147,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
         spacing: 6,
         children: c.badges!.map((badge) {
           return Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: _badgeColor(badge).withOpacity(0.25),
               borderRadius: BorderRadius.circular(12),
@@ -208,7 +204,9 @@ class _ContributorsPageState extends State<ContributorsPage> {
       SingleChildScrollView(
         child: Column(
           children: [
+            // -------------------------
             // Banner
+            // -------------------------
             Image.network(
               (c.banner != null && c.banner!.isNotEmpty)
                   ? c.banner!
@@ -220,95 +218,182 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
             const SizedBox(height: 16),
 
-            // Avatar (zoomable)
-            GestureDetector(
-              onTap: () => _openAvatarFullscreen(c.avatar, context),
-              child: Hero(
-                tag: c.avatar,
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundImage: NetworkImage(c.avatar),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Name
-            Text(
-              c.name,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            // Role
-            if (c.role != null)
-              Text(
-                c.role!,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-
-            // Badges
-            _buildBadges(c),
-
-            // Contributions
-            if (c.contributions != null)
-              Text(
-                "${c.contributions} commits",
-                style: const TextStyle(fontSize: 13, color: Colors.white70),
-              ),
-
-            const SizedBox(height: 16),
-
-            // ABOUT
-            if (c.isCustom && c.about != null && c.about!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  c.about!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 14, color: Colors.white70),
-                ),
-              ),
-
-            const SizedBox(height: 10),
-
-            // MESSAGE
-            if (c.isCustom && c.message != null && c.message!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  c.message!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 15, color: Colors.white),
-                ),
-              ),
-
-            const SizedBox(height: 20),
-
-            // Open Profile Button
+            // -------------------------
+            // GLOBAL PADDING STARTS HERE
+            // -------------------------
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ElevatedButton(
-                onPressed: () {
-                  final url = Uri.parse(c.profileUrl);
-                  launchUrl(url, mode: LaunchMode.externalApplication);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Column(
+                children: [
+                  // Avatar (zoomable)
+                  GestureDetector(
+                    onTap: () => _openAvatarFullscreen(c.avatar, context),
+                    child: Hero(
+                      tag: c.avatar,
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundImage: NetworkImage(c.avatar),
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text("View Profile"),
+
+                  const SizedBox(height: 12),
+
+                  // Name
+                  Text(
+                    c.name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  // Role
+                  if (c.role != null)
+                    Text(
+                      c.role!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  // Badges
+                  _buildBadges(c),
+
+                  // Contributions
+                  if (c.contributions != null)
+                    Text(
+                      "${c.contributions} commits",
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // ABOUT
+                  if (c.isCustom && c.about != null && c.about!.isNotEmpty)
+                    Text(
+                      c.about!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  // MESSAGE
+                  if (c.isCustom && c.message != null && c.message!.isNotEmpty)
+                    Text(
+                      c.message!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
+
+                  const SizedBox(height: 20),
+
+                  // ---------------------------------------------------------
+                  // SOCIAL LINKS SECTION (Custom only)
+                  // ---------------------------------------------------------
+                  if (c.isCustom &&
+                      ((c.telegram != null && c.telegram!.isNotEmpty) ||
+                          (c.discord != null && c.discord!.isNotEmpty)))
+                    Column(
+                      children: [
+                        const Text(
+                          "Social Links",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (c.telegram != null &&
+                                c.telegram!.isNotEmpty)
+                              IconButton(
+                                icon: Image.network(
+                                  "https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg",
+                                  width: 32,
+                                  height: 32,
+                                ),
+                                onPressed: () {
+                                  launchUrl(
+                                    Uri.parse(c.telegram!),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                              ),
+
+                            if (c.discord != null &&
+                                c.discord!.isNotEmpty)
+                              IconButton(
+                                icon: Image.network(
+                                  "https://upload.wikimedia.org/wikipedia/en/9/98/Discord_logo.svg",
+                                  width: 32,
+                                  height: 32,
+                                ),
+                                onPressed: () {
+                                  launchUrl(
+                                    Uri.parse(c.discord!),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+
+                  // ---------------------------------------------------------
+                  // VIEW PROFILE BUTTON (Premium style)
+                  // ---------------------------------------------------------
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        launchUrl(
+                          Uri.parse(c.profileUrl),
+                          mode: LaunchMode.externalApplication,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "View Profile",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
           ],
         ),
       ),
