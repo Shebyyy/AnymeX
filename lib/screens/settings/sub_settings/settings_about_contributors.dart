@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../models/contributor.dart';
 import '../../../controllers/contributors/contributor_controller.dart';
 import '../../../widgets/anymex_bottomsheet.dart';
@@ -24,7 +25,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
       body: FutureBuilder(
         future: future,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
           final list = snapshot.data!;
 
@@ -63,18 +64,26 @@ class _ContributorsPageState extends State<ContributorsPage> {
 
           const SizedBox(height: 12),
 
-          Text(c.name,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            c.name,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
 
           if (c.role != null)
-            Text(c.role!, style: TextStyle(color: Colors.grey)),
+            Text(
+              c.role!,
+              style: const TextStyle(color: Colors.grey),
+            ),
 
           const SizedBox(height: 20),
 
           ElevatedButton(
-            onPressed: () => launchUrl(Uri.parse(c.profileUrl)),
+            onPressed: () {
+              final url = Uri.parse(c.profileUrl);
+              launchUrl(url, mode: LaunchMode.externalApplication);
+            },
             child: const Text("View Profile"),
-          )
+          ),
         ],
       ),
     );
