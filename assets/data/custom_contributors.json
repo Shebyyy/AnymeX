@@ -7,7 +7,10 @@
     "banner": "",
     "profileUrl": "https://github.com/RyanYuuki",
     "about": "Creator and lead developer of AnymeX, focused on delivering a fast and feature rich anime experience.",
-    "message": "Thank you for using AnymeX! Your support and feedback keep the project evolving every day."
+    "message": "Thank you for using AnymeX! Your support and feedback keep the project evolving every day.",
+    "telegram": "https://t.me/Ryan_Yuuki",
+    "discord": "https://discord.com/users/535831876766793738",
+    "badges": ["Lead Developer", "Owner"]
   },
   {
     "username": "Shebyyy",
@@ -17,7 +20,10 @@
     "banner": "",
     "profileUrl": "https://github.com/Shebyyy",
     "about": "Admin and community moderator helping maintain the project and assist users across platforms.",
-    "message": "Thank you for supporting AnymeX! We appreciate every user and continue improving with your feedback."
+    "message": "Thank you for supporting AnymeX! We appreciate every user and continue improving with your feedback.",
+    "telegram": "https://t.me/ASheby",
+    "discord": "https://discord.com/users/612532963938271232",
+    "badges": ["Admin", "Moderator"]
   },
   {
     "username": "itsmechinmoy",
@@ -27,7 +33,10 @@
     "banner": "",
     "profileUrl": "https://github.com/itsmechinmoy",
     "about": "Admin and moderator dedicated to supporting users and maintaining a friendly community environment.",
-    "message": "Glad to be part of this community! Thank you for using AnymeX and being with us."
+    "message": "Glad to be part of this community! Thank you for using AnymeX and being with us.",
+    "telegram": "https://t.me/itsmechinmoy",
+    "discord": "https://discord.com/users/523539866311720963",
+    "badges": ["Admin", "Moderator"]
   },
   {
     "username": "NotSap",
@@ -37,7 +46,10 @@
     "banner": "",
     "profileUrl": "https://github.com/NotSap",
     "about": "Discord moderator helping keep the community safe, active, and welcoming for everyone.",
-    "message": "Thanks for supporting AnymeX! We do our best to make the community enjoyable for all users."
+    "message": "Thanks for supporting AnymeX! We do our best to make the community enjoyable for all users.",
+    "telegram": "",
+    "discord": "https://discord.com/users/944635185423597698",
+    "badges": ["Discord Moderator"]
   },
   {
     "username": "kusokohei",
@@ -47,6 +59,9 @@
     "banner": "",
     "profileUrl": "https://github.com/kusokohei",
     "about": "Discord moderator assisting users and helping maintain a positive and helpful environment.",
-    "message": "Thank you for being part of our wonderful community! Enjoy your time with AnymeX."
+    "message": "Thank you for being part of our wonderful community! Enjoy your time with AnymeX.",
+    "telegram": "",
+    "discord": "https://discord.com/users/1055128056899063857",
+    "badges": ["Discord Moderator"]
   }
 ]
