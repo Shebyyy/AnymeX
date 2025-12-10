@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:anymex/models/contributor.dart';
 import 'package:anymex/controllers/contributors/contributor_controller.dart';
-import 'package:anymex/widgets/anymex_bottomsheet.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
 
-const String defaultBannerUrl = "https://yoururl.com/default_banner.png";
+const String defaultBannerUrl = "https://i.ibb.co/8DtGFx0z/test.jpg";
 
 class ContributorsPage extends StatefulWidget {
   @override
@@ -24,10 +24,12 @@ class _ContributorsPageState extends State<ContributorsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Contributors")),
-      body: FutureBuilder(
+      body: FutureBuilder<List<Contributor>>(
         future: future,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           final list = snapshot.data!;
 
@@ -50,12 +52,13 @@ class _ContributorsPageState extends State<ContributorsPage> {
   }
 
   void _openContributor(Contributor c) {
-    showAnymexBottomSheet(
-      context,
-      child: Column(
+    AnymexSheet.custom(
+      Column(
         children: [
           Image.network(
-            (c.banner != null && c.banner!.isNotEmpty) ? c.banner! : defaultBannerUrl,
+            (c.banner != null && c.banner!.isNotEmpty)
+                ? c.banner!
+                : defaultBannerUrl,
             height: 120,
             width: double.infinity,
             fit: BoxFit.cover,
@@ -85,6 +88,7 @@ class _ContributorsPageState extends State<ContributorsPage> {
           ),
         ],
       ),
+      context,
     );
   }
 }
