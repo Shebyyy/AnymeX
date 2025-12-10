@@ -7,7 +7,7 @@ class ContributorController {
   static const gitHubApi =
       "https://api.github.com/repos/RyanYuuki/AnymeX/contributors";
 
-  /// Load custom contributors
+  /// Load custom contributors (local JSON)
   static Future<List<Contributor>> loadCustom() async {
     final jsonStr = await rootBundle
         .loadString("assets/data/custom_contributors.json");
@@ -18,28 +18,38 @@ class ContributorController {
     );
   }
 
-  /// Load GitHub contributors and filter bots
+  /// Load GitHub contributors and filter bots & GitHub system users
   static Future<List<Contributor>> loadGitHub() async {
     final res = await http.get(Uri.parse(gitHubApi));
+
+    if (res.statusCode != 200) {
+      // If GitHub API fails, return empty → avoid crash
+      return [];
+    }
+
     final data = json.decode(res.body);
 
     return List<Contributor>.from(
       data.map((e) => Contributor.fromGitHub(e)).where(
-        (c) =>
-            !c.username.contains("bot") &&
-            !c.username.contains("actions") &&
-            c.username != "github-actions" &&
-            c.username != "actions-user" &&
-            !c.username.contains("copilot"),
+        (c) {
+          final u = c.username.toLowerCase();
+
+          return !u.contains("bot") &&
+              !u.contains("actions") &&
+              u != "github-actions" &&
+              u != "actions-user" &&
+              !u.contains("copilot");
+        },
       ),
     );
   }
 
-  /// Merge custom + GitHub contributors
+  /// Merge custom and GitHub contributors
   static Future<List<Contributor>> getContributors() async {
     final custom = await loadCustom();
     final github = await loadGitHub();
 
+    // Prevent duplicates using lowercase usernames
     final customUsernames =
         custom.map((c) => c.username.toLowerCase()).toSet();
 
