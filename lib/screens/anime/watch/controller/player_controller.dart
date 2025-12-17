@@ -18,8 +18,8 @@ import 'package:anymex/utils/color_profiler.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/utils/string_extensions.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
-import 'package:anymex/widgets/non_widgets/anymex_toast.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/widgets/player/mini_player_controller.dart';
 import 'package:dartotsu_extension_bridge/ExtensionManager.dart';
 import 'package:dartotsu_extension_bridge/Models/DEpisode.dart' as d;
 import 'package:flutter/foundation.dart';
@@ -229,6 +229,21 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   @override
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
+    
+    // Show mini player when closing main player
+    if (Get.isRegistered<MiniPlayerController>()) {
+      final miniPlayerController = Get.find<MiniPlayerController>();
+      if (player.state.playing) {
+        miniPlayerController.showMiniPlayer(
+          media: anilistData,
+          episode: currentEpisode.value,
+          video: selectedVideo.value!,
+          episodes: episodeList,
+          playerController: this,
+        );
+      }
+    }
+    
     super.onClose();
   }
 
@@ -268,27 +283,11 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<DeviceOrientation> _getClosestLandscapeOrientation() async {
-    try {
-      final event = await accelerometerEvents.first
-          .timeout(const Duration(milliseconds: 100));
+    final event = await accelerometerEvents.first;
 
-      const double threshold = 0.3;
-
-      if (event.x > threshold) {
-        return DeviceOrientation.landscapeLeft;
-      } else if (event.x < -threshold) {
-        return DeviceOrientation.landscapeRight;
-      }
-
-      if (event.y.abs() < 0.5) {
-        final view = WidgetsBinding.instance.platformDispatcher.views.first;
-        return view.physicalSize.width > view.physicalSize.height
-            ? DeviceOrientation.landscapeLeft
-            : DeviceOrientation.landscapeLeft;
-      }
-    } catch (_) {}
-
-    return DeviceOrientation.landscapeLeft;
+    return event.x > 0
+        ? DeviceOrientation.landscapeLeft
+        : DeviceOrientation.landscapeRight;
   }
 
   void toggleOrientation() {
@@ -848,7 +847,6 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     }
 
     selectedVideo.value = track;
-    _extractSubtitles();
     await _switchMedia(track.url, track.headers,
         startPosition: player.state.position);
   }
@@ -892,6 +890,11 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   void updateNavigatorState() {
     canGoForward.value = hasNextEpisode;
     canGoBackward.value = hasPreviousEpisode;
+    
+    // Hide mini player when main player is active
+    if (Get.isRegistered<MiniPlayerController>()) {
+      Get.find<MiniPlayerController>().hideMiniPlayer();
+    }
   }
 
   void changeEpisode(Episode episode) {
@@ -927,9 +930,6 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   void toggleVideoFit() {
     videoFit.value =
         BoxFit.values[(videoFit.value.index + 1) % BoxFit.values.length];
-    AnymexToast.show(
-        message: videoFit.value.name.capitalizeFirst ?? '',
-        duration: const Duration(milliseconds: 700));
   }
 
   Future<void> _trackLocally() async {
