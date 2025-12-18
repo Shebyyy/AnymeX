@@ -24,8 +24,9 @@ jobs:
     steps:
     - name: Checkout from Gitea
       run: |
-        git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
-        git fetch --depth=0
+          git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
+          git fetch origin dev
+          git checkout dev
 
     - name: Download last SHA artifact
       uses: dawidd6/action-download-artifact@v6
