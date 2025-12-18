@@ -118,7 +118,6 @@ jobs:
           path: "app/build/outputs/apk/google/alpha/app-google-alpha.apk"
 
     - name: Upload APK to Discord and Telegram
-      if: ${{ secrets.DISCORD_WEBHOOK != '' }}
       shell: bash
       run: |
         # Prepare Discord embed
