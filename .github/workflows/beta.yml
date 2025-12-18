@@ -26,9 +26,6 @@ jobs:
     - name: Checkout from Gitea
       run: |
         git clone --branch dev https://git.rebelonion.dev/rebelonion/Dantotsu.git .
-
-    - name: Fetch full history
-      run: |
         git fetch origin dev
         git checkout dev
 
