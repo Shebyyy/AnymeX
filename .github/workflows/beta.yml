@@ -1,5 +1,3 @@
-
-
 name: Build APK and Notify Discord
 
 on:
@@ -35,13 +33,23 @@ jobs:
 
     - name: Enable local AAR resolution
       run: |
-        if ! grep -q 'flatDir { dirs "libs" }' app/build.gradle; then
-          sed -i '/dependencies {/i repositories { flatDir { dirs "libs" } }' app/build.gradle
-        fi
-
+        # Add repositories block after namespace declaration
+        sed -i "/namespace 'ani.dantotsu'/a\\
+          \\
+          repositories {\\
+              flatDir {\\
+                  dirs 'libs'\\
+              }\\
+          }" app/build.gradle
+    
     - name: Replace AnimatedBottomBar dependency
       run: |
         sed -i "s|implementation 'com.github.RepoDevil:AnimatedBottomBar:7fcb9af'|implementation(name: 'AnimatedBottomBar', ext: 'aar')|g" app/build.gradle
+        
+        # Verify the changes
+        echo "=== Modified build.gradle snippet ==="
+        grep -A 10 "namespace" app/build.gradle
+        grep "AnimatedBottomBar" app/build.gradle
 
     - name: Download last SHA artifact
       uses: dawidd6/action-download-artifact@v6
