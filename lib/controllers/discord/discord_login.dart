@@ -62,7 +62,7 @@ class _DiscordLoginPageState extends State<DiscordLoginPage> {
           children: [
             // Custom header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(8, kToolbarHeight + 12, 8, 12),
               decoration: BoxDecoration(
                 color: const Color(0xFF2B2D31),
                 boxShadow: [
@@ -201,10 +201,6 @@ class _DiscordLoginPageState extends State<DiscordLoginPage> {
                   },
                   shouldOverrideUrlLoading:
                       (controller, navigationAction) async {
-                    final url = navigationAction.request.url.toString();
-                    if (url.startsWith('https://discord.com/login')) {
-                      return NavigationActionPolicy.CANCEL;
-                    }
                     return NavigationActionPolicy.ALLOW;
                   },
                 ),
