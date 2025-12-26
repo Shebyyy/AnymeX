@@ -119,10 +119,15 @@ jobs:
           name: "Test Release ${{ github.ref_name }}"
 
   update-aur:
-    needs: create-test-release
+    needs: build-linux-appimage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage
+          path: .
       
       - name: Update AUR
         continue-on-error: true
