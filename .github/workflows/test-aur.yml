@@ -127,7 +127,7 @@ jobs:
       - name: Download Linux Artifact
         uses: actions/download-artifact@v4
         with:
-          name: linux
+          name: linux-appimage
           path: .
       
       - name: Update AUR
