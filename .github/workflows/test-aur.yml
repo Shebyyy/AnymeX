@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "test-v*"
+      - "v*"
 
 env:
   FLUTTER_VERSION: "3.32.8"
@@ -169,14 +169,14 @@ jobs:
           pkgrel=1
           arch=(x86_64)
           pkgdesc='An Open Source app for Tracking Multi Service (AL, MAL, SIMKL)'
-          url="https://github.com/RyanYuuki/\${_PkgName}"
+          url="https://github.com/Shebyyy/\${_PkgName}"
           license=(MIT)
           provides=(\${_pkgname}=\${pkgver})
           depends=('libepoxy' 'gdk-pixbuf2' 'pango' 'webkit2gtk-4.1' 'harfbuzz' 'libsoup3' 'glibc' 'fontconfig' 'cairo' 'hicolor-icon-theme' 'glib2' 'gcc-libs' 'mpv' 'zlib-ng-compat' 'gtk3' 'at-spi2-core')
           conflicts=(anymex)
           _appimage="\${_PkgName}-\${pkgver}.AppImage"
           source=("\${_appimage}::\${url}/releases/download/${VERSION}/\${_PkgName}-Linux.AppImage"
-                  "LICENSE-\${pkgver}.md::https://raw.githubusercontent.com/RyanYuuki/AnymeX/refs/tags/${VERSION}/LICENSE.md")
+                  "LICENSE-\${pkgver}.md::https://raw.githubusercontent.com/Shebyyy/AnymeX/refs/tags/${VERSION}/LICENSE.md")
           noextract=(\${_appimage})
           sha256sums=('${HASH}' 'SKIP')
           
@@ -221,7 +221,7 @@ jobs:
             pkgdesc = An Open Source app for Tracking Multi Service (AL, MAL, SIMKL)
             pkgver = ${PKGVER}
             pkgrel = 1
-            url = https://github.com/RyanYuuki/AnymeX
+            url = https://github.com/Shebyyy/AnymeX
             arch = x86_64
             license = MIT
             depends = libepoxy
@@ -243,8 +243,8 @@ jobs:
             provides = anymex=${PKGVER}
             conflicts = anymex
             noextract = AnymeX-${PKGVER}.AppImage
-            source = AnymeX-${PKGVER}.AppImage::https://github.com/RyanYuuki/AnymeX/releases/download/${VERSION}/AnymeX-Linux.AppImage
-            source = LICENSE-${PKGVER}.md::https://raw.githubusercontent.com/RyanYuuki/AnymeX/refs/tags/${VERSION}/LICENSE.md
+            source = AnymeX-${PKGVER}.AppImage::https://github.com/Shebyyy/AnymeX/releases/download/${VERSION}/AnymeX-Linux.AppImage
+            source = LICENSE-${PKGVER}.md::https://raw.githubusercontent.com/Shebyyy/AnymeX/refs/tags/${VERSION}/LICENSE.md
             sha256sums = ${HASH}
             sha256sums = SKIP
           
