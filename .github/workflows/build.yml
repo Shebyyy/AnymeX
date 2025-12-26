@@ -413,15 +413,22 @@ jobs:
             VERSION: ${{ github.ref_name }}
             AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           run: |
-            # Verify the AppImage was downloaded from artifact
-            if [ ! -f "artifacts/AnymeX-Linux.AppImage" ]; then
-              echo "Error: AnymeX-Linux.AppImage not found in artifact!"
-              ls -la artifacts/
+            echo "Listing downloaded files..."
+            ls -la
+            
+            # Find the AppImage file
+            APPIMAGE_FILE=$(find . -name "AnymeX-Linux.AppImage" -o -name "*.AppImage" | head -n 1)
+            
+            if [ -z "$APPIMAGE_FILE" ]; then
+              echo "Error: AppImage not found!"
+              echo "All files in current directory:"
+              find . -type f
               exit 1
             fi
             
+            echo "Found AppImage at: $APPIMAGE_FILE"
             echo "AppImage found from artifact, calculating hash..."
-            HASH=$(sha256sum artifacts/AnymeX-Linux.AppImage | awk '{print $1}')
+            HASH=$(sha256sum "$APPIMAGE_FILE" | awk '{print $1}')
             PKGVER="${VERSION#v}"
             PKGVER="${PKGVER//-/_}"
             
@@ -528,21 +535,43 @@ jobs:
             # Setup SSH for AUR
             echo "Setting up SSH for AUR..."
             mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
             echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
             chmod 600 ~/.ssh/aur
-            ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
             
-            cat >> ~/.ssh/config << 'SSHEOF'
+            # Add SSH host key for AUR
+            ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null
+            chmod 644 ~/.ssh/known_hosts
+            
+            cat > ~/.ssh/config << 'SSHEOF'
             Host aur.archlinux.org
              HostName aur.archlinux.org
              User aur
              IdentityFile ~/.ssh/aur
+             StrictHostKeyChecking accept-new
+             ConnectTimeout 30
             SSHEOF
+            chmod 600 ~/.ssh/config
+            
+            # Test SSH connection
+            echo "Testing SSH connection to AUR..."
+            ssh -T aur@aur.archlinux.org -o ConnectTimeout=10 || echo "SSH test completed (this is expected to 'fail')"
             
             # Clone AUR repository
             echo "Cloning AUR repository..."
             cd ..
-            git clone ssh://aur@aur.archlinux.org/anymex-bin.git aur-repo
+            
+            # Set git timeout
+            export GIT_SSH_COMMAND="ssh -o ConnectTimeout=30"
+            
+            if ! git clone ssh://aur@aur.archlinux.org/anymex-bin.git aur-repo 2>&1; then
+              echo "Failed to clone AUR repository. Check if:"
+              echo "1. The SSH key is correct and has access to AUR"
+              echo "2. The anymex-bin package exists on AUR"
+              echo "3. Network connectivity to aur.archlinux.org is working"
+              exit 1
+            fi
+            
             cd aur-repo
             
             # Copy new files
