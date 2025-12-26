@@ -128,22 +128,23 @@ jobs:
         with:
           name: linux-appimage
           path: .
-      
+        
       - name: Update AUR
+        if: matrix.job == 'aur'
         continue-on-error: true
         env:
           VERSION: ${{ github.ref_name }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
           # Verify the AppImage was downloaded from artifact
-          if [ ! -f "AnymeX-Linux.AppImage" ]; then
+          if [ ! -f "artifacts/AnymeX-Linux.AppImage" ]; then
             echo "Error: AnymeX-Linux.AppImage not found in artifact!"
-            ls -la
+            ls -la artifacts/
             exit 1
           fi
           
           echo "AppImage found from artifact, calculating hash..."
-          HASH=$(sha256sum AnymeX-Linux.AppImage | awk '{print $1}')
+          HASH=$(sha256sum artifacts/AnymeX-Linux.AppImage | awk '{print $1}')
           PKGVER="${VERSION#v}"
           PKGVER="${PKGVER//-/_}"
           
@@ -207,14 +208,42 @@ jobs:
           echo "PKGBUILD created successfully"
           cat PKGBUILD
           
-          # Install necessary packages for makepkg
-          echo "Installing makepkg dependencies..."
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential fakeroot
-          
-          # Generate .SRCINFO
+          # Generate .SRCINFO manually (simpler than installing makepkg on Ubuntu)
           echo "Generating .SRCINFO..."
-          makepkg --printsrcinfo > .SRCINFO
+          cat > .SRCINFO << SRCEOF
+          pkgbase = anymex-bin
+            pkgdesc = An Open Source app for Tracking Multi Service (AL, MAL, SIMKL)
+            pkgver = ${PKGVER}
+            pkgrel = 1
+            url = https://github.com/RyanYuuki/AnymeX
+            arch = x86_64
+            license = MIT
+            depends = libepoxy
+            depends = gdk-pixbuf2
+            depends = pango
+            depends = webkit2gtk-4.1
+            depends = harfbuzz
+            depends = libsoup3
+            depends = glibc
+            depends = fontconfig
+            depends = cairo
+            depends = hicolor-icon-theme
+            depends = glib2
+            depends = gcc-libs
+            depends = mpv
+            depends = zlib-ng-compat
+            depends = gtk3
+            depends = at-spi2-core
+            provides = anymex=${PKGVER}
+            conflicts = anymex
+            noextract = AnymeX-${PKGVER}.AppImage
+            source = AnymeX-${PKGVER}.AppImage::https://github.com/RyanYuuki/AnymeX/releases/download/${VERSION}/AnymeX-Linux.AppImage
+            source = LICENSE-${PKGVER}.md::https://raw.githubusercontent.com/RyanYuuki/AnymeX/refs/tags/${VERSION}/LICENSE.md
+            sha256sums = ${HASH}
+            sha256sums = SKIP
+          
+          pkgname = anymex-bin
+          SRCEOF
           
           echo ".SRCINFO created successfully"
           cat .SRCINFO
