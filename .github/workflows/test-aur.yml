@@ -130,8 +130,6 @@ jobs:
           path: .
         
       - name: Update AUR
-        if: matrix.job == 'aur'
-        continue-on-error: true
         env:
           VERSION: ${{ github.ref_name }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
