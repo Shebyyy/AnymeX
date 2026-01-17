@@ -27,6 +27,9 @@ class CommentSectionController extends GetxController
   final RxBool isInputExpanded = false.obs;
 
   final RxSet<String> votingComments = <String>{}.obs;
+  final RxSet<String> editingComments = <String>{}.obs;
+  final RxMap<String, String> replyText = <String, String>{}.obs;
+  final RxMap<String, bool> showReplyInput = <String, bool>{}.obs;
 
   late AnimationController expandController;
   late AnimationController fadeController;
@@ -211,5 +214,117 @@ class CommentSectionController extends GetxController
 
   Future<void> refreshComments() async {
     await loadComments();
+  }
+
+  // Reply to a comment
+  Future<void> addReply(Comment parentComment) async {
+    final replyText = this.replyText[parentComment.id]?.trim() ?? '';
+    if (replyText.isEmpty) return;
+
+    try {
+      final newComment = await commentsDB.addReply(
+        parentCommentId: int.parse(parentComment.id),
+        comment: replyText,
+        mediaId: mediaId,
+      );
+
+      if (newComment != null) {
+        // Add reply to parent comment
+        final parentIndex = comments.indexWhere((c) => c.id == parentComment.id);
+        if (parentIndex != -1) {
+          final updatedParent = comments[parentIndex].copyWith(
+            replies: [...(comments[parentIndex].replies ?? []), newComment],
+          );
+          comments[parentIndex] = updatedParent;
+        }
+        
+        // Clear reply input
+        this.replyText[parentComment.id] = '';
+        showReplyInput[parentComment.id] = false;
+      }
+
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add reply. Please try again.');
+    }
+  }
+
+  // Edit a comment
+  Future<void> editComment(Comment comment, String newContent) async {
+    if (editingComments.contains(comment.id)) return;
+
+    editingComments.add(comment.id);
+    try {
+      final updatedComment = await commentsDB.updateComment(
+        int.parse(comment.id),
+        newContent.trim(),
+      );
+
+      if (updatedComment != null) {
+        final index = comments.indexWhere((c) => c.id == comment.id);
+        if (index != -1) {
+          comments[index] = comments[index].copyWith(
+            commentText: newContent.trim(),
+            isEdited: true,
+            updatedAt: DateTime.now().toIso8601String(),
+          );
+        }
+      }
+
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to edit comment. Please try again.');
+    } finally {
+      editingComments.remove(comment.id);
+    }
+  }
+
+  // Delete a comment
+  Future<void> deleteComment(Comment comment) async {
+    try {
+      final success = await commentsDB.deleteComment(int.parse(comment.id));
+      
+      if (success) {
+        comments.removeWhere((c) => c.id == comment.id);
+        HapticFeedback.lightImpact();
+        Get.snackbar('Success', 'Comment deleted successfully');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete comment. Please try again.');
+    }
+  }
+
+  // Report a comment
+  Future<void> reportComment(Comment comment, String reason) async {
+    try {
+      final success = await commentsDB.reportComment(
+        int.parse(comment.id),
+        reason,
+      );
+      
+      if (success) {
+        HapticFeedback.lightImpact();
+        Get.snackbar('Success', 'Comment reported successfully');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to report comment. Please try again.');
+    }
+  }
+
+  // Toggle reply input
+  void toggleReplyInput(String commentId) {
+    showReplyInput[commentId] = !(showReplyInput[commentId] ?? false);
+    if (showReplyInput[commentId] == true) {
+      replyText[commentId] = '';
+    }
+  }
+
+  // Toggle edit mode
+  void toggleEditMode(String commentId) {
+    if (editingComments.contains(commentId)) {
+      editingComments.remove(commentId);
+    } else {
+      editingComments.add(commentId);
+    }
   }
 }

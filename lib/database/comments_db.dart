@@ -286,6 +286,200 @@ class CommentsDatabase {
     }
   }
 
+  // Add a reply to a comment
+  Future<Comment?> addReply({
+    required int parentCommentId,
+    required String comment,
+    required String mediaId,
+  }) async {
+    final currentUser = serviceHandler.anilistService.profileData.value;
+    if (currentUser.id == null) {
+      log('Please login first');
+      return null;
+    }
+
+    try {
+      final mediaIdInt = int.tryParse(mediaId);
+      if (mediaIdInt == null) {
+        log('Invalid media ID: $mediaId');
+        return null;
+      }
+
+      final mediaType = 'anime'; // Default to anime
+      
+      final commentData = await _commentsService.createComment(
+        mediaId: mediaIdInt,
+        mediaType: mediaType,
+        content: comment.trim(),
+        parentCommentId: parentCommentId,
+      );
+
+      if (commentData != null) {
+        log('Reply added successfully');
+        return Comment(
+          id: commentData.commentId.toString(),
+          userId: commentData.userId.toString(),
+          commentText: commentData.content,
+          contentId: commentData.mediaId,
+          tag: '0',
+          likes: 0,
+          dislikes: 0,
+          userVote: 0,
+          username: commentData.username,
+          avatarUrl: commentData.profilePictureUrl,
+          createdAt: commentData.createdAt.toIso8601String(),
+          updatedAt: commentData.updatedAt.toIso8601String(),
+          deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
+          parentCommentId: parentCommentId,
+        );
+      }
+    } catch (e) {
+      log("Error adding reply: $e");
+      snackBar('Error adding reply');
+    }
+    return null;
+  }
+
+  // Get user's comment history
+  Future<List<Comment>> getUserCommentHistory({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final commentsData = await _commentsService.getOwnCommentHistory(
+        page: page,
+        limit: limit,
+      );
+      
+      return commentsData.map((commentData) {
+        return Comment(
+          id: commentData.commentId.toString(),
+          userId: commentData.userId.toString(),
+          commentText: commentData.content,
+          contentId: commentData.mediaId,
+          tag: '0',
+          likes: commentData.totalVotes,
+          dislikes: 0,
+          userVote: _convertVoteType(commentData.userVote),
+          username: commentData.username,
+          avatarUrl: commentData.profilePictureUrl,
+          createdAt: commentData.createdAt.toIso8601String(),
+          updatedAt: commentData.updatedAt.toIso8601String(),
+          deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
+          parentCommentId: commentData.parentCommentId,
+        );
+      }).toList();
+    } catch (e) {
+      log("Error fetching comment history: $e");
+      snackBar('Error fetching comment history');
+      return [];
+    }
+  }
+
+  // Get pinned comments for media
+  Future<List<Comment>> getPinnedComments(String mediaId) async {
+    try {
+      final commentsData = await _commentsService.getMediaComments(
+        int.parse(mediaId),
+        'anime',
+        sort: 'pinned',
+      );
+      
+      return commentsData.map((commentData) {
+        return Comment(
+          id: commentData.commentId.toString(),
+          userId: commentData.userId.toString(),
+          commentText: commentData.content,
+          contentId: commentData.mediaId,
+          tag: '0',
+          likes: commentData.totalVotes,
+          dislikes: 0,
+          userVote: _convertVoteType(commentData.userVote),
+          username: commentData.username,
+          avatarUrl: commentData.profilePictureUrl,
+          createdAt: commentData.createdAt.toIso8601String(),
+          updatedAt: commentData.updatedAt.toIso8601String(),
+          deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
+          isPinned: true,
+          parentCommentId: commentData.parentCommentId,
+        );
+      }).toList();
+    } catch (e) {
+      log("Error fetching pinned comments: $e");
+      return [];
+    }
+  }
+
+  // Search comments by content
+  Future<List<Comment>> searchComments(String query, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final commentsData = await _commentsService.searchComments(
+        query,
+        page: page,
+        limit: limit,
+      );
+      
+      return commentsData.map((commentData) {
+        return Comment(
+          id: commentData.commentId.toString(),
+          userId: commentData.userId.toString(),
+          commentText: commentData.content,
+          contentId: commentData.mediaId,
+          tag: '0',
+          likes: commentData.totalVotes,
+          dislikes: 0,
+          userVote: _convertVoteType(commentData.userVote),
+          username: commentData.username,
+          avatarUrl: commentData.profilePictureUrl,
+          createdAt: commentData.createdAt.toIso8601String(),
+          updatedAt: commentData.updatedAt.toIso8601String(),
+          deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
+          parentCommentId: commentData.parentCommentId,
+        );
+      }).toList();
+    } catch (e) {
+      log("Error searching comments: $e");
+      return [];
+    }
+  }
+
+  // Get comment analytics (for content creators)
+  Future<Map<String, dynamic>?> getCommentAnalytics(String mediaId) async {
+    try {
+      final analytics = await _commentsService.getCommentAnalytics(
+        int.parse(mediaId),
+      );
+      
+      if (analytics != null) {
+        return {
+          'total_comments': analytics['total_comments'] ?? 0,
+          'total_votes': analytics['total_votes'] ?? 0,
+          'engagement_rate': analytics['engagement_rate'] ?? 0.0,
+          'top_comments': analytics['top_comments'] ?? [],
+          'sentiment_analysis': analytics['sentiment_analysis'] ?? {},
+        };
+      }
+    } catch (e) {
+      log("Error fetching comment analytics: $e");
+    }
+    return null;
+  }
+
   // Sync user data with AniList
   Future<void> syncUserDataWithAniList() async {
     if (!serviceHandler.anilistService.isLoggedIn.value) return;

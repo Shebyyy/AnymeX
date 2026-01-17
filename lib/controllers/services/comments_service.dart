@@ -21,7 +21,7 @@ class CommentsService {
   // Get the current user profile
   Profile? _getCurrentUser() {
     return serviceHandler.anilistService.profileData.value;
-  
+  }
 
   // Make authenticated API call to Supabase Edge Functions
   Future<Map<String, String>> _getHeaders() async {
@@ -565,27 +565,208 @@ class CommentsService {
     }
   }
 
-  // Moderation: Tag or untag comment
-  Future<bool> tagComment(int commentId, Map<String, bool> tags) async {
+  // Search comments
+  Future<List<CommentData>> searchComments(
+    String query, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/comments/search?q=${Uri.encodeComponent(query)}&page=$page&limit=$limit'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final commentsData = data['comments'] as List<dynamic>;
+        
+        return commentsData.map((comment) => CommentData.fromJson(comment)).toList();
+      } else {
+        log("Failed to search comments: ${response.statusCode}");
+        return [];
+      }
+    } catch (e) {
+      _handleError(e, 'searchComments');
+      return [];
+    }
+  }
+
+  // Get comment analytics for media
+  Future<Map<String, dynamic>?> getCommentAnalytics(int mediaId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/comments/analytics/$mediaId'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        log("Failed to fetch comment analytics: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      _handleError(e, 'getCommentAnalytics');
+      return null;
+    }
+  }
+
+  // Pin/unpin comment
+  Future<bool> pinComment(int commentId, bool isPinned) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/moderation/tag/$commentId'),
+        Uri.parse('$baseUrl/moderation/comment/$commentId/pin'),
         headers: await _getHeaders(),
         body: json.encode({
-          'tags': tags,
+          'is_pinned': isPinned,
         }),
       );
 
       if (response.statusCode == 200) {
-        log("Comment tagged successfully");
+        log("Comment ${isPinned ? 'pinned' : 'unpinned'} successfully");
         return true;
       } else {
-        log("Failed to tag comment: ${response.statusCode}");
+        log("Failed to ${isPinned ? 'pin' : 'unpin'} comment: ${response.statusCode}");
         return false;
       }
     } catch (e) {
-      _handleError(e, 'tagComment');
+      _handleError(e, 'pinComment');
       return false;
+    }
+  }
+
+  // Get trending comments
+  Future<List<CommentData>> getTrendingComments({
+    String timeFrame = 'week', // 'day', 'week', 'month'
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/comments/trending?timeframe=$timeFrame&page=$page&limit=$limit'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final commentsData = data['comments'] as List<dynamic>;
+        
+        return commentsData.map((comment) => CommentData.fromJson(comment)).toList();
+      } else {
+        log("Failed to fetch trending comments: ${response.statusCode}");
+        return [];
+      }
+    } catch (e) {
+      _handleError(e, 'getTrendingComments');
+      return [];
+    }
+  }
+
+  // Get user's comment statistics
+  Future<Map<String, dynamic>?> getUserCommentStats(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/comments/user/$userId/stats'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        log("Failed to fetch user comment stats: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      _handleError(e, 'getUserCommentStats');
+      return null;
+    }
+  }
+
+  // Export comments (for moderators/admins)
+  Future<String?> exportComments({
+    int? mediaId,
+    String? mediaType,
+    String? dateFrom,
+    String? dateTo,
+    String format = 'json', // 'json', 'csv', 'xlsx'
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'format': format,
+      };
+      
+      if (mediaId != null) queryParams['media_id'] = mediaId.toString();
+      if (mediaType != null) queryParams['media_type'] = mediaType;
+      if (dateFrom != null) queryParams['date_from'] = dateFrom;
+      if (dateTo != null) queryParams['date_to'] = dateTo;
+
+      final uri = Uri.parse('$baseUrl/admin/comments/export').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: await _getHeaders());
+
+      if (response.statusCode == 200) {
+        log("Comments exported successfully");
+        return response.body; // Return the exported data
+      } else {
+        log("Failed to export comments: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      _handleError(e, 'exportComments');
+      return null;
+    }
+  }
+
+  // Moderate multiple comments at once
+  Future<bool> bulkModerateComments(
+    List<int> commentIds,
+    String action, // 'delete', 'approve', 'spam'
+    {String? reason}
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/moderation/bulk'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'comment_ids': commentIds,
+          'action': action,
+          'reason': reason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        log("Bulk moderation completed successfully");
+        return true;
+      } else {
+        log("Failed to bulk moderate comments: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      _handleError(e, 'bulkModerateComments');
+      return false;
+    }
+  }
+
+  // Get comment health metrics
+  Future<Map<String, dynamic>?> getCommentHealthMetrics() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/health'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        log("Failed to fetch comment health metrics: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      _handleError(e, 'getCommentHealthMetrics');
+      return null;
     }
   }
 }
