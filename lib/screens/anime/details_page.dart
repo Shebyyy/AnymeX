@@ -742,11 +742,12 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                           selectedIcon: Iconsax.play5,
                           unselectedIcon: Iconsax.play,
                           label: "Watch"),
-                    // NavItem(
-                    //     onTap: _onPageSelected,
-                    //     selectedIcon: HugeIcons.strokeRoundedComment01,
-                    //     unselectedIcon: HugeIcons.strokeRoundedComment02,
-                    //     label: "Comments"),
+                    if (widget.media.serviceType == ServicesType.anilist)
+                      NavItem(
+                          onTap: _onPageSelected,
+                          selectedIcon: HugeIcons.strokeRoundedComment01,
+                          unselectedIcon: HugeIcons.strokeRoundedComment02,
+                          label: "Comments"),
                   ]),
             ],
           ),
@@ -766,11 +767,18 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                   selectedIcon: Iconsax.info_circle5,
                   unselectedIcon: Iconsax.info_circle,
                   label: "Info"),
-              NavItem(
-                  onTap: _onPageSelected,
-                  selectedIcon: Iconsax.play5,
-                  unselectedIcon: Iconsax.play,
-                  label: "Watch"),
+              if (sourceController.shouldShowExtensions.value)
+                NavItem(
+                    onTap: _onPageSelected,
+                    selectedIcon: Iconsax.play5,
+                    unselectedIcon: Iconsax.play,
+                    label: "Watch"),
+              if (widget.media.serviceType == ServicesType.anilist)
+                NavItem(
+                    onTap: _onPageSelected,
+                    selectedIcon: HugeIcons.strokeRoundedComment01,
+                    unselectedIcon: HugeIcons.strokeRoundedComment02,
+                    label: "Comments"),
             ]));
   }
 

@@ -2,6 +2,9 @@
 import 'package:anymex/controllers/discord/discord_rpc.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:anymex/database/comments_db.dart';
+import 'package:anymex/database/model/comment.dart';
+import 'package:anymex/widgets/comments/comments_widget.dart';
 
 import 'package:anymex/controllers/service_handler/params.dart';
 import 'package:anymex/controllers/source/source_mapper.dart';
@@ -71,6 +74,9 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
   RxDouble mangaScore = 0.0.obs;
   RxInt mangaProgress = 0.obs;
   RxString mangaStatus = "".obs;
+
+  // Comments
+  Rxn<List<Comment>> comments = Rxn();
 
   // Tracker's Controller
   PageController controller = PageController();
@@ -149,6 +155,12 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
       }
       Logger.i(e.toString());
       Logger.i(stackTrace.toString());
+    } finally {
+      if (widget.media.serviceType == ServicesType.anilist) {
+        final data =
+            await CommentsDatabase().fetchComments(widget.media.id.toString());
+        comments.value = data;
+      }
     }
   }
 
@@ -378,6 +390,7 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
               else
                 const SizedBox.shrink(),
               _buildChapterSection(context),
+              _buildCommentsSection(context)
             ],
           ),
         ],
@@ -491,6 +504,19 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
     );
   }
 
+  Widget _buildCommentsSection(BuildContext context) {
+    // Only show comments for AniList media
+    if (widget.media.serviceType != ServicesType.anilist) {
+      return const SizedBox.shrink();
+    }
+    
+    return CommentsWidget(
+      mediaId: widget.media.id.toString(),
+      mediaType: 'manga',
+      mediaTitle: anilistData?.title ?? widget.media.title,
+    );
+  }
+
   // Common Info Section
   Column _buildCommonInfo(BuildContext context) {
     return Column(
@@ -591,6 +617,12 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                           selectedIcon: Iconsax.book,
                           unselectedIcon: Iconsax.book,
                           label: "Read"),
+                    if (widget.media.serviceType == ServicesType.anilist)
+                      NavItem(
+                          onTap: (index) => _onPageSelected(index),
+                          selectedIcon: HugeIcons.strokeRoundedComment01,
+                          unselectedIcon: HugeIcons.strokeRoundedComment02,
+                          label: "Comments"),
                   ]),
             ],
           ),
@@ -610,11 +642,18 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                   selectedIcon: Iconsax.info_circle5,
                   unselectedIcon: Iconsax.info_circle,
                   label: "Info"),
-              NavItem(
-                  onTap: _onPageSelected,
-                  selectedIcon: Iconsax.book,
-                  unselectedIcon: Iconsax.book,
-                  label: "Watch"),
+              if (sourceController.shouldShowExtensions.value)
+                NavItem(
+                    onTap: _onPageSelected,
+                    selectedIcon: Iconsax.book,
+                    unselectedIcon: Iconsax.book,
+                    label: "Read"),
+              if (widget.media.serviceType == ServicesType.anilist)
+                NavItem(
+                    onTap: _onPageSelected,
+                    selectedIcon: HugeIcons.strokeRoundedComment01,
+                    unselectedIcon: HugeIcons.strokeRoundedComment02,
+                    label: "Comments"),
             ]));
   }
   // Mobile Navigation bar: END
