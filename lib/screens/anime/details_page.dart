@@ -7,6 +7,7 @@ import 'package:anymex/controllers/service_handler/params.dart';
 import 'package:anymex/controllers/source/source_mapper.dart';
 import 'package:anymex/database/comments_db.dart';
 import 'package:anymex/database/model/comment.dart';
+import 'package:anymex/widgets/comments/comments_widget.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_button.dart';
 import 'package:dartotsu_extension_bridge/dartotsu_extension_bridge.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
@@ -523,7 +524,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
               else
                 const SizedBox.shrink(),
               _buildEpisodeSection(context),
-              // _buildCommentsSection(context)
+              _buildCommentsSection(context)
             ],
           )
         ],
@@ -636,14 +637,16 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   }
 
   Widget _buildCommentsSection(BuildContext context) {
-    return
-        // comments.value != null
-        //     ? CommentSection(
-        //         mediaId: widget.media.id,
-        //         currentTag: ('Episode ${currentAnime.value?.episodeCount ?? '0'}'),
-        //       )
-        //     :
-        const SizedBox.shrink();
+    // Only show comments for AniList media
+    if (widget.media.serviceType != ServicesType.anilist) {
+      return const SizedBox.shrink();
+    }
+    
+    return CommentsWidget(
+      mediaId: widget.media.id.toString(),
+      mediaType: 'anime',
+      mediaTitle: anilistData?.title ?? widget.media.title,
+    );
   }
 
   // Common Info Section
