@@ -165,3 +165,70 @@ class Comment {
     );
   }
 }
+
+class CommentData {
+  final int commentId;
+  final int userId;
+  final String username;
+  final String? profilePictureUrl;
+  final int mediaId;
+  final String mediaType;
+  final String content;
+  final int? parentCommentId;
+  final int totalVotes;
+  final String? userVote;
+  final bool isMod;
+  final bool isAdmin;
+  final bool isSuperAdmin;
+  final bool isLocked;
+  final bool deleted;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<CommentData>? replies;
+
+  CommentData({
+    required this.commentId,
+    required this.userId,
+    required this.username,
+    this.profilePictureUrl,
+    required this.mediaId,
+    required this.mediaType,
+    required this.content,
+    this.parentCommentId,
+    required this.totalVotes,
+    this.userVote,
+    required this.isMod,
+    required this.isAdmin,
+    required this.isSuperAdmin,
+    required this.isLocked,
+    required this.deleted,
+    required this.createdAt,
+    required this.updatedAt,
+    this.replies,
+  });
+
+  factory CommentData.fromJson(Map<String, dynamic> json) {
+    return CommentData(
+      commentId: json['comment_id'],
+      userId: json['user_id'],
+      username: json['username'],
+      profilePictureUrl: json['profile_picture_url'],
+      mediaId: json['media_id'],
+      mediaType: json['media_type'],
+      content: json['content'],
+      parentCommentId: json['parent_comment_id'],
+      totalVotes: json['total_votes'] ?? 0,
+      userVote: json['user_vote'],
+      isMod: json['is_mod'] ?? false,
+      isAdmin: json['is_admin'] ?? false,
+      isSuperAdmin: json['is_super_admin'] ?? false,
+      isLocked: json['is_locked'] ?? false,
+      deleted: json['deleted'] ?? false,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
+      replies: json['replies'] != null 
+          ? (json['replies'] as List).map((r) => CommentData.fromJson(r)).toList()
+          : null,
+    );
+  }
+}
