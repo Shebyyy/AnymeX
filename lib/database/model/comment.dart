@@ -12,6 +12,9 @@ class Comment {
   String createdAt;
   String updatedAt;
   bool deleted;
+  bool isMod;
+  bool isAdmin;
+  bool isSuperAdmin;
 
   Comment({
     required this.id,
@@ -27,6 +30,9 @@ class Comment {
     required this.createdAt,
     required this.updatedAt,
     required this.deleted,
+    this.isMod = false,
+    this.isAdmin = false,
+    this.isSuperAdmin = false,
   });
 
   factory Comment.fromMap(Map m) {
@@ -43,6 +49,9 @@ class Comment {
       createdAt: m['created_at'].toString(),
       updatedAt: m['updated_at'].toString(),
       deleted: m['deleted'] ?? false,
+      isMod: m['is_mod'] ?? false,
+      isAdmin: m['is_admin'] ?? false,
+      isSuperAdmin: m['is_super_admin'] ?? false,
       userVote: 0,
     );
   }
@@ -61,6 +70,9 @@ class Comment {
     String? createdAt,
     String? updatedAt,
     bool? deleted,
+    bool? isMod,
+    bool? isAdmin,
+    bool? isSuperAdmin,
   }) {
     return Comment(
       id: id ?? this.id,
@@ -76,6 +88,9 @@ class Comment {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deleted: deleted ?? this.deleted,
+      isMod: isMod ?? this.isMod,
+      isAdmin: isAdmin ?? this.isAdmin,
+      isSuperAdmin: isSuperAdmin ?? this.isSuperAdmin,
     );
   }
 }
