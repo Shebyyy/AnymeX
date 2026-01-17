@@ -8,7 +8,7 @@ import 'package:hive/hive.dart';
 
 class CommentsService {
   final storage = Hive.box('auth');
-  final String baseUrl = 'https://kynmczvxwnpyuotwwjrz.supabase.co/functions/v1';
+  final String baseUrl = 'https://fuaomunoacfwepcnppua.supabase.co/functions/v1';
   
   void log(String msg) => d.Logger.i("[CommentsService] $msg");
 
@@ -28,7 +28,7 @@ class CommentsService {
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
-      'Anilist-Token': token ?? '',
+      'Auth-Provider': 'anilist',
     };
   }
 
@@ -36,7 +36,11 @@ class CommentsService {
   void _handleError(dynamic error, String context) {
     log("Error in $context: $error");
     if (error.toString().contains('401') || error.toString().contains('403')) {
-      snackBar('Authentication failed. Please login again.');
+      if (error.toString().contains('Invalid JWT')) {
+        snackBar('Comments system is currently being updated. Please try again later.');
+      } else {
+        snackBar('Authentication failed. Please login again.');
+      }
     } else if (error.toString().contains('429')) {
       snackBar('Too many requests. Please try again later.');
     } else {
@@ -331,7 +335,7 @@ class CommentsService {
   Future<bool> lockThread(int commentId, bool isLocked) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/moderation/lock/$commentId'),
+        Uri.parse('$baseUrl/moderation/thread/$commentId/lock'),
         headers: await _getHeaders(),
         body: json.encode({
           'is_locked': isLocked,
@@ -355,7 +359,7 @@ class CommentsService {
   Future<bool> softDeleteComment(int commentId, String reason) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/moderation/delete/$commentId'),
+        Uri.parse('$baseUrl/moderation/moderate/delete/$commentId'),
         headers: await _getHeaders(),
         body: json.encode({
           'reason': reason,
@@ -420,6 +424,167 @@ class CommentsService {
     } catch (e) {
       _handleError(e, 'getSystemStats');
       return null;
+    }
+  }
+
+  // Admin: Ban or unban user
+  Future<bool> banUser(int userId, bool isBanned, {String? reason, int? durationDays}) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/admin/user/$userId/ban'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'is_banned': isBanned,
+          'reason': reason,
+          'duration_days': durationDays,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        log("User ${isBanned ? 'banned' : 'unbanned'} successfully");
+        return true;
+      } else {
+        log("Failed to ${isBanned ? 'ban' : 'unban'} user: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      _handleError(e, 'banUser');
+      return false;
+    }
+  }
+
+  // Admin: Change user role
+  Future<bool> changeUserRole(int userId, String role, {String? reason}) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/admin/user/$userId/role'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'role': role,
+          'reason': reason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        log("User role changed to $role successfully");
+        return true;
+      } else {
+        log("Failed to change user role: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      _handleError(e, 'changeUserRole');
+      return false;
+    }
+  }
+
+  // Admin: Get user activity
+  Future<UserActivity?> getUserActivity(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/user/$userId/activity'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return UserActivity.fromJson(data);
+      } else {
+        log("Failed to fetch user activity: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      _handleError(e, 'getUserActivity');
+      return null;
+    }
+  }
+
+  // Admin: Get moderation logs
+  Future<List<ModerationLog>> getModerationLogs({
+    String? action,
+    int? targetUserId,
+    int? performedBy,
+    String? dateFrom,
+    String? dateTo,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      
+      if (action != null) queryParams['action'] = action;
+      if (targetUserId != null) queryParams['target_user_id'] = targetUserId.toString();
+      if (performedBy != null) queryParams['performed_by'] = performedBy.toString();
+      if (dateFrom != null) queryParams['date_from'] = dateFrom;
+      if (dateTo != null) queryParams['date_to'] = dateTo;
+
+      final uri = Uri.parse('$baseUrl/admin/logs').replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: await _getHeaders());
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final logsData = data['logs'] as List<dynamic>;
+        
+        return logsData.map((log) => ModerationLog.fromJson(log)).toList();
+      } else {
+        log("Failed to fetch moderation logs: ${response.statusCode}");
+        return [];
+      }
+    } catch (e) {
+      _handleError(e, 'getModerationLogs');
+      return [];
+    }
+  }
+
+  // Moderation: Resolve or dismiss report
+  Future<bool> resolveReport(int reportId, String status, {String? notes}) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/moderation/reports/$reportId/resolve'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'status': status, // 'resolved' or 'dismissed'
+          'notes': notes,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        log("Report $status successfully");
+        return true;
+      } else {
+        log("Failed to $status report: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      _handleError(e, 'resolveReport');
+      return false;
+    }
+  }
+
+  // Moderation: Tag or untag comment
+  Future<bool> tagComment(int commentId, Map<String, bool> tags) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/moderation/tag/$commentId'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'tags': tags,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        log("Comment tagged successfully");
+        return true;
+      } else {
+        log("Failed to tag comment: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      _handleError(e, 'tagComment');
+      return false;
     }
   }
 }
@@ -559,6 +724,8 @@ class ReportData {
   final String reason;
   final String status;
   final DateTime createdAt;
+  final String? reporterUsername;
+  final String? reporterProfilePictureUrl;
 
   ReportData({
     required this.reportId,
@@ -567,6 +734,8 @@ class ReportData {
     required this.reason,
     required this.status,
     required this.createdAt,
+    this.reporterUsername,
+    this.reporterProfilePictureUrl,
   });
 
   factory ReportData.fromJson(Map<String, dynamic> json) {
@@ -576,6 +745,111 @@ class ReportData {
       reporterUserId: json['reporter_user_id'],
       reason: json['reason'],
       status: json['status'],
+      createdAt: DateTime.parse(json['created_at']),
+      reporterUsername: json['reporter_username'],
+      reporterProfilePictureUrl: json['reporter_profile_picture_url'],
+    );
+  }
+}
+
+class SystemStats {
+  final Map<String, dynamic> users;
+  final Map<String, dynamic> comments;
+  final Map<String, dynamic> votes;
+  final Map<String, dynamic> reports;
+  final Map<String, dynamic> moderation;
+
+  SystemStats({
+    required this.users,
+    required this.comments,
+    required this.votes,
+    required this.reports,
+    required this.moderation,
+  });
+
+  factory SystemStats.fromJson(Map<String, dynamic> json) {
+    return SystemStats(
+      users: json['users'] ?? {},
+      comments: json['comments'] ?? {},
+      votes: json['votes'] ?? {},
+      reports: json['reports'] ?? {},
+      moderation: json['moderation'] ?? {},
+    );
+  }
+}
+
+class UserActivity {
+  final Map<String, dynamic> user;
+  final Map<String, dynamic> stats;
+  final List<CommentData> recentComments;
+  final List<dynamic> recentVotes;
+  final List<ReportData> reports;
+
+  UserActivity({
+    required this.user,
+    required this.stats,
+    required this.recentComments,
+    required this.recentVotes,
+    required this.reports,
+  });
+
+  factory UserActivity.fromJson(Map<String, dynamic> json) {
+    return UserActivity(
+      user: json['user'] ?? {},
+      stats: json['stats'] ?? {},
+      recentComments: (json['recent_comments'] as List?)
+          ?.map((c) => CommentData.fromJson(c))
+          .toList() ?? [],
+      recentVotes: json['recent_votes'] ?? [],
+      reports: (json['reports'] as List?)
+          ?.map((r) => ReportData.fromJson(r))
+          .toList() ?? [],
+    );
+  }
+}
+
+class ModerationLog {
+  final int logId;
+  final String action;
+  final int? targetUserId;
+  final int? targetCommentId;
+  final int performedBy;
+  final String? performedByUsername;
+  final String? performedByProfilePictureUrl;
+  final String? targetUsername;
+  final String? targetProfilePictureUrl;
+  final String? targetCommentContent;
+  final Map<String, dynamic>? details;
+  final DateTime createdAt;
+
+  ModerationLog({
+    required this.logId,
+    required this.action,
+    this.targetUserId,
+    this.targetCommentId,
+    required this.performedBy,
+    this.performedByUsername,
+    this.performedByProfilePictureUrl,
+    this.targetUsername,
+    this.targetProfilePictureUrl,
+    this.targetCommentContent,
+    this.details,
+    required this.createdAt,
+  });
+
+  factory ModerationLog.fromJson(Map<String, dynamic> json) {
+    return ModerationLog(
+      logId: json['log_id'],
+      action: json['action'],
+      targetUserId: json['target_user_id'],
+      targetCommentId: json['target_comment_id'],
+      performedBy: json['performed_by'],
+      performedByUsername: json['performed_by_username'],
+      performedByProfilePictureUrl: json['performed_by_profile_picture_url'],
+      targetUsername: json['target_username'],
+      targetProfilePictureUrl: json['target_profile_picture_url'],
+      targetCommentContent: json['target_comment_content'],
+      details: json['details'],
       createdAt: DateTime.parse(json['created_at']),
     );
   }

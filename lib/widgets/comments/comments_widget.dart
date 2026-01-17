@@ -5,6 +5,10 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:anymex/controllers/comments_controller.dart';
 import 'package:anymex/database/model/comment.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_container.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_button.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_dialog.dart';
+import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 
 class CommentsWidget extends StatefulWidget {
   final String mediaId;
@@ -57,7 +61,7 @@ class _CommentsWidgetState extends State<CommentsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnymexContainer(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,30 +69,36 @@ class _CommentsWidgetState extends State<CommentsWidget> {
           // Header
           Row(
             children: [
-              Icon(Icons.comment_outlined, size: 24),
-              const SizedBox(width: 8),
-              Text(
-                'Comments',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              Icon(
+                Icons.comment_outlined, 
+                size: 24,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              AnymexText(
+                text: 'Comments',
+                size: 20,
+                variant: TextVariant.bold,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               const Spacer(),
               if (widget.mediaTitle != null)
                 Flexible(
-                  child: Text(
-                    widget.mediaTitle!,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  child: AnymexText(
+                    text: widget.mediaTitle!,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Comment input
           _buildCommentInput(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Comments list
           _buildCommentsList(),
@@ -98,11 +108,12 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   }
 
   Widget _buildCommentInput() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
+    return AnymexContainer(
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.3),
+      radius: 16,
+      border: Border.all(
+        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,25 +122,40 @@ class _CommentsWidgetState extends State<CommentsWidget> {
             controller: _commentController,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(
-              hintText: 'Write a comment...',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 14,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Share your thoughts...',
+              hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
               border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
-                onPressed: () {
-                  _commentController.clear();
-                },
-                child: const Text('Cancel'),
+              AnymexButton2(
+                label: 'Cancel',
+                onTap: () => _commentController.clear(),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _submitComment,
-                child: const Text('Post'),
+              const SizedBox(width: 12),
+              AnymexButton(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                color: Theme.of(context).colorScheme.primary,
+                radius: 20,
+                onTap: _submitComment,
+                child: AnymexText(
+                  text: 'Post',
+                  color: Colors.white,
+                  size: 14,
+                  variant: TextVariant.bold,
+                ),
               ),
             ],
           ),
@@ -146,26 +172,73 @@ class _CommentsWidgetState extends State<CommentsWidget> {
         );
       }
 
+      // Check if there's an authentication error
+      if (_commentsController.errorMessage.value.contains('Invalid JWT') ||
+          _commentsController.errorMessage.value.contains('401')) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.build_circle_outlined, 
+                size: 64, 
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 20),
+              AnymexText(
+                text: 'Comments System Update',
+                size: 18,
+                variant: TextVariant.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              AnymexText(
+                text: 'The comments system is currently being updated.\nPlease try again in a few minutes.',
+                size: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              AnymexButton(
+                height: 45,
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                color: Theme.of(context).colorScheme.primary,
+                radius: 22,
+                onTap: _loadComments,
+                child: AnymexText(
+                  text: 'Retry',
+                  color: Colors.white,
+                  size: 14,
+                  variant: TextVariant.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
       if (_commentsController.comments.isEmpty && !_commentsController.isLoading.value) {
         return Center(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.comment_bank_outlined, size: 64, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              Text(
-                'No comments yet',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
+              Icon(
+                Icons.comment_bank_outlined, 
+                size: 64, 
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+              ),
+              const SizedBox(height: 20),
+              AnymexText(
+                text: 'No comments yet',
+                size: 16,
+                variant: TextVariant.bold,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Be the first to share your thoughts!',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
+              AnymexText(
+                text: 'Be the first to share your thoughts!',
+                size: 14,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
             ],
           ),
@@ -231,22 +304,23 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reply to Comment'),
-        content: Column(
+      builder: (context) => AnymexDialog(
+        title: 'Reply to Comment',
+        contentWidget: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Replying to ${parentComment.username}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            AnymexText(
+              text: 'Replying to ${parentComment.username}',
+              size: 14,
+              variant: TextVariant.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             const SizedBox(height: 8),
-            Text(
-              parentComment.commentText,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
+            AnymexText(
+              text: parentComment.commentText,
+              size: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -254,30 +328,40 @@ class _CommentsWidgetState extends State<CommentsWidget> {
             TextField(
               controller: replyController,
               maxLines: 3,
-              decoration: const InputDecoration(
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 14,
+              ),
+              decoration: InputDecoration(
                 hintText: 'Write your reply...',
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.all(12),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await _commentsController.addComment(
-                replyController.text.trim(),
-              );
-              if (success) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Reply'),
-          ),
-        ],
+        onConfirm: () async {
+          final success = await _commentsController.addComment(
+            replyController.text.trim(),
+          );
+          if (success) {
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
@@ -287,34 +371,44 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Comment'),
-        content: TextField(
+      builder: (context) => AnymexDialog(
+        title: 'Edit Comment',
+        contentWidget: TextField(
           controller: editController,
           maxLines: 3,
-          decoration: const InputDecoration(
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
             hintText: 'Edit your comment...',
-            border: OutlineInputBorder(),
+            hintStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            contentPadding: const EdgeInsets.all(12),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await _commentsController.updateComment(
-                int.parse(comment.id),
-                editController.text.trim(),
-              );
-              if (success) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
+        onConfirm: () async {
+          final success = await _commentsController.updateComment(
+            int.parse(comment.id),
+            editController.text.trim(),
+          );
+          if (success) {
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
@@ -322,28 +416,15 @@ class _CommentsWidgetState extends State<CommentsWidget> {
   void _showDeleteDialog(Comment comment) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Comment'),
-        content: const Text('Are you sure you want to delete this comment? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await _commentsController.deleteComment(int.parse(comment.id));
-              if (success) {
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
+      builder: (context) => AnymexDialog(
+        title: 'Delete Comment',
+        message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+        onConfirm: () async {
+          final success = await _commentsController.deleteComment(int.parse(comment.id));
+          if (success) {
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
@@ -353,57 +434,64 @@ class _CommentsWidgetState extends State<CommentsWidget> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report Comment'),
-        content: Column(
+      builder: (context) => AnymexDialog(
+        title: 'Report Comment',
+        contentWidget: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Reporting comment by ${comment.username}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            AnymexText(
+              text: 'Reporting comment by ${comment.username}',
+              size: 14,
+              variant: TextVariant.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             const SizedBox(height: 8),
-            Text(
-              comment.commentText,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
+            AnymexText(
+              text: comment.commentText,
+              size: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 14,
+              ),
+              decoration: InputDecoration(
                 hintText: 'Reason for reporting...',
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.all(12),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await _commentsController.reportComment(
-                int.parse(comment.id),
-                reasonController.text.trim(),
-              );
-              if (success) {
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Report'),
-          ),
-        ],
+        onConfirm: () async {
+          final success = await _commentsController.reportComment(
+            int.parse(comment.id),
+            reasonController.text.trim(),
+          );
+          if (success) {
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
@@ -431,13 +519,15 @@ class CommentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnymexContainer(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(12),
-        color: comment.deleted ? Colors.grey.shade100 : null,
+      color: comment.deleted 
+          ? Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.3)
+          : Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.1),
+      radius: 16,
+      border: Border.all(
+        color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,12 +537,15 @@ class CommentCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.grey.shade300,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
                 backgroundImage: comment.avatarUrl != null
                     ? CachedNetworkImageProvider(comment.avatarUrl!)
                     : null,
                 child: comment.avatarUrl == null
-                    ? Icon(Icons.person, color: Colors.grey.shade600)
+                    ? Icon(
+                        Icons.person, 
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                      )
                     : null,
               ),
               const SizedBox(width: 12),
@@ -462,39 +555,37 @@ class CommentCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          comment.username,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        AnymexText(
+                          text: comment.username,
+                          size: 14,
+                          variant: TextVariant.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         if (comment.isMod || comment.isAdmin) ...[
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: comment.isSuperAdmin ? Colors.purple : Colors.blue,
-                              borderRadius: BorderRadius.circular(4),
+                              color: comment.isSuperAdmin 
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.secondary,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              comment.isSuperAdmin ? 'Admin' : 'Mod',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: AnymexText(
+                              text: comment.isSuperAdmin ? 'Admin' : 'Mod',
+                              size: 10,
+                              color: Colors.white,
+                              variant: TextVariant.bold,
                             ),
                           ),
                         ],
                       ],
                     ),
-                    Text(
-                      timeago.format(DateTime.parse(comment.createdAt)),
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
+                    const SizedBox(height: 2),
+                    AnymexText(
+                      text: timeago.format(DateTime.parse(comment.createdAt)),
+                      size: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ],
                 ),
