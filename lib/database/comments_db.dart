@@ -67,6 +67,9 @@ class CommentsDatabase {
           createdAt: commentData.createdAt.toIso8601String(),
           updatedAt: commentData.updatedAt.toIso8601String(),
           deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
         );
       }).toList();
     } catch (e) {
@@ -119,6 +122,9 @@ class CommentsDatabase {
           createdAt: commentData.createdAt.toIso8601String(),
           updatedAt: commentData.updatedAt.toIso8601String(),
           deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
         );
       }
     } catch (e) {
@@ -182,6 +188,9 @@ class CommentsDatabase {
           createdAt: commentData.createdAt.toIso8601String(),
           updatedAt: commentData.updatedAt.toIso8601String(),
           deleted: commentData.deleted,
+          isMod: commentData.isMod,
+          isAdmin: commentData.isAdmin,
+          isSuperAdmin: commentData.isSuperAdmin,
         );
       }
     } catch (e) {
@@ -256,7 +265,7 @@ class CommentsDatabase {
       return {
         'anilist_user_id': currentUser.id,
         'username': currentUser.name,
-        'profile_picture_url': currentUser.avatar?.large,
+        'profile_picture_url': currentUser.avatar,
       };
     } catch (e) {
       log("Error getting user info: $e");
@@ -331,6 +340,9 @@ class CommentsDatabase {
       createdAt: commentData.createdAt.toIso8601String(),
       updatedAt: commentData.updatedAt.toIso8601String(),
       deleted: commentData.deleted,
+      isMod: commentData.isMod,
+      isAdmin: commentData.isAdmin,
+      isSuperAdmin: commentData.isSuperAdmin,
     );
   }
 
