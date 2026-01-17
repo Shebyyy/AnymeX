@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:anymex/utils/logger.dart' as d;
 import 'package:anymex/controllers/service_handler/service_handler.dart';
-import 'package:anymex/database/model/comment.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:hive/hive.dart';
@@ -589,6 +588,48 @@ class CommentsService {
     }
   }
 }
+
+// Data models for the API responses
+class CommentData {
+  final int commentId;
+  final int userId;
+  final String username;
+  final String? profilePictureUrl;
+  final int mediaId;
+  final String mediaType;
+  final String content;
+  final int? parentCommentId;
+  final int totalVotes;
+  final String? userVote;
+  final bool isMod;
+  final bool isAdmin;
+  final bool isSuperAdmin;
+  final bool isLocked;
+  final bool deleted;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<CommentData>? replies;
+
+  CommentData({
+    required this.commentId,
+    required this.userId,
+    required this.username,
+    this.profilePictureUrl,
+    required this.mediaId,
+    required this.mediaType,
+    required this.content,
+    this.parentCommentId,
+    required this.totalVotes,
+    this.userVote,
+    required this.isMod,
+    required this.isAdmin,
+    required this.isSuperAdmin,
+    required this.isLocked,
+    required this.deleted,
+    required this.createdAt,
+    required this.updatedAt,
+    this.replies,
+  });
 
   factory CommentData.fromJson(Map<String, dynamic> json) {
     return CommentData(
