@@ -828,3 +828,26 @@ class ModerationLog {
     );
   }
 }
+
+class SystemStats {
+  final Map<String, dynamic> users;
+  final Map<String, dynamic> comments;
+  final Map<String, dynamic> votes;
+  final Map<String, dynamic> reports;
+
+  SystemStats({
+    required this.users,
+    required this.comments,
+    required this.votes,
+    required this.reports,
+  });
+
+  factory SystemStats.fromJson(Map<String, dynamic> json) {
+    return SystemStats(
+      users: json['users'],
+      comments: json['comments'],
+      votes: json['votes'],
+      reports: json['reports'],
+    );
+  }
+}
