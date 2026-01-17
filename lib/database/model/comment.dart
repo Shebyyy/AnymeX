@@ -167,43 +167,73 @@ class Comment {
 }
 
 class CommentData {
+  final int id;
   final int commentId;
-  final int userId;
-  final String username;
-  final String? profilePictureUrl;
   final int mediaId;
   final String mediaType;
   final String content;
-  final int? parentCommentId;
-  final int totalVotes;
-  final String? userVote;
-  final bool isMod;
-  final bool isAdmin;
-  final bool isSuperAdmin;
-  final bool isLocked;
+  final String username;
+  final int userId;
+  final String? profilePictureUrl;
+  final int likes;
+  final int dislikes;
   final bool deleted;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<CommentData>? replies;
+  final bool isEdited;
+  final int? parentId;
+  final List<int> childIds;
+  final bool isPinned;
+  final bool isReported;
+  final int reportCount;
+  final bool isLikedByUser;
+  final bool isDislikedByUser;
+  final bool isOwner;
+  final bool isModerator;
+  final bool isAdmin;
+  final bool isSuperAdmin;
+  final String? reportReason;
+  final DateTime? reportCreatedAt;
+  final String? bannedBy;
+  final DateTime? bannedAt;
+  final String? banReason;
+  final String? lockedBy;
+  final DateTime? lockedAt;
+  final String? lockReason;
 
   CommentData({
+    required this.id,
     required this.commentId,
-    required this.userId,
-    required this.username,
-    this.profilePictureUrl,
     required this.mediaId,
     required this.mediaType,
     required this.content,
-    this.parentCommentId,
-    required this.totalVotes,
-    this.userVote,
-    required this.isMod,
-    required this.isAdmin,
-    required this.isSuperAdmin,
-    required this.isLocked,
+    required this.username,
+    required this.userId,
+    this.profilePictureUrl,
+    required this.likes,
+    required this.dislikes,
     required this.deleted,
     required this.createdAt,
     required this.updatedAt,
-    this.replies,
+    required this.isEdited,
+    this.parentId,
+    required this.childIds,
+    required this.isPinned,
+    required this.isReported,
+    required this.reportCount,
+    required this.isLikedByUser,
+    required this.isDislikedByUser,
+    required this.isOwner,
+    required this.isModerator,
+    required this.isAdmin,
+    required this.isSuperAdmin,
+    this.reportReason,
+    this.reportCreatedAt,
+    this.bannedBy,
+    this.bannedAt,
+    this.banReason,
+    this.lockedBy,
+    this.lockedAt,
+    this.lockReason,
   });
 }
