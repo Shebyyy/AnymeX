@@ -752,32 +752,6 @@ class ReportData {
   }
 }
 
-class SystemStats {
-  final Map<String, dynamic> users;
-  final Map<String, dynamic> comments;
-  final Map<String, dynamic> votes;
-  final Map<String, dynamic> reports;
-  final Map<String, dynamic> moderation;
-
-  SystemStats({
-    required this.users,
-    required this.comments,
-    required this.votes,
-    required this.reports,
-    required this.moderation,
-  });
-
-  factory SystemStats.fromJson(Map<String, dynamic> json) {
-    return SystemStats(
-      users: json['users'] ?? {},
-      comments: json['comments'] ?? {},
-      votes: json['votes'] ?? {},
-      reports: json['reports'] ?? {},
-      moderation: json['moderation'] ?? {},
-    );
-  }
-}
-
 class UserActivity {
   final Map<String, dynamic> user;
   final Map<String, dynamic> stats;
