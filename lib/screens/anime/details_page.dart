@@ -8,6 +8,8 @@ import 'package:anymex/controllers/source/source_mapper.dart';
 import 'package:anymex/database/comments_db.dart';
 import 'package:anymex/database/model/comment.dart';
 import 'package:anymex/widgets/comments/comments_widget.dart';
+import 'package:anymex/comments/comment_section_new.dart';
+import 'package:anymex/comments/user_role_controller_new.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_button.dart';
 import 'package:dartotsu_extension_bridge/dartotsu_extension_bridge.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
@@ -104,6 +106,10 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize user role controller
+    if (!Get.isRegistered<UserRoleController>()) {
+      Get.put(UserRoleController());
+    }
     if (sourceController.installedExtensions.isEmpty) {
       showAnify.value = false;
     }
@@ -642,10 +648,11 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
       return const SizedBox.shrink();
     }
     
-    return CommentsWidget(
-      mediaId: widget.media.id.toString(),
-      mediaType: 'anime',
+    return CommentSectionNew(
+      mediaId: int.tryParse(widget.media.id) ?? 0,
+      mediaType: MediaType.anime,
       mediaTitle: anilistData?.title ?? widget.media.title,
+      mediaPoster: anilistData?.poster ?? widget.media.poster,
     );
   }
 

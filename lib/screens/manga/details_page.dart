@@ -5,6 +5,8 @@ import 'package:anymex/utils/logger.dart';
 import 'package:anymex/database/comments_db.dart';
 import 'package:anymex/database/model/comment.dart';
 import 'package:anymex/widgets/comments/comments_widget.dart';
+import 'package:anymex/comments/comment_section_new.dart';
+import 'package:anymex/comments/user_role_controller_new.dart';
 
 import 'package:anymex/controllers/service_handler/params.dart';
 import 'package:anymex/controllers/source/source_mapper.dart';
@@ -94,6 +96,10 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize user role controller
+    if (!Get.isRegistered<UserRoleController>()) {
+      Get.put(UserRoleController());
+    }
     mediaService = widget.media.serviceType;
     Future.delayed(const Duration(milliseconds: 300), () {
       _checkMangaPresence();
@@ -510,10 +516,11 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
       return const SizedBox.shrink();
     }
     
-    return CommentsWidget(
-      mediaId: widget.media.id.toString(),
-      mediaType: 'manga',
+    return CommentSectionNew(
+      mediaId: int.tryParse(widget.media.id) ?? 0,
+      mediaType: MediaType.manga,
       mediaTitle: anilistData?.title ?? widget.media.title,
+      mediaPoster: anilistData?.poster ?? widget.media.poster,
     );
   }
 

@@ -3,18 +3,22 @@ import 'package:anymex/screens/settings/sub_settings/settings_accounts.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_common.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_experimental.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_extensions.dart';
-import 'package:anymex/screens/settings/sub_settings/settings_player.dart';
-import 'package:anymex/screens/settings/sub_settings/settings_theme.dart';
-import 'package:anymex/screens/settings/sub_settings/settings_ui.dart';
+import 'package:anymex/screens/sub_settings/settings_player.dart';
+import 'package:anymex/screens/sub_settings/settings_theme.dart';
+import 'package:anymex/screens/sub_settings/settings_ui.dart';
+import 'package:anymex/screens/settings/sub_settings/super_admin_settings_new.dart';
+import 'package:anymex/screens/settings/sub_settings/admin_settings_new.dart';
+import 'package:anymex/screens/settings/sub_settings/moderator_settings_new.dart';
+import 'package:anymex/comments/user_role_controller_new.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
+import 'package:hugeicons/hugeicons.hugeicons.dart';
 import 'package:iconly/iconly.dart';
-import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:super_sliver_list/super_sliver_list';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -24,6 +28,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize user role controller if not already registered
+    if (!Get.isRegistered<UserRoleController>()) {
+      Get.put(UserRoleController());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Glow(
@@ -119,23 +132,61 @@ class _SettingsPageState extends State<SettingsPage> {
                   description: "About the App",
                   onTap: () async {
                     navigate(() => const AboutPage());
-                  },
-                ),
-                // const SizedBox(height: 10),
-                // CustomTile(
-                //   icon: HugeIcons.strokeRoundedInformationCircle,
-                //   title: "TEST",
-                //   description: "TEST PAGE",
-                //   onTap: () async {
-                //     navigate(() => const TestPage());
-                //   },
-                // ),
+                  }),
+                const SizedBox(height: 10),
+                // Role-based settings
+                Obx(() {
+                  final userRoleController = Get.find<UserRoleController>();
+                  final isAdmin = userRoleController.isAdmin;
+                  final isModerator = userRoleController.isModerator;
+                  final isSuperAdmin = userRoleController.isSuperAdmin;
+                  
+                  return Column(
+                    children: [
+                      if (isSuperAdmin) ...[
+                        CustomTile(
+                          icon: Icons.admin_panel_settings_rounded,
+                          title: "Super Admin Settings",
+                          description: "Manage system-wide settings and permissions",
+                          onTap: () {
+                            navigate(() => const SuperAdminSettingsNew());
+                          },
+                          iconColor: Colors.red,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      if (isAdmin) ...[
+                        CustomTile(
+                          icon: Icons.admin_panel_settings_rounded,
+                          title: "Admin Settings",
+                          description: "Moderation and user management",
+                          onTap: () {
+                            navigate(() => const AdminSettingsNew());
+                          },
+                          iconColor: Colors.orange,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      if (isModerator) ...[
+                        CustomTile(
+                          icon: Icons.admin_panel_settings_rounded,
+                          title: "Moderator Settings",
+                          description: "Content moderation tools",
+                          onTap: () {
+                            navigate(() => const ModeratorSettingsNew());
+                          },
+                          iconColor: Colors.green,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ],
+                  ]);
+                }),
+                const SizedBox(height: 30),
               ],
             ),
           ),
-          30.height(),
-        ],
-      )),
+      ),
     );
   }
 }
@@ -149,10 +200,10 @@ class CustomBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
         style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .surfaceContainer
-                .withOpacity(0.5)),
+          backgroundColor: Theme.of(context)
+              .colorScheme
+              .surfaceContainer
+              .withOpacity(0.5)),
         onPressed: () {
           Navigator.pop(context);
         },

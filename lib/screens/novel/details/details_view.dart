@@ -4,6 +4,8 @@ import 'package:anymex/screens/anime/widgets/custom_list_dialog.dart';
 import 'package:anymex/screens/novel/details/controller/details_controller.dart';
 import 'package:anymex/screens/novel/details/widgets/chapters_section.dart';
 import 'package:anymex/screens/novel/details/widgets/novel_stats.dart';
+import 'package:anymex/comments/comment_section_new.dart';
+import 'package:anymex/comments/user_role_controller_new.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/anime/gradient_image.dart';
 import 'package:anymex/widgets/common/glow.dart';
@@ -15,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:expandable_page_view/expandable_page_view.dart';
 
 class NovelDetailsPage extends StatefulWidget {
   final Media media;
@@ -33,9 +36,23 @@ class NovelDetailsPage extends StatefulWidget {
 class _NovelDetailsPageState extends State<NovelDetailsPage> {
   late NovelDetailsController controller;
 
+  // Page View Tracker
+  RxInt selectedPage = 0.obs;
+  PageController pageController = PageController();
+
+  void _onPageSelected(int index) {
+    selectedPage.value = index;
+    pageController.animateToPage(index,
+        duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+  }
+
   @override
   initState() {
     super.initState();
+    // Initialize user role controller
+    if (!Get.isRegistered<UserRoleController>()) {
+      Get.put(UserRoleController());
+    }
     controller = Get.put(NovelDetailsController(
         source: widget.source, initialMedia: widget.media));
 
@@ -54,6 +71,7 @@ class _NovelDetailsPageState extends State<NovelDetailsPage> {
   @override
   void dispose() {
     controller.dispose();
+    pageController.dispose();
     Get.delete<NovelDetailsController>();
     super.dispose();
   }
@@ -109,20 +127,80 @@ class _NovelDetailsPageState extends State<NovelDetailsPage> {
                       ),
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20.0, 24.0, 20.0, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: NovelStats(data: controller.media.value),
+                  SliverToBoxAdapter(child: 20.height()),
+                  SliverToBoxAdapter(
+                    child: ExpandablePageView(
+                      physics: const BouncingScrollPhysics(),
+                      controller: pageController,
+                      onPageChanged: (index) {
+                        selectedPage.value = index;
+                      },
+                      children: [
+                        _buildInfoSection(context),
+                        _buildChaptersSection(context),
+                        _buildCommentsSection(context),
+                      ],
                     ),
                   ),
-                  SliverToBoxAdapter(child: 20.height()),
-                  ChapterSliverSection(controller: controller)
                 ],
               );
             }),
           ],
         ),
+        bottomNavigationBar: _buildMobiledNav(),
       ),
+    );
+  }
+
+  Widget _buildMobiledNav() {
+    return Obx(() => Container(
+      margin: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
+      child: ResponsiveNavBar(
+        isDesktop: false,
+        currentIndex: selectedPage.value,
+        items: [
+          NavItem(
+            onTap: _onPageSelected,
+            selectedIcon: Iconsax.info_circle5,
+            unselectedIcon: Iconsax.info_circle,
+            label: "Info"),
+          NavItem(
+            onTap: _onPageSelected,
+            selectedIcon: Iconsax.book5,
+            unselectedIcon: Iconsax.book,
+            label: "Read"),
+          NavItem(
+            onTap: _onPageSelected,
+            selectedIcon: HugeIcons.strokeRoundedComment01,
+            unselectedIcon: HugeIcons.strokeRoundedComment02,
+            label: "Comments"),
+        ],
+      ),
+    ));
+  }
+
+  Widget _buildInfoSection(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 0),
+          child: NovelStats(data: controller.media.value),
+        ),
+        // Add more info content here if needed
+      ],
+    );
+  }
+
+  Widget _buildChaptersSection(BuildContext context) {
+    return ChapterSliverSection(controller: controller);
+  }
+
+  Widget _buildCommentsSection(BuildContext context) {
+    return CommentSectionNew(
+      mediaId: int.tryParse(widget.media.id) ?? 0,
+      mediaType: MediaType.novel,
+      mediaTitle: widget.media.title,
+      mediaPoster: widget.media.poster,
     );
   }
 
