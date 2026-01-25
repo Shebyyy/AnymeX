@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/calendar_data.dart';
-import 'package:anymex/controllers/services/dub_service.dart';
+import 'package:anymex/screens/anime/misc/dub_service.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/details_page.dart';
