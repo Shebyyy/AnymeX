@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:xml/xml.dart';
-import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/utils/logger.dart';
 
 class DubService {
@@ -54,15 +53,10 @@ class DubService {
       if (rssResponse.statusCode == 200) {
         final document = XmlDocument.parse(rssResponse.body);
         final items = document.findAllElements('item');
-        final today = DateTime.now();
 
         for (var item in items) {
-          final title = item.findElement('title').innerText;
-          final pubDateStr = item.findElement('pubDate').innerText;
-          
-          // Basic check if released recently (today/yesterday to account for timezones)
-          // Note: Parsing RSS date is complex, assuming match for now or loose filtering
-          // Logic: If RSS says "Episode X of [Title] is out!", we extract [Title]
+          // FIXED: using findAllElements(...).first instead of findElement
+          final title = item.findAllElements('title').first.innerText;
           
           // Extract Show Name from Title string "Episode 3 of Show Name is out!"
           String extractedTitle = title;
