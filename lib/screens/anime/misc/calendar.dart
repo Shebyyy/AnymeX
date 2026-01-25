@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/calendar_data.dart';
+// Updated import to match where you created the file
 import 'package:anymex/screens/anime/misc/dub_service.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -8,6 +9,7 @@ import 'package:anymex/screens/anime/details_page.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
+import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:blur/blur.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
+
   @override
   State<Calendar> createState() => _CalendarState();
 }
@@ -32,6 +35,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   late TabController _tabController;
   List<DateTime> dateTabs = [];
   bool isGrid = true;
+  bool isLoading = true;
   bool includeList = false;
 
   // Dub Mode
@@ -48,9 +52,11 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
         setState(() {
           rawData.value = calendarData.map((e) => e).toList();
           listData.value = calendarData.where((e) => ids.contains(e.id)).toList();
+          isLoading = false;
         });
       }
     });
+
     dateTabs = List.generate(7, (index) => DateTime.now().add(Duration(days: index)));
     _tabController = TabController(length: dateTabs.length, vsync: this);
   }
@@ -70,9 +76,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   List<Map<String, String>> _getDubs(Media m) {
     String t = _norm(m.title);
     if (dubCache.containsKey(t)) return dubCache[t]!;
-    if (m.titleEnglish != null && dubCache.containsKey(_norm(m.titleEnglish!))) {
-      return dubCache[_norm(m.titleEnglish!)]!;
-    }
+    // Removed titleEnglish check because Media model doesn't have it
     return [];
   }
 
@@ -108,6 +112,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
                 icon: Icon(isGrid ? Icons.grid_view_rounded : Icons.view_list)),
             const SizedBox(width: 10),
           ],
+          automaticallyImplyLeading: false,
           bottom: TabBar(
             controller: _tabController,
             isScrollable: true,
@@ -287,28 +292,39 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Theme.of(context).colorScheme.surface.withAlpha(144)),
-      child: Stack(children: [
-        Positioned.fill(child: NetworkSizedImage(imageUrl: widget.data.cover ?? widget.data.poster, radius: 12, width: double.infinity)),
-        Positioned.fill(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container())),
-        Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [
-          Theme.of(context).colorScheme.surface.withOpacity(0.3),
-          Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8)
-        ], begin: Alignment.centerLeft, end: Alignment.centerRight)))),
-        Row(children: [
-          NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 12),
-          Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-            AnymexText(text: "EP ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
-            AnymexText(text: widget.data.title, size: 16, maxLines: 2, variant: TextVariant.bold),
-          ])))
+    return AnymexOnTap(
+      onTap: () {
+        navigate(
+            () => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
+      },
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12), 
+          color: Theme.of(context).colorScheme.surface.withAlpha(144),
+          border: Border(right: BorderSide(width: 2, color: Theme.of(context).colorScheme.primary))
+        ),
+        child: Stack(children: [
+          Positioned.fill(child: NetworkSizedImage(imageUrl: widget.data.cover ?? widget.data.poster, radius: 12, width: double.infinity)),
+          Positioned.fill(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container())),
+          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [
+            Theme.of(context).colorScheme.surface.withOpacity(0.3),
+            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8)
+          ], begin: Alignment.centerLeft, end: Alignment.centerRight)))),
+          Row(children: [
+            NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 12),
+            Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              AnymexText(text: "EP ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
+              AnymexText(text: widget.data.title, size: 16, maxLines: 2, variant: TextVariant.bold),
+            ])))
+          ]),
+          Positioned(bottom: 10, right: 10, child: Obx(() => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Theme.of(context).colorScheme.primary),
+            child: AnymexText(text: formatTime(timeLeft.value), size: 12, color: Theme.of(context).colorScheme.onPrimary, variant: TextVariant.bold),
+          )))
         ]),
-        Positioned(bottom: 10, right: 10, child: Obx(() => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Theme.of(context).colorScheme.primary),
-          child: AnymexText(text: formatTime(timeLeft.value), size: 12, color: Theme.of(context).colorScheme.onPrimary, variant: TextVariant.bold),
-        )))
-      ]),
+      ),
     );
   }
 }
