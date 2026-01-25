@@ -33,6 +33,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   html: any
+  xml: ^6.5.0
   http: ^1.2.2
   http_interceptor: ^2.0.0
   hugeicons: ^0.0.7
