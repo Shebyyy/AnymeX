@@ -5,6 +5,7 @@ import 'package:anymex/controllers/services/anilist/calendar_data.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/details_page.dart';
+import 'package:anymex/screens/anime/misc/dub_release.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/header.dart';
@@ -15,6 +16,7 @@ import 'package:blur/blur.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_progress.dart';
 import 'package:get/get.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 
@@ -36,6 +38,11 @@ class _CalendarState extends State<Calendar>
   bool isGrid = true;
   bool isLoading = true;
   bool includeList = false;
+
+  // Dub releases state
+  RxMap<String, List<String>> dubSources = <String, List<String>>{}.obs;
+  RxBool isLoadingDubs = false.obs;
+  RxBool showDubSection = false.obs;
 
   @override
   void initState() {
@@ -65,6 +72,20 @@ class _CalendarState extends State<Calendar>
     setState(() {
       includeList = !includeList;
     });
+  }
+
+  Future<void> fetchDubReleases() async {
+    isLoadingDubs.value = true;
+    showDubSection.value = true;
+
+    try {
+      final sources = await DubService.fetchDubSources();
+      dubSources.value = sources;
+    } catch (e) {
+      dubSources.value = {};
+    } finally {
+      isLoadingDubs.value = false;
+    }
   }
 
   @override
@@ -99,6 +120,16 @@ class _CalendarState extends State<Calendar>
                       : Icons.text_snippet_sharp)),
               const SizedBox(width: 10),
             ],
+            IconButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              ),
+              onPressed: () {
+                fetchDubReleases();
+              },
+              icon: const Icon(HugeIcons.strokeRoundedMic02),
+            ),
+            const SizedBox(width: 10),
             IconButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
@@ -142,45 +173,192 @@ class _CalendarState extends State<Calendar>
             }).toList(),
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: dateTabs.map((date) {
-            return Obx(() {
-              List<Media> filteredList = (includeList ? listData : rawData)
-                  .where((media) =>
-                      DateTime.fromMillisecondsSinceEpoch(
-                              media.nextAiringEpisode!.airingAt * 1000)
-                          .day ==
-                      date.day)
-                  .toList();
+        body: Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: dateTabs.map((date) {
+                  return Obx(() {
+                    List<Media> filteredList = (includeList ? listData : rawData)
+                        .where((media) =>
+                            DateTime.fromMillisecondsSinceEpoch(
+                                    media.nextAiringEpisode!.airingAt * 1000)
+                                .day ==
+                            date.day)
+                        .toList();
 
-              return isLoading
-                  ? const Center(child: AnymexProgressIndicator())
-                  : filteredList.isEmpty
-                      ? const Center(child: Text("No Anime Airing on this day"))
-                      : GridView.builder(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
-                          itemCount: filteredList.length,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: getResponsiveCrossAxisVal(
-                                      MediaQuery.of(context).size.width,
-                                      itemWidth: isGrid ? 120 : 400),
-                                  mainAxisExtent: getResponsiveSize(context,
-                                      mobileSize: isGrid ? 250 : 150,
-                                      desktopSize: isGrid ? 250 : 180),
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 25),
-                          itemBuilder: (context, index) {
-                            final data = filteredList[index];
-                            return isGrid
-                                ? GridAnimeCard(data: data)
-                                : BlurAnimeCard(data: data);
-                          },
-                        );
-            });
-          }).toList(),
+                    return isLoading
+                        ? const Center(child: AnymexProgressIndicator())
+                        : filteredList.isEmpty
+                            ? const Center(child: Text("No Anime Airing on this day"))
+                            : GridView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                itemCount: filteredList.length,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: getResponsiveCrossAxisVal(
+                                            MediaQuery.of(context).size.width,
+                                            itemWidth: isGrid ? 120 : 400),
+                                        mainAxisExtent: getResponsiveSize(context,
+                                            mobileSize: isGrid ? 250 : 150,
+                                            desktopSize: isGrid ? 250 : 180),
+                                        crossAxisSpacing: 10,
+                                        mainAxisSpacing: 25),
+                                itemBuilder: (context, index) {
+                                  final data = filteredList[index];
+                                  return isGrid
+                                      ? GridAnimeCard(data: data)
+                                      : BlurAnimeCard(data: data);
+                                },
+                              );
+                  });
+                }).toList(),
+              ),
+            ),
+            // Dub Releases Section
+            Obx(() {
+              if (!showDubSection.value) return const SizedBox.shrink();
+
+              if (isLoadingDubs.value) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnymexProgressIndicator(),
+                      SizedBox(width: 16),
+                      AnymexText(text: 'Fetching Dubs...'),
+                    ],
+                  ),
+                );
+              }
+
+              if (dubSources.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const AnymexText(text: 'No dub releases found'),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          showDubSection.value = false;
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(HugeIcons.strokeRoundedMic02),
+                          const SizedBox(width: 8),
+                          AnymexText(
+                            text: 'Dub Releases: ${DateFormat('MMM d').format(dateTabs[_tabController.index])}',
+                            variant: TextVariant.bold,
+                            size: 16,
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              showDubSection.value = false;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: dubSources.keys.length,
+                        itemBuilder: (context, index) {
+                          final title = dubSources.keys.elementAt(index);
+                          final sites = dubSources[title] ?? [];
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.play_circle_outline,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      AnymexText(
+                                        text: title,
+                                        variant: TextVariant.bold,
+                                        color: Colors.white,
+                                        maxLines: 2,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Wrap(
+                                        spacing: 4,
+                                        runSpacing: 4,
+                                        children: sites
+                                            .map((site) => Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: Text(
+                                                    site,
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ))
+                                            .toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );
@@ -329,14 +507,18 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
   @override
   void initState() {
     super.initState();
-    timeLeft.value = widget.data.nextAiringEpisode!.timeUntilAiring;
-    startCountdown();
+    timeLeft.value = widget.data.nextAiringEpisode?.timeUntilAiring ?? 0;
+    if (timeLeft.value > 0) startCountdown();
   }
 
   void startCountdown() {
     Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (timeLeft.value > 0) {
-        timeLeft.value--;
+      if (mounted) {
+        if (timeLeft.value > 0) {
+          timeLeft.value--;
+        } else {
+          timer.cancel();
+        }
       } else {
         timer.cancel();
       }
@@ -383,11 +565,11 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
           border: Border(
               right: BorderSide(
                   width: 2, color: Theme.of(context).colorScheme.primary)),
-          borderRadius: BorderRadius.circular(12.multiplyRadius()),
+          borderRadius: BorderRadius.circular(12),
           color: Theme.of(context).colorScheme.surface.withAlpha(144),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12.multiplyRadius()),
+          borderRadius: BorderRadius.circular(12),
           child: Stack(children: [
             // Background image
             Positioned.fill(
@@ -436,8 +618,9 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
                             height: getResponsiveSize(context,
                                 mobileSize: 10, desktopSize: 30)),
                         AnymexText(
-                          text:
-                              "Episode ${widget.data.nextAiringEpisode!.episode}",
+                          text: widget.data.nextAiringEpisode != null
+                              ? "Episode ${widget.data.nextAiringEpisode!.episode}"
+                              : "Airing Soon",
                           size: 14,
                           maxLines: 2,
                           color: Theme.of(context).colorScheme.primary,
@@ -466,7 +649,7 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular((8.multiplyRadius())),
+                    borderRadius: BorderRadius.circular(8),
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   child: AnymexText(
