@@ -1,13 +1,16 @@
 import 'dart:async';
+
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/calendar_data.dart';
-// Updated import to match where you created the file
-import 'package:anymex/screens/anime/misc/dub_service.dart';
+// Corrected import path based on your file location
+import 'package:anymex/screens/anime/misc/dub_service.dart'; 
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/details_page.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
+// Restored missing imports
+import 'package:anymex/widgets/header.dart'; 
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
@@ -38,7 +41,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   bool isLoading = true;
   bool includeList = false;
 
-  // Dub Mode
+  // Dub Mode Variables
   RxBool isDubMode = false.obs;
   RxBool isFetching = false.obs;
   Map<String, List<Map<String, String>>> dubCache = {};
@@ -74,10 +77,30 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   String _norm(String t) => t.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   List<Map<String, String>> _getDubs(Media m) {
+    // Check main title
     String t = _norm(m.title);
     if (dubCache.containsKey(t)) return dubCache[t]!;
-    // Removed titleEnglish check because Media model doesn't have it
+    
+    // Removed titleEnglish check as it caused errors
     return [];
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void changeLayout() {
+    setState(() {
+      isGrid = !isGrid;
+    });
+  }
+
+  void changeListType() {
+    setState(() {
+      includeList = !includeList;
+    });
   }
 
   @override
@@ -102,13 +125,13 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
             if (serviceHandler.isLoggedIn.value) ...[
               IconButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
-                  onPressed: () => setState(() => includeList = !includeList),
+                  onPressed: changeListType,
                   icon: Icon(!includeList ? Icons.book_rounded : Icons.text_snippet_sharp)),
               const SizedBox(width: 10),
             ],
             IconButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
-                onPressed: () => setState(() => isGrid = !isGrid),
+                onPressed: changeLayout,
                 icon: Icon(isGrid ? Icons.grid_view_rounded : Icons.view_list)),
             const SizedBox(width: 10),
           ],
@@ -136,7 +159,9 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
           controller: _tabController,
           children: dateTabs.map((date) {
             return Obx(() {
-              if (isFetching.value) return const Center(child: AnymexProgressIndicator());
+              if (isLoading || (isDubMode.value && isFetching.value)) {
+                 return const Center(child: AnymexProgressIndicator());
+              }
               
               var list = (includeList ? listData : rawData).where((m) =>
                   DateTime.fromMillisecondsSinceEpoch(m.nextAiringEpisode!.airingAt * 1000).day == date.day).toList();
@@ -149,7 +174,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
               if (list.isEmpty) return const Center(child: Text("No Anime Found"));
 
               return GridView.builder(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 itemCount: list.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: getResponsiveCrossAxisVal(MediaQuery.of(context).size.width, itemWidth: isGrid ? 120 : 400),
@@ -182,6 +207,8 @@ class GridAnimeCard extends StatefulWidget {
 }
 
 class _GridAnimeCardState extends State<GridAnimeCard> {
+  static const double cardWidth = 108;
+  static const double cardHeight = 280;
   List<Map<String, String>> streams = [];
   bool _loaded = false;
 
@@ -221,18 +248,27 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 108, height: 280,
-      child: Column(children: [
+      width: cardWidth,
+      height: cardHeight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
         Stack(children: [
           AnymexOnTap(
+            margin: 0,
             onTap: () => navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title)),
-            child: Hero(tag: widget.data.title, child: ClipRRect(borderRadius: BorderRadius.circular(12), child: NetworkSizedImage(radius: 12, imageUrl: widget.data.poster, width: 108, height: 160))),
+            child: Hero(tag: widget.data.title, child: ClipRRect(borderRadius: BorderRadius.circular(12), child: NetworkSizedImage(radius: 12, imageUrl: widget.data.poster, width: cardWidth, height: 160))),
+          ),
+          Positioned(
+              bottom: 0,
+              right: 0,
+              child: _buildEpisodeChip(widget.data),
           ),
           if (widget.isDubMode) Positioned(top: 5, right: 5, child: CircleAvatar(radius: 10, backgroundColor: Colors.black54, child: Icon(HugeIcons.strokeRoundedMic01, size: 12, color: Theme.of(context).colorScheme.primary))),
         ]),
         const SizedBox(height: 5),
         if (widget.isDubMode && streams.isNotEmpty)
-          SizedBox(height: 20, child: ListView.separated(
+          SizedBox(height: 25, child: ListView.separated(
             scrollDirection: Axis.horizontal, itemCount: streams.length, separatorBuilder: (_,__) => const SizedBox(width:4),
             itemBuilder: (_, i) => GestureDetector(
               onTap: () async {
@@ -256,10 +292,59 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
             )
           ))
         else
-          AnymexText(text: 'EP ${widget.data.nextAiringEpisode?.episode ?? "?"}', variant: TextVariant.regular, fontStyle: FontStyle.italic, color: Colors.grey, size: 12),
-        const SizedBox(height: 2),
-        AnymexText(text: widget.data.title, maxLines: 2, size: 13, textAlign: TextAlign.center),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.movie_filter_rounded,
+                    color: Colors.grey, size: 16),
+                if (widget.data.nextAiringEpisode?.episode != null) ...[
+                  const SizedBox(width: 5),
+                  AnymexText(
+                    text: 'EPISODE ${widget.data.nextAiringEpisode!.episode}',
+                    maxLines: 1,
+                    variant: TextVariant.regular,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                    size: 12,
+                  ),
+                ]
+              ],
+            ),
+        const SizedBox(height: 5),
+        SizedBox(
+            width: cardWidth,
+            child: AnymexText(text: widget.data.title, maxLines: 2, size: 14)),
       ]),
+    );
+  }
+
+  Widget _buildEpisodeChip(Media media) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Iconsax.star5,
+            size: 16,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+          const SizedBox(width: 4),
+          AnymexText(
+            text: media.rating,
+            color: Theme.of(context).colorScheme.onPrimary,
+            size: 12,
+            variant: TextVariant.bold,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -292,30 +377,34 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
 
   @override
   Widget build(BuildContext context) {
+    final gradientColors = [
+      Theme.of(context).colorScheme.surface.withOpacity(0.3),
+      Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+      Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8),
+    ];
+
     return AnymexOnTap(
       onTap: () {
-        navigate(
-            () => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
+        navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
       },
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12), 
+          borderRadius: BorderRadius.circular(12),
           color: Theme.of(context).colorScheme.surface.withAlpha(144),
           border: Border(right: BorderSide(width: 2, color: Theme.of(context).colorScheme.primary))
         ),
         child: Stack(children: [
           Positioned.fill(child: NetworkSizedImage(imageUrl: widget.data.cover ?? widget.data.poster, radius: 12, width: double.infinity)),
-          Positioned.fill(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container())),
-          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [
-            Theme.of(context).colorScheme.surface.withOpacity(0.3),
-            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8)
-          ], begin: Alignment.centerLeft, end: Alignment.centerRight)))),
+          Positioned.fill(child: RepaintBoundary(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container()))),
+          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: gradientColors, begin: Alignment.centerLeft, end: Alignment.centerRight)))),
           Row(children: [
-            NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 12),
-            Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              AnymexText(text: "EP ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
-              AnymexText(text: widget.data.title, size: 16, maxLines: 2, variant: TextVariant.bold),
+            NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 0),
+            Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(height: 10), // Approx spacing from original
+              AnymexText(text: "Episode ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
+              const SizedBox(height: 10),
+              AnymexText(text: widget.data.title, size: 14, maxLines: 2, variant: TextVariant.bold),
             ])))
           ]),
           Positioned(bottom: 10, right: 10, child: Obx(() => Container(
