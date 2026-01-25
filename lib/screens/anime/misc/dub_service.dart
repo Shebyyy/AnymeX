@@ -9,13 +9,19 @@ class DubService {
   static const String liveChartUrl = 'https://www.livechart.me/streams';
   static const String kuroiruUrl = 'https://kuroiru.co/api/anime';
 
+  // Headers to prevent blocking by LiveChart
+  static const Map<String, String> _headers = {
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+  };
+
   // Returns a Map where Key = Anime Title (normalized), Value = List of {name, url}
   static Future<Map<String, List<Map<String, String>>>> fetchDubSources() async {
     final Map<String, List<Map<String, String>>> dubMap = {};
 
     try {
       // 1. Fetch LiveChart Streams (Scraping)
-      final lcResponse = await http.get(Uri.parse(liveChartUrl));
+      final lcResponse = await http.get(Uri.parse(liveChartUrl), headers: _headers);
       if (lcResponse.statusCode == 200) {
         var document = html_parser.parse(lcResponse.body);
         var streamLists = document.querySelectorAll('div[data-controller="stream-list"]');
@@ -51,14 +57,15 @@ class DubService {
       }
 
       // 2. Fetch AnimeSchedule RSS
-      final rssResponse = await http.get(Uri.parse(rssUrl));
+      final rssResponse = await http.get(Uri.parse(rssUrl), headers: _headers);
       if (rssResponse.statusCode == 200) {
         final document = XmlDocument.parse(rssResponse.body);
         final items = document.findAllElements('item');
 
         for (var item in items) {
-          // FIXED: using findAllElements(...).first instead of findElement
+          // Fixed: Define title and link variables correctly
           final title = item.findAllElements('title').first.innerText;
+          final link = item.findAllElements('link').first.innerText;
           
           String extractedTitle = title;
           if (title.contains("Episode") && title.contains(" of ")) {
@@ -91,7 +98,7 @@ class DubService {
     if (malId == 'null' || malId.isEmpty) return [];
     
     try {
-      final response = await http.get(Uri.parse('$kuroiruUrl/$malId'));
+      final response = await http.get(Uri.parse('$kuroiruUrl/$malId'), headers: _headers);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         List<Map<String, String>> streams = [];
