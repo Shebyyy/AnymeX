@@ -6,7 +6,6 @@ import 'package:anymex/utils/logger.dart';
 
 class DubService {
   static const String rssUrl = 'https://animeschedule.net/dubrss.xml';
-  // Updated URL to include all streams to avoid region locking in scraper
   static const String liveChartUrl = 'https://www.livechart.me/streams?hide_unavailable=false';
   static const String kuroiruUrl = 'https://kuroiru.co/api/anime';
 
@@ -25,21 +24,22 @@ class DubService {
       if (lcResponse.statusCode == 200) {
         var document = html_parser.parse(lcResponse.body);
         
-        // LiveChart structures services in "column-block" divs
+        // Find all service blocks
         var streamLists = document.querySelectorAll('div[data-controller="stream-list"]');
         
         for (var list in streamLists) {
-          // 1. Get Service Info (Name & Icon) from the header inside this block
-          var header = list.querySelector('.grouped-list-heading');
-          var titleEl = header?.querySelector('.grouped-list-heading-title');
+          // Extract Service Name
+          var titleEl = list.querySelector('.grouped-list-heading-title');
           String serviceName = titleEl?.text.trim() ?? "Unknown";
 
-          var imgEl = header?.querySelector('img');
-          String serviceIcon = imgEl?.attributes['src'] ?? "";
-          // LiveChart sometimes uses srcset, fallback to src. 
-          // If relative URL, prepend domain (though usually they are absolute or from s.livechart.me)
-          
-          // 2. Get all Anime items listed under this service
+          // Extract Service Icon
+          var imgEl = list.querySelector('.grouped-list-heading-icon img');
+          String? serviceIcon = imgEl?.attributes['src'];
+          // Handle relative URLs if necessary (LiveChart usually provides absolute)
+          if (serviceIcon != null && serviceIcon.startsWith('/')) {
+            serviceIcon = 'https://u.livechart.me$serviceIcon'; 
+          }
+
           var animeItems = list.querySelectorAll('li.grouped-list-item');
           
           for (var item in animeItems) {
@@ -64,7 +64,7 @@ class DubService {
                 dubMap[normalizedTitle]!.add({
                   'name': serviceName, 
                   'url': url,
-                  'icon': serviceIcon
+                  'icon': serviceIcon ?? ''
                 });
               }
             }
@@ -72,14 +72,13 @@ class DubService {
         }
       }
 
-      // 2. Fetch AnimeSchedule RSS (Fallback/New Drops)
+      // 2. Fetch AnimeSchedule RSS (Fallback)
       final rssResponse = await http.get(Uri.parse(rssUrl), headers: _headers);
       if (rssResponse.statusCode == 200) {
         final document = XmlDocument.parse(rssResponse.body);
         final items = document.findAllElements('item');
 
         for (var item in items) {
-          // Use findAllElements...first to be safe with xml package versions
           final title = item.findAllElements('title').first.innerText;
           final link = item.findAllElements('link').first.innerText;
 
@@ -97,12 +96,11 @@ class DubService {
             dubMap[normalizedTitle] = [];
           }
           
-          // Add RSS entry if not present
           if (!dubMap[normalizedTitle]!.any((e) => e['name'] == 'AnimeSchedule')) {
              dubMap[normalizedTitle]!.insert(0, {
                'name': 'AnimeSchedule', 
                'url': link,
-               'icon': '' // No icon for RSS, UI handles empty check
+               'icon': '' // RSS doesn't give icons
              });
           }
         }
@@ -128,7 +126,7 @@ class DubService {
              streams.add({
                'name': stream['name'] ?? 'Unknown',
                'url': stream['url'] ?? '',
-               'icon': '' // Kuroiru API doesn't return icons, UI will show generic link icon
+               'icon': '' 
              });
            }
         }
