@@ -3,13 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:xml/xml.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:intl/intl.dart'; // Ensure intl is imported for date formatting
 
 class DubSource {
   final String name;
   final String url;
-  final String? iconUrl;
+  final String date;
 
-  DubSource({required this.name, required this.url, this.iconUrl});
+  DubSource({required this.name, this.url = '', this.date = ''});
 }
 
 class DubService {
@@ -27,18 +28,13 @@ class DubService {
       if (lcResponse.statusCode == 200) {
         var document = html_parser.parse(lcResponse.body);
         
-        // Find all service blocks
         var streamLists = document.querySelectorAll('div[data-controller="stream-list"]');
         
         for (var list in streamLists) {
-          // Get Service Name & Icon
+          // Get Service Name (e.g., Crunchyroll)
           var serviceNameEl = list.querySelector('.grouped-list-heading-title');
-          var serviceIconEl = list.querySelector('.grouped-list-heading-icon img');
-          
-          String serviceName = serviceNameEl?.text.trim() ?? "Unknown Service";
-          String? serviceIcon = serviceIconEl?.attributes['src']; // Often relative, check if needs https prefix
+          String serviceName = serviceNameEl?.text.trim() ?? "Unknown";
 
-          // Get Anime Items in this list
           var animeItems = list.querySelectorAll('li.grouped-list-item');
           
           for (var item in animeItems) {
@@ -46,23 +42,18 @@ class DubService {
             var infoDiv = item.querySelector('.info.text-italic');
             String infoText = infoDiv?.text ?? "";
             
-            // Get Link
-            var linkEl = item.querySelector('.anime-item__actions a');
-            String? link = linkEl?.attributes['href'];
+            // Get the Watch Link
+            var linkEl = item.querySelector('a.anime-item__action-button');
+            String link = linkEl?.attributes['href'] ?? "";
 
-            // Check if it lists "Dub"
+            // Check if it lists "Dub" or "Sub & Dub"
             if (title.isNotEmpty && infoText.contains("Dub")) {
               if (!dubMap.containsKey(title)) {
                 dubMap[title] = [];
               }
-              
-              // Avoid duplicates
+              // Avoid duplicates if possible
               if (!dubMap[title]!.any((s) => s.name == serviceName)) {
-                dubMap[title]!.add(DubSource(
-                  name: serviceName, 
-                  url: link ?? "", 
-                  iconUrl: serviceIcon
-                ));
+                dubMap[title]!.add(DubSource(name: serviceName, url: link));
               }
             }
           }
@@ -76,17 +67,21 @@ class DubService {
         final items = document.findAllElements('item');
 
         for (var item in items) {
-          // Fix for "findElement" error: use findAllElements(...).first
-          final title = item.findAllElements('title').isNotEmpty 
-              ? item.findAllElements('title').first.innerText 
-              : "";
-          final link = item.findAllElements('link').isNotEmpty 
-              ? item.findAllElements('link').first.innerText 
-              : "";
+          final title = item.findAllElements('title').first.innerText;
+          final link = item.findAllElements('link').first.innerText;
+          final pubDateStr = item.findAllElements('pubDate').first.innerText;
           
-          if (title.isEmpty) continue;
+          // Format Date (Simple)
+          String formattedDate = "";
+          try {
+             // Example: Sun, 25 Jan 2026 08:00:00 UTC
+             DateTime parsed = HttpDate.parse(pubDateStr); 
+             formattedDate = DateFormat('h:mm a').format(parsed.toLocal());
+          } catch (_) {
+             formattedDate = "New";
+          }
 
-          // Extract Show Name from Title string "Episode 3 of Show Name is out!"
+          // Extract Show Name
           String extractedTitle = title;
           if (title.contains("Episode") && title.contains(" of ")) {
              int startIndex = title.indexOf(" of ") + 4;
@@ -99,14 +94,11 @@ class DubService {
           if (!dubMap.containsKey(extractedTitle)) {
             dubMap[extractedTitle] = [];
           }
-          // Add if not exists
-          if (!dubMap[extractedTitle]!.any((s) => s.name == "AnimeSchedule")) {
-             dubMap[extractedTitle]!.add(DubSource(
-               name: "AnimeSchedule", 
-               url: link,
-               iconUrl: "https://animeschedule.net/img/logo.png" // Fallback icon
-             ));
-          }
+          dubMap[extractedTitle]!.add(DubSource(
+            name: "AnimeSchedule", 
+            url: link,
+            date: formattedDate
+          ));
         }
       }
 
@@ -117,7 +109,7 @@ class DubService {
     return dubMap;
   }
 
-  // Fetch specific Kuroiru data for an AniList entry (using MAL ID)
+  // Fetch specific Kuroiru data
   static Future<List<DubSource>> fetchKuroiruLinks(String malId) async {
     if (malId == 'null' || malId.isEmpty) return [];
     
@@ -130,8 +122,7 @@ class DubService {
            for (var stream in data['data']['streams']) {
              streams.add(DubSource(
                name: stream['name'] ?? 'Unknown',
-               url: stream['url'] ?? '',
-               iconUrl: stream['icon'] // If API provides it, otherwise null
+               url: stream['url'] ?? '' // Assuming API provides URL, otherwise empty
              ));
            }
         }
