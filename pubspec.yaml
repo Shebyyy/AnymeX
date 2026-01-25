@@ -8,6 +8,7 @@ environment:
   flutter: ">=3.0.0"
 
 dependencies:
+  xml: ^6.5.0
   algorithmic: ^0.0.11
   blur: ^4.0.0
   cached_network_image: ^3.4.1
