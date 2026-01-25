@@ -57,8 +57,8 @@ class DubService {
         final items = document.findAllElements('item');
 
         for (var item in items) {
+          // FIXED: using findAllElements(...).first instead of findElement
           final title = item.findAllElements('title').first.innerText;
-          final link = item.findAllElements('link').first.innerText;
           
           String extractedTitle = title;
           if (title.contains("Episode") && title.contains(" of ")) {
