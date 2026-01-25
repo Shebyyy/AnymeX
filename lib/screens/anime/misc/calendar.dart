@@ -1,18 +1,13 @@
 import 'dart:async';
-
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/calendar_data.dart';
-// Corrected import path based on your file location
-import 'package:anymex/screens/anime/misc/dub_service.dart'; 
+import 'package:anymex/screens/anime/misc/dub_service.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/details_page.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
-// Restored missing imports
-import 'package:anymex/widgets/header.dart'; 
 import 'package:anymex/widgets/helper/platform_builder.dart';
-import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:blur/blur.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +20,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
-
   @override
   State<Calendar> createState() => _CalendarState();
 }
@@ -38,10 +32,9 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   late TabController _tabController;
   List<DateTime> dateTabs = [];
   bool isGrid = true;
-  bool isLoading = true;
   bool includeList = false;
 
-  // Dub Mode Variables
+  // Dub Mode
   RxBool isDubMode = false.obs;
   RxBool isFetching = false.obs;
   Map<String, List<Map<String, String>>> dubCache = {};
@@ -55,11 +48,9 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
         setState(() {
           rawData.value = calendarData.map((e) => e).toList();
           listData.value = calendarData.where((e) => ids.contains(e.id)).toList();
-          isLoading = false;
         });
       }
     });
-
     dateTabs = List.generate(7, (index) => DateTime.now().add(Duration(days: index)));
     _tabController = TabController(length: dateTabs.length, vsync: this);
   }
@@ -73,34 +64,12 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
     }
   }
 
-  // Normalizer for matching titles
   String _norm(String t) => t.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   List<Map<String, String>> _getDubs(Media m) {
-    // Check main title
     String t = _norm(m.title);
     if (dubCache.containsKey(t)) return dubCache[t]!;
-    
-    // Removed titleEnglish check as it caused errors
     return [];
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  void changeLayout() {
-    setState(() {
-      isGrid = !isGrid;
-    });
-  }
-
-  void changeListType() {
-    setState(() {
-      includeList = !includeList;
-    });
   }
 
   @override
@@ -114,7 +83,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
           title: Obx(() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 AnymexText(text: "Calendar", color: Theme.of(context).colorScheme.primary, variant: TextVariant.semiBold, size: 16),
                 if (isDubMode.value)
-                  AnymexText(text: isFetching.value ? "Fetching..." : "Showing Dubs Only", variant: TextVariant.regular, size: 10, color: Colors.grey)
+                  AnymexText(text: isFetching.value ? "Fetching..." : "Dubbed Anime Only", variant: TextVariant.regular, size: 10, color: Colors.grey)
               ])),
           actions: [
             Obx(() => IconButton(
@@ -125,17 +94,16 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
             if (serviceHandler.isLoggedIn.value) ...[
               IconButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
-                  onPressed: changeListType,
+                  onPressed: () => setState(() => includeList = !includeList),
                   icon: Icon(!includeList ? Icons.book_rounded : Icons.text_snippet_sharp)),
               const SizedBox(width: 10),
             ],
             IconButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
-                onPressed: changeLayout,
+                onPressed: () => setState(() => isGrid = !isGrid),
                 icon: Icon(isGrid ? Icons.grid_view_rounded : Icons.view_list)),
             const SizedBox(width: 10),
           ],
-          automaticallyImplyLeading: false,
           bottom: TabBar(
             controller: _tabController,
             isScrollable: true,
@@ -145,9 +113,9 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
                 var list = (includeList ? listData : rawData).where((m) =>
                     DateTime.fromMillisecondsSinceEpoch(m.nextAiringEpisode!.airingAt * 1000).day == date.day).toList();
                 
-                // Smart Count: If Dub Mode, count only matches
+                // FIXED: Strict filter. Only count items that exist in our cache.
                 if (isDubMode.value && !isFetching.value) {
-                  list = list.where((m) => _getDubs(m).isNotEmpty || m.idMal != null).toList();
+                  list = list.where((m) => _getDubs(m).isNotEmpty).toList();
                 }
                 
                 return Tab(child: AnymexText(variant: TextVariant.bold, text: '${DateFormat('EEEE, MMM d').format(date)} (${list.length})'));
@@ -159,22 +127,20 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
           controller: _tabController,
           children: dateTabs.map((date) {
             return Obx(() {
-              if (isLoading || (isDubMode.value && isFetching.value)) {
-                 return const Center(child: AnymexProgressIndicator());
-              }
+              if (isFetching.value) return const Center(child: AnymexProgressIndicator());
               
               var list = (includeList ? listData : rawData).where((m) =>
                   DateTime.fromMillisecondsSinceEpoch(m.nextAiringEpisode!.airingAt * 1000).day == date.day).toList();
 
               if (isDubMode.value) {
-                // Filter List
-                list = list.where((m) => _getDubs(m).isNotEmpty || m.idMal != null).toList();
+                // FIXED: Strict filter. If it's not in our map, it doesn't show.
+                list = list.where((m) => _getDubs(m).isNotEmpty).toList();
               }
 
               if (list.isEmpty) return const Center(child: Text("No Anime Found"));
 
               return GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.all(10),
                 itemCount: list.length,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: getResponsiveCrossAxisVal(MediaQuery.of(context).size.width, itemWidth: isGrid ? 120 : 400),
@@ -207,8 +173,6 @@ class GridAnimeCard extends StatefulWidget {
 }
 
 class _GridAnimeCardState extends State<GridAnimeCard> {
-  static const double cardWidth = 108;
-  static const double cardHeight = 280;
   List<Map<String, String>> streams = [];
   bool _loaded = false;
 
@@ -216,80 +180,56 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
   void initState() {
     super.initState();
     streams = List.from(widget.dubInfo);
-    if (widget.isDubMode && widget.data.idMal != null && !_loaded) _lazyLoad();
-  }
-
-  void _lazyLoad() async {
-    var k = await DubService.fetchKuroiruLinks(widget.data.idMal.toString());
-    if (mounted && k.isNotEmpty) setState(() { streams.addAll(k.where((n) => !streams.any((e) => e['name'] == n['name']))); _loaded = true; });
-  }
-
-  IconData _getBrandIcon(String name) {
-    name = name.toLowerCase();
-    if (name.contains('crunchyroll')) return HugeIcons.strokeRoundedPlay; 
-    if (name.contains('netflix')) return HugeIcons.strokeRoundedPlay;
-    if (name.contains('disney')) return HugeIcons.strokeRoundedPlay;
-    if (name.contains('muse')) return HugeIcons.strokeRoundedYoutube;
-    if (name.contains('ani-one')) return HugeIcons.strokeRoundedYoutube;
-    if (name.contains('bilibili')) return HugeIcons.strokeRoundedTv01;
-    return HugeIcons.strokeRoundedLink01;
-  }
-
-  Color _getBrandColor(String name) {
-    name = name.toLowerCase();
-    if (name.contains('crunchyroll')) return Colors.orange;
-    if (name.contains('netflix')) return Colors.red;
-    if (name.contains('disney')) return Colors.blue;
-    if (name.contains('muse') || name.contains('ani-one')) return Colors.redAccent;
-    if (name.contains('bilibili')) return Colors.blueAccent;
-    return Colors.grey;
+    // Removed lazy loading of Kuroiru to enforce the strict filter and fix "every show stays" issue.
+    // If you want Kuroiru results, they must be added to the global fetch or accept that filter is strict.
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: cardWidth,
-      height: cardHeight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+      width: 108, height: 280,
+      child: Column(children: [
         Stack(children: [
           AnymexOnTap(
-            margin: 0,
             onTap: () => navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title)),
-            child: Hero(tag: widget.data.title, child: ClipRRect(borderRadius: BorderRadius.circular(12), child: NetworkSizedImage(radius: 12, imageUrl: widget.data.poster, width: cardWidth, height: 160))),
-          ),
-          Positioned(
-              bottom: 0,
-              right: 0,
-              child: _buildEpisodeChip(widget.data),
+            child: Hero(tag: widget.data.title, child: ClipRRect(borderRadius: BorderRadius.circular(12), child: NetworkSizedImage(radius: 12, imageUrl: widget.data.poster, width: 108, height: 160))),
           ),
           if (widget.isDubMode) Positioned(top: 5, right: 5, child: CircleAvatar(radius: 10, backgroundColor: Colors.black54, child: Icon(HugeIcons.strokeRoundedMic01, size: 12, color: Theme.of(context).colorScheme.primary))),
         ]),
         const SizedBox(height: 5),
         if (widget.isDubMode && streams.isNotEmpty)
-          SizedBox(height: 25, child: ListView.separated(
-            scrollDirection: Axis.horizontal, itemCount: streams.length, separatorBuilder: (_,__) => const SizedBox(width:4),
-            itemBuilder: (_, i) => GestureDetector(
-              onTap: () async {
-                 if (streams[i]['url'] != null) {
-                   await launchUrl(Uri.parse(streams[i]['url']!), mode: LaunchMode.externalApplication);
-                 }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _getBrandColor(streams[i]['name']!).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: _getBrandColor(streams[i]['name']!).withOpacity(0.5)),
-                ),
-                child: Row(children: [
-                  Icon(_getBrandIcon(streams[i]['name']!), size: 10, color: _getBrandColor(streams[i]['name']!)),
-                  const SizedBox(width: 3),
-                  Text(streams[i]['name']!.length > 8 ? "${streams[i]['name']!.substring(0, 6)}.." : streams[i]['name']!, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: _getBrandColor(streams[i]['name']!)))
-                ]),
+          SizedBox(height: 25, child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: streams.map((s) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: GestureDetector(
+                      onTap: () async {
+                         if (s['url'] != null && s['url']!.isNotEmpty) {
+                           await launchUrl(Uri.parse(s['url']!), mode: LaunchMode.externalApplication);
+                         }
+                      },
+                      child: Tooltip(
+                        message: s['name'] ?? "",
+                        child: CircleAvatar(
+                          radius: 10,
+                          backgroundColor: Colors.white10,
+                          backgroundImage: (s['icon'] != null && s['icon']!.isNotEmpty) 
+                            ? NetworkImage(s['icon']!) 
+                            : null,
+                          child: (s['icon'] == null || s['icon']!.isEmpty)
+                              ? Icon(Icons.link, size: 12, color: Theme.of(context).colorScheme.primary)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-            )
+            ),
           ))
         else
             Row(
@@ -312,39 +252,9 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
             ),
         const SizedBox(height: 5),
         SizedBox(
-            width: cardWidth,
-            child: AnymexText(text: widget.data.title, maxLines: 2, size: 14)),
+            width: 108,
+            child: AnymexText(text: widget.data.title, maxLines: 2, size: 14, textAlign: TextAlign.center)),
       ]),
-    );
-  }
-
-  Widget _buildEpisodeChip(Media media) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(8),
-          bottomRight: Radius.circular(8),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Iconsax.star5,
-            size: 16,
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
-          const SizedBox(width: 4),
-          AnymexText(
-            text: media.rating,
-            color: Theme.of(context).colorScheme.onPrimary,
-            size: 12,
-            variant: TextVariant.bold,
-          ),
-        ],
-      ),
     );
   }
 }
@@ -377,12 +287,6 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final gradientColors = [
-      Theme.of(context).colorScheme.surface.withOpacity(0.3),
-      Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-      Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8),
-    ];
-
     return AnymexOnTap(
       onTap: () {
         navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
@@ -390,21 +294,22 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12), 
           color: Theme.of(context).colorScheme.surface.withAlpha(144),
           border: Border(right: BorderSide(width: 2, color: Theme.of(context).colorScheme.primary))
         ),
         child: Stack(children: [
           Positioned.fill(child: NetworkSizedImage(imageUrl: widget.data.cover ?? widget.data.poster, radius: 12, width: double.infinity)),
-          Positioned.fill(child: RepaintBoundary(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container()))),
-          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: gradientColors, begin: Alignment.centerLeft, end: Alignment.centerRight)))),
+          Positioned.fill(child: Blur(blur: 4, blurColor: Colors.transparent, child: Container())),
+          Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [
+            Theme.of(context).colorScheme.surface.withOpacity(0.3),
+            Theme.of(context).colorScheme.primaryContainer.withOpacity(0.8)
+          ], begin: Alignment.centerLeft, end: Alignment.centerRight)))),
           Row(children: [
-            NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 0),
-            Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(height: 10), // Approx spacing from original
-              AnymexText(text: "Episode ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
-              const SizedBox(height: 10),
-              AnymexText(text: widget.data.title, size: 14, maxLines: 2, variant: TextVariant.bold),
+            NetworkSizedImage(imageUrl: widget.data.poster, width: 110, height: double.infinity, radius: 12),
+            Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+              AnymexText(text: "EP ${widget.data.nextAiringEpisode?.episode}", size: 14, color: Theme.of(context).colorScheme.primary, variant: TextVariant.bold),
+              AnymexText(text: widget.data.title, size: 16, maxLines: 2, variant: TextVariant.bold),
             ])))
           ]),
           Positioned(bottom: 10, right: 10, child: Obx(() => Container(
