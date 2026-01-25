@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:xml/xml.dart';
-import 'package:anymex/models/dub_release.dart';
+import 'package:anymex/screens/anime/misc/dub_release.dart';
 
 class DubReleasesUtil {
   static Future<List<DubRelease>> getDubReleases(
