@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/calendar_data.dart';
+// Ensure this path matches where you put the file in Step 1
 import 'package:anymex/screens/anime/misc/dub_service.dart';
 import 'package:anymex/controllers/settings/methods.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -8,6 +9,7 @@ import 'package:anymex/screens/anime/details_page.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
+import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:blur/blur.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 class Calendar extends StatefulWidget {
   const Calendar({super.key});
+
   @override
   State<Calendar> createState() => _CalendarState();
 }
@@ -32,6 +35,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
   late TabController _tabController;
   List<DateTime> dateTabs = [];
   bool isGrid = true;
+  bool isLoading = true;
   bool includeList = false;
 
   // Dub Mode
@@ -48,9 +52,11 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
         setState(() {
           rawData.value = calendarData.map((e) => e).toList();
           listData.value = calendarData.where((e) => ids.contains(e.id)).toList();
+          isLoading = false;
         });
       }
     });
+
     dateTabs = List.generate(7, (index) => DateTime.now().add(Duration(days: index)));
     _tabController = TabController(length: dateTabs.length, vsync: this);
   }
@@ -113,7 +119,7 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
                 var list = (includeList ? listData : rawData).where((m) =>
                     DateTime.fromMillisecondsSinceEpoch(m.nextAiringEpisode!.airingAt * 1000).day == date.day).toList();
                 
-                // FIXED: Strict filter. Only count items that exist in our cache.
+                // Smart Count: If Dub Mode, ONLY count entries that have dubs
                 if (isDubMode.value && !isFetching.value) {
                   list = list.where((m) => _getDubs(m).isNotEmpty).toList();
                 }
@@ -132,8 +138,8 @@ class _CalendarState extends State<Calendar> with SingleTickerProviderStateMixin
               var list = (includeList ? listData : rawData).where((m) =>
                   DateTime.fromMillisecondsSinceEpoch(m.nextAiringEpisode!.airingAt * 1000).day == date.day).toList();
 
+              // STRICT FILTER: Remove items that don't have dub info
               if (isDubMode.value) {
-                // FIXED: Strict filter. If it's not in our map, it doesn't show.
                 list = list.where((m) => _getDubs(m).isNotEmpty).toList();
               }
 
@@ -174,14 +180,13 @@ class GridAnimeCard extends StatefulWidget {
 
 class _GridAnimeCardState extends State<GridAnimeCard> {
   List<Map<String, String>> streams = [];
-  bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
     streams = List.from(widget.dubInfo);
-    // Removed lazy loading of Kuroiru to enforce the strict filter and fix "every show stays" issue.
-    // If you want Kuroiru results, they must be added to the global fetch or accept that filter is strict.
+    // Removed lazy loading from Kuroiru to respect the Strict Filter requested.
+    // If strict filter is not wanted, uncomment the _lazyLoad() logic.
   }
 
   @override
@@ -191,21 +196,23 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
       child: Column(children: [
         Stack(children: [
           AnymexOnTap(
+            margin: 0,
             onTap: () => navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title)),
             child: Hero(tag: widget.data.title, child: ClipRRect(borderRadius: BorderRadius.circular(12), child: NetworkSizedImage(radius: 12, imageUrl: widget.data.poster, width: 108, height: 160))),
           ),
+          Positioned(bottom: 0, right: 0, child: _buildEpisodeChip(widget.data)),
           if (widget.isDubMode) Positioned(top: 5, right: 5, child: CircleAvatar(radius: 10, backgroundColor: Colors.black54, child: Icon(HugeIcons.strokeRoundedMic01, size: 12, color: Theme.of(context).colorScheme.primary))),
         ]),
         const SizedBox(height: 5),
         if (widget.isDubMode && streams.isNotEmpty)
-          SizedBox(height: 25, child: Center(
+          SizedBox(height: 30, child: Center(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: streams.map((s) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 3.0),
                     child: GestureDetector(
                       onTap: () async {
                          if (s['url'] != null && s['url']!.isNotEmpty) {
@@ -213,16 +220,17 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
                          }
                       },
                       child: Tooltip(
-                        message: s['name'] ?? "",
+                        message: s['name'] ?? "Unknown",
                         child: CircleAvatar(
-                          radius: 10,
+                          radius: 12,
                           backgroundColor: Colors.white10,
+                          // Use the icon from the scraper if valid, else fallback icon
                           backgroundImage: (s['icon'] != null && s['icon']!.isNotEmpty) 
                             ? NetworkImage(s['icon']!) 
                             : null,
                           child: (s['icon'] == null || s['icon']!.isEmpty)
-                              ? Icon(Icons.link, size: 12, color: Theme.of(context).colorScheme.primary)
-                              : null,
+                             ? Icon(Icons.link, size: 12, color: Theme.of(context).colorScheme.primary)
+                             : null,
                         ),
                       ),
                     ),
@@ -240,7 +248,7 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
                 if (widget.data.nextAiringEpisode?.episode != null) ...[
                   const SizedBox(width: 5),
                   AnymexText(
-                    text: 'EPISODE ${widget.data.nextAiringEpisode!.episode}',
+                    text: 'EP ${widget.data.nextAiringEpisode!.episode}',
                     maxLines: 1,
                     variant: TextVariant.regular,
                     fontStyle: FontStyle.italic,
@@ -250,11 +258,41 @@ class _GridAnimeCardState extends State<GridAnimeCard> {
                 ]
               ],
             ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 2),
         SizedBox(
             width: 108,
             child: AnymexText(text: widget.data.title, maxLines: 2, size: 14, textAlign: TextAlign.center)),
       ]),
+    );
+  }
+
+  Widget _buildEpisodeChip(Media media) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Iconsax.star5,
+            size: 16,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+          const SizedBox(width: 4),
+          AnymexText(
+            text: media.rating,
+            color: Theme.of(context).colorScheme.onPrimary,
+            size: 12,
+            variant: TextVariant.bold,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -289,7 +327,8 @@ class _BlurAnimeCardState extends State<BlurAnimeCard> {
   Widget build(BuildContext context) {
     return AnymexOnTap(
       onTap: () {
-        navigate(() => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
+        navigate(
+            () => AnimeDetailsPage(media: widget.data, tag: widget.data.title));
       },
       child: Container(
         clipBehavior: Clip.antiAlias,
