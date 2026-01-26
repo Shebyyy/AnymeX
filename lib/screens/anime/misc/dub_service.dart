@@ -18,10 +18,12 @@ class DubService {
     final Map<String, List<Map<String, String>>> dubMap = {};
 
     try {
-      // 1. Fetch LiveChart Streams (Source for Links & Icons)
+      // 1. Fetch LiveChart Streams
       final lcResponse = await http.get(Uri.parse(liveChartUrl), headers: _headers);
       if (lcResponse.statusCode == 200) {
         var document = html_parser.parse(lcResponse.body);
+        
+        // Find all service blocks
         var streamLists = document.querySelectorAll('div[data-controller="stream-list"]');
         
         for (var list in streamLists) {
@@ -32,7 +34,11 @@ class DubService {
           // Extract Service Icon
           var imgEl = list.querySelector('.grouped-list-heading-icon img');
           String? serviceIcon = imgEl?.attributes['src'];
-          
+          // Handle relative URLs if necessary (LiveChart usually provides absolute)
+          if (serviceIcon != null && serviceIcon.startsWith('/')) {
+            serviceIcon = 'https://u.livechart.me$serviceIcon'; 
+          }
+
           var animeItems = list.querySelectorAll('li.grouped-list-item');
           
           for (var item in animeItems) {
@@ -44,13 +50,22 @@ class DubService {
             var linkEl = item.querySelector('a.anime-item__action-button');
             String url = linkEl?.attributes['href'] ?? "";
 
-            // Check if it's a Dub
+            // Check if it lists "Dub"
             if (title.isNotEmpty && infoText.contains("Dub")) {
-              _addToMap(dubMap, title, {
-                'name': serviceName, 
-                'url': url,
-                'icon': serviceIcon ?? ''
-              });
+              String normalizedTitle = _normalizeTitle(title);
+              
+              if (!dubMap.containsKey(normalizedTitle)) {
+                dubMap[normalizedTitle] = [];
+              }
+
+              // Add if not duplicate
+              if (!dubMap[normalizedTitle]!.any((e) => e['name'] == serviceName)) {
+                dubMap[normalizedTitle]!.add({
+                  'name': serviceName, 
+                  'url': url,
+                  'icon': serviceIcon ?? ''
+                });
+              }
             }
           }
         }
