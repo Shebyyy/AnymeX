@@ -49,14 +49,12 @@ class _CalendarState extends State<Calendar>
     super.initState();
     final ids = serviceHandler.animeList.map((e) => e.id).toSet().toList();
     fetchCalendarData(calendarData).then((_) {
-      if (mounted) {
-        setState(() {
-          rawData.value = calendarData.map((e) => e).toList();
-          listData.value =
-              calendarData.where((e) => ids.contains(e.id)).toList();
-          isLoading = false;
-        });
-      }
+      setState(() {
+        rawData.value = calendarData.map((e) => e).toList();
+        listData.value =
+            calendarData.where((e) => ids.contains(e.id)).toList();
+        isLoading = false;
+      });
     });
 
     dateTabs =
