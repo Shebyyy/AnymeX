@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
-import 'package:xml/xml.dart';
 import 'package:anymex/utils/logger.dart';
 
 class DubService {
-  static const String rssUrl = 'https://animeschedule.net/dubrss.xml';
-  static const String liveChartUrl = 'https://www.livechart.me/streams?hide_unavailable=false';
+  static const String animeScheduleUrl = 'https://animeschedule.net/';
+  static const String liveChartUrl = 'https://www.livechart.me/streams/';
   static const String kuroiruUrl = 'https://kuroiru.co/api/anime';
 
   static const Map<String, String> _headers = {
@@ -14,17 +13,15 @@ class DubService {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
   };
 
-  // Returns: Map<NormalizedTitle, List<{name, url, icon}>>
+  /// Returns: Map<NormalizedTitle, List<{name, url, icon}>>
   static Future<Map<String, List<Map<String, String>>>> fetchDubSources() async {
     final Map<String, List<Map<String, String>>> dubMap = {};
 
     try {
-      // 1. Fetch LiveChart Streams
+      // 1. Fetch LiveChart Streams (Source for Links & Icons)
       final lcResponse = await http.get(Uri.parse(liveChartUrl), headers: _headers);
       if (lcResponse.statusCode == 200) {
         var document = html_parser.parse(lcResponse.body);
-        
-        // Find all service blocks
         var streamLists = document.querySelectorAll('div[data-controller="stream-list"]');
         
         for (var list in streamLists) {
@@ -35,11 +32,7 @@ class DubService {
           // Extract Service Icon
           var imgEl = list.querySelector('.grouped-list-heading-icon img');
           String? serviceIcon = imgEl?.attributes['src'];
-          // Handle relative URLs if necessary (LiveChart usually provides absolute)
-          if (serviceIcon != null && serviceIcon.startsWith('/')) {
-            serviceIcon = 'https://u.livechart.me$serviceIcon'; 
-          }
-
+          
           var animeItems = list.querySelectorAll('li.grouped-list-item');
           
           for (var item in animeItems) {
@@ -51,57 +44,49 @@ class DubService {
             var linkEl = item.querySelector('a.anime-item__action-button');
             String url = linkEl?.attributes['href'] ?? "";
 
-            // Check if it lists "Dub"
+            // Check if it's a Dub
             if (title.isNotEmpty && infoText.contains("Dub")) {
-              String normalizedTitle = _normalizeTitle(title);
-              
-              if (!dubMap.containsKey(normalizedTitle)) {
-                dubMap[normalizedTitle] = [];
-              }
-
-              // Add if not duplicate
-              if (!dubMap[normalizedTitle]!.any((e) => e['name'] == serviceName)) {
-                dubMap[normalizedTitle]!.add({
-                  'name': serviceName, 
-                  'url': url,
-                  'icon': serviceIcon ?? ''
-                });
-              }
+              _addToMap(dubMap, title, {
+                'name': serviceName, 
+                'url': url,
+                'icon': serviceIcon ?? ''
+              });
             }
           }
         }
       }
 
-      // 2. Fetch AnimeSchedule RSS (Fallback)
-      final rssResponse = await http.get(Uri.parse(rssUrl), headers: _headers);
-      if (rssResponse.statusCode == 200) {
-        final document = XmlDocument.parse(rssResponse.body);
-        final items = document.findAllElements('item');
+      // 2. Fetch AnimeSchedule HTML (Source for Schedule)
+      final asResponse = await http.get(Uri.parse(animeScheduleUrl), headers: _headers);
+      if (asResponse.statusCode == 200) {
+        var document = html_parser.parse(asResponse.body);
+        // Find all show tiles
+        var shows = document.querySelectorAll('.timetable-column-show');
 
-        for (var item in items) {
-          final title = item.findAllElements('title').first.innerText;
-          final link = item.findAllElements('link').first.innerText;
-
-          String extractedTitle = title;
-          if (title.contains("Episode") && title.contains(" of ")) {
-             int startIndex = title.indexOf(" of ") + 4;
-             int endIndex = title.indexOf(" is out");
-             if (startIndex != -1 && endIndex != -1) {
-               extractedTitle = title.substring(startIndex, endIndex);
-             }
-          }
-
-          String normalizedTitle = _normalizeTitle(extractedTitle);
-          if (!dubMap.containsKey(normalizedTitle)) {
-            dubMap[normalizedTitle] = [];
-          }
+        for (var show in shows) {
+          // Check if it has a DUB tag
+          var airType = show.querySelector('span[airtype="dub"]');
           
-          if (!dubMap[normalizedTitle]!.any((e) => e['name'] == 'AnimeSchedule')) {
-             dubMap[normalizedTitle]!.insert(0, {
-               'name': 'AnimeSchedule', 
-               'url': link,
-               'icon': '' // RSS doesn't give icons
-             });
+          // If the dub tag exists (it might be hidden via CSS class, but it exists in DOM if it's a dub entry)
+          // We check if the text content implies Dub
+          if (airType != null) {
+            var titleEl = show.querySelector('.show-title-bar');
+            var linkEl = show.querySelector('a.show-link');
+            
+            String title = titleEl?.text.trim() ?? "";
+            String link = linkEl?.attributes['href'] ?? "";
+            
+            if (title.isNotEmpty) {
+              if (link.startsWith('/')) {
+                link = "https://animeschedule.net$link";
+              }
+              
+              _addToMap(dubMap, title, {
+                'name': 'AnimeSchedule',
+                'url': link,
+                'icon': 'https://img.animeschedule.net/production/assets/public/img/logos/as-logo-855bacd96c.png'
+              });
+            }
           }
         }
       }
@@ -113,6 +98,7 @@ class DubService {
     return dubMap;
   }
 
+  // Fetch specific Kuroiru data for an AniList entry (using MAL ID)
   static Future<List<Map<String, String>>> fetchKuroiruLinks(String malId) async {
     if (malId == 'null' || malId.isEmpty) return [];
     
@@ -126,7 +112,7 @@ class DubService {
              streams.add({
                'name': stream['name'] ?? 'Unknown',
                'url': stream['url'] ?? '',
-               'icon': '' 
+               'icon': '' // Kuroiru doesn't provide icons in this API endpoint
              });
            }
         }
@@ -136,6 +122,17 @@ class DubService {
       Logger.i("Error fetching Kuroiru: $e");
     }
     return [];
+  }
+
+  static void _addToMap(Map<String, List<Map<String, String>>> map, String title, Map<String, String> data) {
+    String normTitle = _normalizeTitle(title);
+    if (!map.containsKey(normTitle)) {
+      map[normTitle] = [];
+    }
+    // Avoid duplicates
+    if (!map[normTitle]!.any((e) => e['name'] == data['name'])) {
+      map[normTitle]!.add(data);
+    }
   }
 
   static String _normalizeTitle(String title) {
