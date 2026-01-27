@@ -600,6 +600,11 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                           selectedIcon: Iconsax.book,
                           unselectedIcon: Iconsax.book,
                           label: "Read"),
+                    NavItem(
+                        onTap: (index) => _onPageSelected(index),
+                        selectedIcon: HugeIcons.strokeRoundedComment01,
+                        unselectedIcon: HugeIcons.strokeRoundedComment02,
+                        label: "Comments"),
                   ]),
             ],
           ),
@@ -624,6 +629,11 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                   selectedIcon: Iconsax.book,
                   unselectedIcon: Iconsax.book,
                   label: "Watch"),
+              NavItem(
+                  onTap: _onPageSelected,
+                  selectedIcon: HugeIcons.strokeRoundedComment01,
+                  unselectedIcon: HugeIcons.strokeRoundedComment02,
+                  label: "Comments"),
             ]));
   }
   // Mobile Navigation bar: END

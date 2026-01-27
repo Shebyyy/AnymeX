@@ -524,7 +524,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
               else
                 const SizedBox.shrink(),
               _buildEpisodeSection(context),
-              // _buildCommentsSection(context)
+              _buildCommentsSection(context)
             ],
           )
         ],
@@ -736,11 +736,11 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                           selectedIcon: Iconsax.play5,
                           unselectedIcon: Iconsax.play,
                           label: "Watch"),
-                    // NavItem(
-                    //     onTap: _onPageSelected,
-                    //     selectedIcon: HugeIcons.strokeRoundedComment01,
-                    //     unselectedIcon: HugeIcons.strokeRoundedComment02,
-                    //     label: "Comments"),
+                    NavItem(
+                        onTap: _onPageSelected,
+                        selectedIcon: HugeIcons.strokeRoundedComment01,
+                        unselectedIcon: HugeIcons.strokeRoundedComment02,
+                        label: "Comments"),
                   ]),
             ],
           ),
@@ -765,6 +765,11 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                   selectedIcon: Iconsax.play5,
                   unselectedIcon: Iconsax.play,
                   label: "Watch"),
+              NavItem(
+                  onTap: _onPageSelected,
+                  selectedIcon: HugeIcons.strokeRoundedComment01,
+                  unselectedIcon: HugeIcons.strokeRoundedComment02,
+                  label: "Comments"),
             ]));
   }
 

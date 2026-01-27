@@ -468,8 +468,28 @@ class CommentumService extends GetxController {
     if (currentUserId == null) return 'user';
     
     try {
-      // This would need to be implemented based on Commentum v2 config
-      // For now, return basic user role
+      // Use Commentum v2 API to check user role
+      final token = await _authToken;
+      if (token == null) return 'user';
+      
+      // Call Commentum v2 to get user role
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/role'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'client_type': _clientType,
+          'user_id': currentUserId,
+          'token': token,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['role'] ?? 'user';
+      }
+      
       return 'user';
     } catch (e) {
       Logger.i('Error getting user role: $e');
