@@ -1,5 +1,5 @@
 ### 🔧 Bug Fixes & Improvements
--   few things again
--   few things
+-   missing gettotalcommentcount
+-   reply
 
  
