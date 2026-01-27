@@ -81,23 +81,30 @@ class CommentumService extends GetxController {
     }
 
     try {
+      final requestBody = {
+        'action': 'create',
+        'client_type': _clientType,
+        'user_id': currentUserId,
+        'media_id': mediaId,
+        'content': content,
+        if (parentId != null) 'parent_id': parentId,
+      };
+      
+      Logger.i('Creating comment with body: ${json.encode(requestBody)}');
+
       final response = await http.post(
         Uri.parse('$baseUrl/comments'),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: json.encode({
-          'action': 'create',
-          'client_type': _clientType,
-          'user_id': currentUserId,
-          'media_id': mediaId,
-          'content': content,
-          'parent_id': parentId,
-        }),
+        body: json.encode(requestBody),
       );
 
+      Logger.i('Comment creation response status: ${response.statusCode}');
+      
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
+        Logger.i('Comment creation response data: ${json.encode(data)}');
         final commentData = data['comment'];
         return _mapCommentumToAnymeXComment(commentData);
       } else {

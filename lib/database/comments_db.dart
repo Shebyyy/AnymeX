@@ -31,21 +31,27 @@ class CommentsDatabase {
 
   // Organize flat comment list into nested structure
   List<Comment> _organizeComments(List<Comment> comments) {
+    log("Organizing ${comments.length} comments");
+    
     // Separate parent comments and replies
     final Map<int, Comment> commentMap = {};
     final List<Comment> parentComments = [];
+    int replyCount = 0;
     
-    // First pass: create map of all comments
+    // First pass: create map of all comments and log structure
     for (final comment in comments) {
-      commentMap[int.tryParse(comment.id) ?? 0] = comment;
+      final commentId = int.tryParse(comment.id) ?? 0;
+      commentMap[commentId] = comment;
+      log("Comment ${comment.id} (ID: $commentId) - parentId: ${comment.parentId}, text: ${comment.commentText.substring(0, comment.commentText.length > 30 ? 30 : comment.commentText.length)}");
     }
     
     // Second pass: organize replies under parents
     for (final comment in comments) {
       final parentId = comment.parentId;
-      if (parentId == null) {
+      if (parentId == null || parentId == 0) {
         // This is a parent comment
         parentComments.add(comment);
+        log("Added parent comment: ${comment.id}");
       } else {
         // This is a reply, find its parent
         final parent = commentMap[parentId];
@@ -54,9 +60,12 @@ class CommentsDatabase {
             parent.replies = [];
           }
           parent.replies!.add(comment);
+          replyCount++;
+          log("Added reply ${comment.id} to parent ${parentId} (parent now has ${parent.replies!.length} replies)");
         } else {
           // Parent not found, treat as parent comment
           parentComments.add(comment);
+          log("Parent $parentId not found for comment ${comment.id}, treating as parent comment");
         }
       }
     }
@@ -68,9 +77,11 @@ class CommentsDatabase {
     for (final parent in parentComments) {
       if (parent.replies != null) {
         parent.replies!.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        log("Parent ${parent.id} has ${parent.replies!.length} replies after sorting");
       }
     }
     
+    log("Organized into ${parentComments.length} parent comments with $replyCount total replies");
     return parentComments;
   }
 
@@ -90,9 +101,9 @@ class CommentsDatabase {
       );
       
       if (newComment != null) {
-        log('Comment added successfully');
+        log('Comment added successfully: ${newComment.id}, parentId: ${newComment.parentId}');
       } else {
-        log('Failed to add comment');
+        log('Failed to add comment - API returned null');
       }
       
       return newComment;

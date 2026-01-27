@@ -17,10 +17,14 @@ class CommentPreloader extends GetxService {
     print('Preloading comments for media: $mediaId');
     
     try {
-      // Create controller and start loading immediately
-      final controller = CommentSectionController(
-        mediaId: mediaId,
-        currentTag: currentTag,
+      // Create controller using Get.put to ensure proper initialization
+      final controller = Get.put(
+        CommentSectionController(
+          mediaId: mediaId,
+          currentTag: currentTag,
+        ),
+        tag: mediaId,
+        permanent: false, // Allow cleanup
       );
       
       // Store the controller
@@ -42,10 +46,15 @@ class CommentPreloader extends GetxService {
   
   // Remove preloaded controller when media is closed
   void removePreloadedController(String mediaId) {
-    final controller = _preloadedControllers.remove(mediaId);
-    if (controller != null) {
-      controller.onClose();
+    _preloadedControllers.remove(mediaId);
+    
+    try {
+      // Use Get.delete to properly dispose the controller
+      Get.delete<CommentSectionController>(tag: mediaId);
       print('Removed preloaded controller for media: $mediaId');
+    } catch (e) {
+      print('Error removing controller for media $mediaId: $e');
+      // Don't crash the app if removal fails
     }
   }
   
