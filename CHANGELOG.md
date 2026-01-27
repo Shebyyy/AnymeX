@@ -1,5 +1,6 @@
 ### 🆕 Changelog
 ### 🌟 Features
+- [֍](https://github.com/Shebyyy/AnymeX/commit/1cb42ce)  comment using api
 - [֍](https://github.com/Shebyyy/AnymeX/commit/55d46d7)  comment using api
 - [֍](https://github.com/Shebyyy/AnymeX/commit/6913e20)  animated logo
 - [֍](https://github.com/Shebyyy/AnymeX/commit/f9a498f)  manga border cropper
