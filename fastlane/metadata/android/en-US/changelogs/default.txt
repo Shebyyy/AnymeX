@@ -1,5 +1,6 @@
 ### 🌟 Features
 -   comment using api
+-   comment using api
 -   animated logo
 -   manga border cropper
 -   add volume button navigation for manga reader
