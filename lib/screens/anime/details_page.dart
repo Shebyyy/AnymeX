@@ -200,11 +200,8 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
       }
       Logger.i("Media Details Fetch Failed => $e");
     } finally {
-      if (widget.media.serviceType == ServicesType.anilist) {
-        final data =
-            await CommentsDatabase().fetchComments(widget.media.id.toString());
-        comments.value = data;
-      }
+      // Comments are now handled by CommentSection widget
+      // No need to fetch here as it's done in the CommentSectionController
     }
   }
 

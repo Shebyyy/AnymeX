@@ -104,12 +104,9 @@ class CommentSectionController extends GetxController
   Future<void> loadComments() async {
     isLoading.value = true;
     try {
-      print('Loading comments for mediaId: $mediaId'); // Debug log
       final fetchedComments = await commentsDB.fetchComments(mediaId);
-      print('Fetched ${fetchedComments.length} comments for mediaId: $mediaId'); // Debug log
       comments.assignAll(fetchedComments);
     } catch (e) {
-      print('Error loading comments: $e'); // Debug log
       Get.snackbar('Error', 'Failed to load comments. Please try again.');
     } finally {
       isLoading.value = false;
