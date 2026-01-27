@@ -557,17 +557,15 @@ class _CommentSectionState extends State<CommentSection> {
                       icon: Icons.flag_outlined,
                       onTap: () => _showReportDialog(context, comment, controller),
                     ),
-                  if (comment.userId != controller.profile.id?.toString())
+                    if (comment.userId != controller.profile.id?.toString())
                     const SizedBox(width: 8),
-                  // Reply button (only for non-owners)
-                  if (comment.userId != controller.profile.id?.toString())
-                    _buildActionButton(
-                      context: context,
-                      icon: Icons.reply_outlined,
-                      onTap: () => _showReplyDialog(context, comment, controller),
-                    ),
-                  if (controller.canModerate())
-                    const SizedBox(width: 8),
+                  // Reply button (available to everyone)
+                  _buildActionButton(
+                    context: context,
+                    icon: Icons.reply_outlined,
+                    onTap: () => _showReplyDialog(context, comment, controller),
+                  ),
+                  const SizedBox(width: 8),
                   if (controller.canModerate())
                     _buildActionButton(
                       context: context,
