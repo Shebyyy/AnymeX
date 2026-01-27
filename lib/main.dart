@@ -12,6 +12,7 @@ import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/controllers/ui/greeting.dart';
 import 'package:anymex/controllers/theme.dart';
+import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/models/player/player_adaptor.dart';
 import 'package:anymex/models/ui/ui_adaptor.dart';
 import 'package:anymex/models/Offline/Hive/custom_list.dart';
@@ -184,6 +185,7 @@ void _initializeGetxController() async {
   Get.put(Settings());
   Get.put(ServiceHandler());
   Get.put(GreetingController());
+  Get.put(CommentumService());
   Get.lazyPut(() => CacheController());
   // DownloadManagerBinding.initializeDownloadManager();
 }

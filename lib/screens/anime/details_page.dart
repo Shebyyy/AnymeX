@@ -636,14 +636,10 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   }
 
   Widget _buildCommentsSection(BuildContext context) {
-    return
-        // comments.value != null
-        //     ? CommentSection(
-        //         mediaId: widget.media.id,
-        //         currentTag: ('Episode ${currentAnime.value?.episodeCount ?? '0'}'),
-        //       )
-        //     :
-        const SizedBox.shrink();
+    return CommentSection(
+      mediaId: widget.media.id.toString(),
+      currentTag: ('Episode ${currentAnime.value?.episodeCount ?? '0'}'),
+    );
   }
 
   // Common Info Section

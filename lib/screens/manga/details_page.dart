@@ -15,6 +15,7 @@ import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Offline/Hive/chapter.dart';
+import 'package:anymex/screens/anime/widgets/comments/comments_section.dart';
 import 'package:anymex/screens/anime/widgets/custom_list_dialog.dart';
 import 'package:anymex/screens/anime/widgets/list_editor.dart';
 import 'package:anymex/screens/anime/widgets/voice_actor.dart';
@@ -378,10 +379,18 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
               else
                 const SizedBox.shrink(),
               _buildChapterSection(context),
+              _buildCommentsSection(context),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCommentsSection(BuildContext context) {
+    return CommentSection(
+      mediaId: widget.media.id.toString(),
+      currentTag: ('Chapter ${mangaProgress.value}'),
     );
   }
 
