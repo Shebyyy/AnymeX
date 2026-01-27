@@ -1,1 +1,22 @@
+### 🌟 Features
+-   comment using api
+-   animated logo
+-   manga border cropper
+-   add volume button navigation for manga reader
+
+### 🔧 Bug Fixes & Improvements
+-   comment using api
+-   fixed flash attack when opening the app
+-   probably fixed some graphical issues on ios enabled impeller
+-   fixed empty source when 2 source have same name
+-   fixed white screen  black screen issue on ios in dc login page
+-   fixed issue with orientation when first opening the player  fixed subtitle issue when switching to next episode
+
+### 🎨 Style Changes
+-   added a toast when switching resize modes
+-   fixed a responsive ui issue in ios dialogs
+
+### 🧹 Chores & Documentation
+-   fix aur package update
+
  
