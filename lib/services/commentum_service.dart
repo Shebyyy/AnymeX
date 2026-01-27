@@ -43,17 +43,24 @@ class CommentumService extends GetxController {
   // Fetch comments for a media
   Future<List<Comment>> fetchComments(String mediaId, {int page = 1, int limit = 50, String sort = 'newest'}) async {
     try {
+      final url = '$baseUrl/media?media_id=$mediaId&client_type=${_clientType}&page=$page&limit=$limit&sort=$sort';
+      print('Fetching comments from: $url'); // Debug log
+      
       final response = await http.get(
-        Uri.parse('$baseUrl/media?media_id=$mediaId&client_type=${_clientType}&page=$page&limit=$limit&sort=$sort'),
+        Uri.parse(url),
         headers: {
           'Content-Type': 'application/json',
         },
       );
 
+      print('Response status: ${response.statusCode}'); // Debug log
+      print('Response body: ${response.body}'); // Debug log
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final commentsList = data['comments'] as List<dynamic>? ?? [];
         
+        print('Found ${commentsList.length} comments'); // Debug log
         return commentsList.map((commentData) => _mapCommentumToAnymeXComment(commentData)).toList();
       } else {
         Logger.i('Failed to fetch comments: ${response.statusCode}');
@@ -61,6 +68,7 @@ class CommentumService extends GetxController {
       }
     } catch (e) {
       Logger.i('Error fetching comments: $e');
+      print('Exception in fetchComments: $e'); // Debug log
       return [];
     }
   }
@@ -487,7 +495,10 @@ class CommentumService extends GetxController {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['role'] ?? 'user';
+        final role = data['role'] ?? 'user';
+        // Update reactive role
+        currentUserRole.value = role;
+        return role;
       }
       
       return 'user';
