@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/database/comments_db.dart';
 import 'package:anymex/database/model/comment.dart';
@@ -27,6 +28,7 @@ class CommentSectionController extends GetxController
   final RxBool isLoading = false.obs;
   final RxBool isSubmitting = false.obs;
   final RxBool isInputExpanded = false.obs;
+  final RxBool isRefreshing = false.obs;
 
   final RxSet<String> votingComments = <String>{}.obs;
   
@@ -38,6 +40,10 @@ class CommentSectionController extends GetxController
 
   late AnimationController expandController;
   late AnimationController fadeController;
+  
+  // Auto-refresh timer
+  Timer? _refreshTimer;
+  static const Duration refreshInterval = Duration(seconds: 3); // Refresh every 3 seconds for real-time feel
 
   @override
   void onInit() {
@@ -46,10 +52,12 @@ class CommentSectionController extends GetxController
     _setupFocusListener();
     _checkUserRole();
     loadComments();
+    _startAutoRefresh();
   }
 
   @override
   void onClose() {
+    _refreshTimer?.cancel();
     expandController.dispose();
     fadeController.dispose();
     commentController.dispose();
@@ -101,16 +109,87 @@ class CommentSectionController extends GetxController
     }
   }
 
+  // Start auto-refresh timer
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(refreshInterval, (timer) {
+      if (mediaId.isNotEmpty) {
+        refreshComments(silent: true); // Silent refresh without loading indicators
+      }
+    });
+  }
+
+  // Load comments for current media
   Future<void> loadComments() async {
+    if (mediaId.isEmpty) return;
+    
+    // Always load fresh data, no caching for real-time feel
     isLoading.value = true;
     try {
       final fetchedComments = await commentsDB.fetchComments(mediaId);
       comments.assignAll(fetchedComments);
+      print('Loaded ${fetchedComments.length} comments for media: $mediaId');
     } catch (e) {
+      print('Error loading comments: $e');
       Get.snackbar('Error', 'Failed to load comments. Please try again.');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // Refresh comments (manual or auto) - more aggressive
+  Future<void> refreshComments({bool silent = false}) async {
+    if (mediaId.isEmpty) return;
+    
+    if (!silent) {
+      isRefreshing.value = true;
+    }
+    
+    try {
+      // Re-check user role in case it changed
+      await _checkUserRole();
+      
+      final fetchedComments = await commentsDB.fetchComments(mediaId);
+      
+      // Always update for real-time feel, even if count is same
+      // (there might be new comments, edits, votes, etc.)
+      comments.assignAll(fetchedComments);
+      
+      if (!silent) {
+        // Only show toast if there are actual changes
+        final commentCount = fetchedComments.length;
+        Get.snackbar('Refreshed', '$commentCount comments loaded');
+      }
+      print('Refreshed ${fetchedComments.length} comments for media: $mediaId');
+    } catch (e) {
+      print('Error refreshing comments: $e');
+      if (!silent) {
+        Get.snackbar('Error', 'Failed to refresh comments. Please try again.');
+      }
+    } finally {
+      if (!silent) {
+        isRefreshing.value = false;
+      }
+    }
+  }
+
+  // Background refresh - called after any user action
+  Future<void> backgroundRefresh() async {
+    if (mediaId.isEmpty) return;
+    
+    try {
+      final fetchedComments = await commentsDB.fetchComments(mediaId);
+      comments.assignAll(fetchedComments);
+      print('Background refreshed ${fetchedComments.length} comments');
+    } catch (e) {
+      print('Error in background refresh: $e');
+      // Silent fail for background refresh
+    }
+  }
+
+  // Force refresh with user role re-check
+  Future<void> forceRefresh() async {
+    await _checkUserRole();
+    await refreshComments(silent: false);
   }
 
   Future<void> addReply(Comment parentComment, String replyContent) async {
@@ -118,19 +197,23 @@ class CommentSectionController extends GetxController
 
     isSubmitting.value = true;
     try {
-      // For now, create a reply as a new comment with parent reference
-      // In a full implementation, this would be a nested reply system
+      // Create a proper reply with parentId
+      final parentCommentId = int.tryParse(parentComment.id) ?? 0;
+      if (parentCommentId == 0) {
+        Get.snackbar('Error', 'Invalid parent comment ID');
+        return;
+      }
+
       final newComment = await commentsDB.addComment(
         comment: replyContent.trim(),
         mediaId: mediaId,
         tag: currentTag ?? 'General',
+        parentId: parentCommentId, // Set the parent ID for nested reply
       );
 
       if (newComment != null) {
-        // For now, add as a regular comment. In future, implement nested replies
-        comments.insert(0, newComment);
-        
-        // Optionally show that it's a reply
+        // Background refresh to show the nested reply
+        await backgroundRefresh();
         Get.snackbar('Reply posted', 'Your reply has been posted successfully');
       }
 
@@ -154,7 +237,9 @@ class CommentSectionController extends GetxController
       );
 
       if (newComment != null) {
-        comments.insert(0, newComment);
+        // Immediate background refresh to show the new comment
+        await backgroundRefresh();
+        Get.snackbar('Success', 'Comment posted successfully');
       }
 
       HapticFeedback.lightImpact();
@@ -216,10 +301,8 @@ class CommentSectionController extends GetxController
         comments[index] = comment;
         Get.snackbar('Error', 'Failed to update vote. Please try again.');
       } else {
-        comment.likes = result['likes'];
-        comment.dislikes = result['dislikes'];
-        comment.userVote = result['userVote'];
-        comments[index] = comment;
+        // Background refresh to get the most up-to-date vote counts
+        await backgroundRefresh();
       }
     } catch (e) {
       comment.likes = originalLikes;
@@ -298,10 +381,8 @@ class CommentSectionController extends GetxController
       final updatedComment = await commentsDB.editComment(commentId, newContent);
       
       if (updatedComment != null) {
-        final index = comments.indexWhere((c) => c.id == comment.id);
-        if (index != -1) {
-          comments[index] = updatedComment;
-        }
+        // Immediate background refresh to show the updated comment
+        await backgroundRefresh();
         Get.snackbar('Success', 'Comment edited successfully');
       } else {
         Get.snackbar('Error', 'Failed to edit comment');
@@ -322,7 +403,8 @@ class CommentSectionController extends GetxController
       final success = await commentsDB.deleteComment(commentId);
       
       if (success) {
-        comments.removeWhere((c) => c.id == comment.id);
+        // Immediate background refresh to remove the deleted comment
+        await backgroundRefresh();
         Get.snackbar('Success', 'Comment deleted successfully');
       } else {
         Get.snackbar('Error', 'Failed to delete comment');
@@ -430,7 +512,27 @@ class CommentSectionController extends GetxController
     return isAdmin.value;
   }
 
-  Future<void> refreshComments() async {
-    await loadComments();
+  // Handle media change - called when user navigates to different media
+  void onMediaChanged(String newMediaId) {
+    if (newMediaId != mediaId) {
+      // Clear existing comments and reset state
+      comments.clear();
+      votingComments.clear();
+      
+      // Cancel existing timer
+      _refreshTimer?.cancel();
+      
+      // Start fresh for new media
+      _startAutoRefresh();
+      loadComments();
+      
+      print('Media changed to: $newMediaId, refreshing comments');
+    }
+  }
+
+  // Handle user login/logout - refresh user role and comments
+  void onUserAuthChanged() {
+    _checkUserRole();
+    refreshComments(silent: false);
   }
 }

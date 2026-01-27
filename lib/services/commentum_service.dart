@@ -467,6 +467,7 @@ class CommentumService extends GetxController {
       createdAt: commentData['created_at']?.toString() ?? DateTime.now().toIso8601String(),
       updatedAt: commentData['updated_at']?.toString() ?? DateTime.now().toIso8601String(),
       deleted: commentData['deleted'] as bool? ?? false,
+      parentId: commentData['parent_id'] as int?, // Map parent ID for nested comments
     );
   }
 

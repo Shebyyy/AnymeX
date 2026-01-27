@@ -1,5 +1,6 @@
 import 'package:anymex/database/model/comment.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comments_controller.dart';
+import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
 import 'package:expressive_loading_indicator/expressive_loading_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -21,19 +22,65 @@ class CommentSection extends StatefulWidget {
 
 class _CommentSectionState extends State<CommentSection> {
   late CommentSectionController controller;
+  String? lastMediaId;
 
   @override
   void initState() {
-    controller = Get.put(CommentSectionController(
-      mediaId: widget.mediaId,
-      currentTag: widget.currentTag,
-    ));
     super.initState();
+    lastMediaId = widget.mediaId;
+    
+    // Check if comments are already preloaded
+    final preloadedController = CommentPreloader.to.getPreloadedController(widget.mediaId);
+    if (preloadedController != null) {
+      // Use the preloaded controller
+      controller = preloadedController;
+      print('Using preloaded controller for media: ${widget.mediaId}');
+    } else {
+      // Create new controller if not preloaded
+      controller = Get.put(CommentSectionController(
+        mediaId: widget.mediaId,
+        currentTag: widget.currentTag,
+      ), tag: widget.mediaId);
+      print('Created new controller for media: ${widget.mediaId}');
+    }
+  }
+
+  @override
+  void didUpdateWidget(CommentSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Check if mediaId changed
+    if (widget.mediaId != oldWidget.mediaId) {
+      // Don't delete the old controller if it was preloaded
+      final wasPreloaded = CommentPreloader.to.isPreloaded(oldWidget.mediaId);
+      if (!wasPreloaded) {
+        Get.delete<CommentSectionController>(tag: oldWidget.mediaId);
+      }
+      
+      // Check if new media has preloaded controller
+      final preloadedController = CommentPreloader.to.getPreloadedController(widget.mediaId);
+      if (preloadedController != null) {
+        controller = preloadedController;
+        print('Using preloaded controller for new media: ${widget.mediaId}');
+      } else {
+        // Create new controller for new media
+        controller = Get.put(CommentSectionController(
+          mediaId: widget.mediaId,
+          currentTag: widget.currentTag,
+        ), tag: widget.mediaId);
+        print('Created new controller for new media: ${widget.mediaId}');
+      }
+      
+      print('Media changed from ${oldWidget.mediaId} to ${widget.mediaId}');
+    }
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    // Don't delete preloaded controllers, only delete non-preloaded ones
+    final isPreloaded = CommentPreloader.to.isPreloaded(widget.mediaId);
+    if (!isPreloaded) {
+      Get.delete<CommentSectionController>(tag: widget.mediaId);
+    }
     super.dispose();
   }
 
@@ -91,12 +138,35 @@ class _CommentSectionState extends State<CommentSection> {
                 ),
               ),
               Text(
-                '${controller.comments.length} ${controller.comments.length == 1 ? 'comment' : 'comments'}',
+                _getTotalCommentCount(controller.comments),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              const SizedBox(width: 12),
+              // Refresh button
+              Obx(() => IconButton(
+                onPressed: controller.isRefreshing.value 
+                    ? null 
+                    : () => controller.forceRefresh(),
+                icon: controller.isRefreshing.value
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                tooltip: 'Refresh comments',
+              )),
             ],
           ),
         ));
@@ -411,11 +481,102 @@ class _CommentSectionState extends State<CommentSection> {
           ),
         ),
         itemBuilder: (context, index) {
-          return _buildCommentItem(
-              context, controller.comments[index], controller);
+          return _buildCommentWithReplies(
+              context, controller.comments[index], controller, 0);
         },
       );
     });
+  }
+
+  // Build comment with its nested replies
+  Widget _buildCommentWithReplies(BuildContext context, Comment comment,
+      CommentSectionController controller, int depth) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Main comment
+        Container(
+          margin: EdgeInsets.only(
+            left: depth > 0 ? 16.0 + (depth * 20.0) : 0,
+          ),
+          child: _buildCommentItem(context, comment, controller),
+        ),
+        
+        // Replies section
+        if (comment.replies != null && comment.replies!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            margin: EdgeInsets.only(
+              left: depth > 0 ? 16.0 + (depth * 20.0) : 56,
+            ),
+            padding: const EdgeInsets.only(left: 16),
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: colorScheme.outlineVariant.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Reply count indicator
+                if (comment.replies!.length > 1)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${comment.replies!.length} replies',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                
+                // Individual replies
+                ...comment.replies!.asMap().entries.map((entry) {
+                  final replyIndex = entry.key;
+                  final reply = entry.value;
+                  final isLastReply = replyIndex == comment.replies!.length - 1;
+                  
+                  return Column(
+                    children: [
+                      _buildCommentWithReplies(
+                        context, 
+                        reply, 
+                        controller, 
+                        depth + 1
+                      ),
+                      if (!isLastReply)
+                        Container(
+                          margin: EdgeInsets.only(
+                            left: 16.0 + ((depth + 1) * 20.0),
+                            top: 16,
+                            bottom: 16,
+                          ),
+                          height: 1,
+                          decoration: BoxDecoration(
+                            color: colorScheme.outlineVariant.withOpacity(0.15),
+                          ),
+                        ),
+                    ],
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildCommentItem(BuildContext context, Comment comment,

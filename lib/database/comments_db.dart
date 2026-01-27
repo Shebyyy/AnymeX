@@ -16,7 +16,12 @@ class CommentsDatabase {
       log("Fetching comments for media: $mediaId");
       final comments = await commentumService.fetchComments(mediaId);
       log("Fetched ${comments.length} comments");
-      return comments;
+      
+      // Organize comments into nested structure
+      final organizedComments = _organizeComments(comments);
+      log("Organized into ${organizedComments.length} top-level comments with replies");
+      
+      return organizedComments;
     } catch (e) {
       log("Error fetching comments: $e");
       snackBar('Error fetching comments');
@@ -24,17 +29,64 @@ class CommentsDatabase {
     }
   }
 
+  // Organize flat comment list into nested structure
+  List<Comment> _organizeComments(List<Comment> comments) {
+    // Separate parent comments and replies
+    final Map<int, Comment> commentMap = {};
+    final List<Comment> parentComments = [];
+    
+    // First pass: create map of all comments
+    for (final comment in comments) {
+      commentMap[int.tryParse(comment.id) ?? 0] = comment;
+    }
+    
+    // Second pass: organize replies under parents
+    for (final comment in comments) {
+      final parentId = comment.parentId;
+      if (parentId == null) {
+        // This is a parent comment
+        parentComments.add(comment);
+      } else {
+        // This is a reply, find its parent
+        final parent = commentMap[parentId];
+        if (parent != null) {
+          if (parent.replies == null) {
+            parent.replies = [];
+          }
+          parent.replies!.add(comment);
+        } else {
+          // Parent not found, treat as parent comment
+          parentComments.add(comment);
+        }
+      }
+    }
+    
+    // Sort parent comments by creation date (newest first)
+    parentComments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    
+    // Sort replies within each parent
+    for (final parent in parentComments) {
+      if (parent.replies != null) {
+        parent.replies!.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      }
+    }
+    
+    return parentComments;
+  }
+
   // Add a comment using Commentum v2
   Future<Comment?> addComment({
     required String comment,
     required String mediaId,
     required String tag,
+    int? parentId, // Add parentId for replies
   }) async {
     try {
-      log("Adding comment to media: $mediaId");
+      log("Adding comment to media: $mediaId${parentId != null ? ' as reply to $parentId' : ''}");
       final newComment = await commentumService.createComment(
         mediaId: mediaId,
         content: comment,
+        parentId: parentId, // Pass parentId to service
       );
       
       if (newComment != null) {
