@@ -488,6 +488,40 @@ class _CommentSectionState extends State<CommentSection> {
     });
   }
 
+  // Calculate total comment count including replies
+  String _getTotalCommentCount(List<Comment> comments) {
+    int totalComments = comments.length;
+    int totalReplies = 0;
+    
+    for (final comment in comments) {
+      totalReplies += _countReplies(comment);
+    }
+    
+    final total = totalComments + totalReplies;
+    
+    if (total == 1) {
+      return '1 comment';
+    } else if (totalReplies > 0) {
+      return '$total comments ($totalReplies replies)';
+    } else {
+      return '$total comments';
+    }
+  }
+
+  // Count all replies recursively
+  int _countReplies(Comment comment) {
+    int replyCount = 0;
+    
+    if (comment.replies != null) {
+      replyCount += comment.replies!.length;
+      for (final reply in comment.replies!) {
+        replyCount += _countReplies(reply); // Count nested replies
+      }
+    }
+    
+    return replyCount;
+  }
+
   // Build comment with its nested replies
   Widget _buildCommentWithReplies(BuildContext context, Comment comment,
       CommentSectionController controller, int depth) {
