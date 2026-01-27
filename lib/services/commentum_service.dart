@@ -3,12 +3,16 @@ import 'package:anymex/utils/logger.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/database/model/comment.dart';
+import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
 class CommentumService extends GetxController {
   static const String baseUrl = 'https://whzwmfxngelicmjyxwmr.supabase.co/functions/v1';
+  
+  // Reactive user role
+  final RxString currentUserRole = 'user'.obs;
   
   // Get current user info from AnymeX authentication
   Profile? get currentUser => serviceHandler.profileData.value;

@@ -68,7 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       navigate(() => const SettingsCommon());
                     }),
                 CustomTile(
-                    icon: HugeIcons.strokeRoundedChatBubble,
+                    icon: HugeIcons.strokeRoundedComment01,
                     title: "Comments",
                     description: "Comment system settings and moderation",
                     onTap: () {

@@ -2,8 +2,11 @@ import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/screens/settings/settings.dart';
+import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 
 import 'settings_moderation.dart';
 
@@ -55,7 +58,7 @@ class _SettingsCommentsState extends State<SettingsComments> {
                     icon: Icons.person_outline,
                     title: "User Role",
                     description: _getCurrentRoleDescription(),
-                    trailing: Obx(() => Text(
+                    postFix: Obx(() => Text(
                       commentumService.currentUserRole.value.toUpperCase(),
                       style: TextStyle(
                         color: _getRoleColor(),

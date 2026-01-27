@@ -117,7 +117,7 @@ class _NovelDetailsPageState extends State<NovelDetailsPage> {
                     ),
                   ),
                   SliverToBoxAdapter(child: 20.height()),
-                  ChapterSliverSection(controller),
+                  ChapterSliverSection(controller: controller),
                   SliverToBoxAdapter(child: 20.height()),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),

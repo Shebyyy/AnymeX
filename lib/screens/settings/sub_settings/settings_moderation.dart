@@ -2,8 +2,11 @@ import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/screens/settings/settings.dart';
+import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 
 class SettingsModeration extends StatefulWidget {
   const SettingsModeration({super.key});
@@ -71,7 +74,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
                   icon: Icons.admin_panel_settings,
                   title: "Your Role",
                   description: commentumService.currentUserRole.value.toUpperCase(),
-                  trailing: Container(
+                  postFix: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: _getRoleColor(),
@@ -107,7 +110,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
                     icon: Icons.report_outlined,
                     title: "Moderation Queue",
                     description: "${moderationQueue.length} pending reports",
-                    trailing: isLoadingQueue.value 
+                    postFix: isLoadingQueue.value 
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -222,7 +225,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     }
   }
 
-  void _navigateToModerationQueue() {
+  Future<void> _navigateToModerationQueue() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -232,7 +235,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     snackBar('Moderation queue interface coming soon!');
   }
 
-  void _navigateToUserManagement() {
+  Future<void> _navigateToUserManagement() async {
     if (!await commentumService.isAdmin()) {
       snackBar('You need admin permissions to access this panel');
       return;
@@ -242,7 +245,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     snackBar('User management interface coming soon!');
   }
 
-  void _showModerationHistory() {
+  Future<void> _showModerationHistory() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -275,7 +278,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     );
   }
 
-  void _showUserSearch() {
+  Future<void> _showUserSearch() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -307,7 +310,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     );
   }
 
-  void _showCommentSearch() {
+  Future<void> _showCommentSearch() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -339,7 +342,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     );
   }
 
-  void _showStatistics() {
+  Future<void> _showStatistics() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -372,7 +375,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     );
   }
 
-  void _showNotificationSettings() {
+  Future<void> _showNotificationSettings() async {
     if (!await commentumService.isModerator()) {
       snackBar('You need moderator permissions to access this panel');
       return;
@@ -404,7 +407,7 @@ class _SettingsModerationState extends State<SettingsModeration> {
     );
   }
 
-  void _showModerationRules() {
+  Future<void> _showModerationRules() async {
     if (!await commentumService.isAdmin()) {
       snackBar('You need admin permissions to access this panel');
       return;
