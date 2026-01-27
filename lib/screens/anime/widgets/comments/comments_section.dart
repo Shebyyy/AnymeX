@@ -770,7 +770,7 @@ class _CommentSectionState extends State<CommentSection> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: 'Manage User: ${comment.username}',
+        title: Text('Manage User: ${comment.username}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

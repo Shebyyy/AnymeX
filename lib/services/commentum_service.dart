@@ -438,8 +438,15 @@ class CommentumService extends GetxController {
   // Map Commentum v2 comment to AnymeX comment model
   Comment _mapCommentumToAnymeXComment(Map<String, dynamic> commentData) {
     // Map user votes from Commentum format to AnymeX format
-    final userVotesJson = commentData['user_votes'] as String? ?? '{}';
-    final userVotes = json.decode(userVotesJson) as Map<String, dynamic>? ?? {};
+    final userVotesData = commentData['user_votes'];
+    Map<String, dynamic> userVotes = {};
+    
+    if (userVotesData is String) {
+      userVotes = json.decode(userVotesData) as Map<String, dynamic>? ?? {};
+    } else if (userVotesData is Map) {
+      userVotes = Map<String, dynamic>.from(userVotesData);
+    }
+    
     final currentUserVote = userVotes[currentUserId] ?? '0';
     
     int userVoteValue = 0;
