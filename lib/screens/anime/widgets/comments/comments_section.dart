@@ -530,12 +530,429 @@ class _CommentSectionState extends State<CommentSection> {
                     onTap: () => controller.handleVote(comment, -1),
                     isUpvote: false,
                   ),
+                  const Spacer(),
+                  // Action buttons based on user role and ownership
+                  // Edit button (only for comment owners)
+                  if (comment.userId == controller.profile.id?.toString())
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.edit_outlined,
+                      onTap: () => _showEditDialog(context, comment, controller),
+                    ),
+                  if (comment.userId == controller.profile.id?.toString())
+                    const SizedBox(width: 8),
+                  // Delete button (owners + admins)
+                  if (controller.canDeleteComment(comment))
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.delete_outline,
+                      onTap: () => _showDeleteDialog(context, comment, controller),
+                    ),
+                  if (controller.canDeleteComment(comment))
+                    const SizedBox(width: 8),
+                  // Report button (only for non-owners)
+                  if (comment.userId != controller.profile.id?.toString())
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.flag_outlined,
+                      onTap: () => _showReportDialog(context, comment, controller),
+                    ),
+                  if (comment.userId != controller.profile.id?.toString())
+                    const SizedBox(width: 8),
+                  // Reply button (only for non-owners)
+                  if (comment.userId != controller.profile.id?.toString())
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.reply_outlined,
+                      onTap: () => _showReplyDialog(context, comment, controller),
+                    ),
+                  if (controller.canModerate())
+                    const SizedBox(width: 8),
+                  if (controller.canModerate())
+                    _buildActionButton(
+                      context: context,
+                      icon: Icons.more_vert,
+                      onTap: () => _showModerationMenu(context, comment, controller),
+                    ),
                 ],
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, Comment comment, CommentSectionController controller) {
+    final TextEditingController editController = TextEditingController(text: comment.commentText);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Comment'),
+        content: TextField(
+          controller: editController,
+          maxLines: 5,
+          minLines: 1,
+          decoration: const InputDecoration(
+            hintText: 'Edit your comment...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (editController.text.trim().isNotEmpty) {
+                controller.editComment(comment, editController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, Comment comment, CommentSectionController controller) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Comment'),
+        content: const Text('Are you sure you want to delete this comment? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              controller.deleteComment(comment);
+              Navigator.pop(context);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showModerationMenu(BuildContext context, Comment comment, CommentSectionController controller) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundImage: comment.avatarUrl?.isNotEmpty == true
+                        ? NetworkImage(comment.avatarUrl!)
+                        : null,
+                    child: comment.avatarUrl?.isEmpty != true
+                        ? null
+                        : Icon(Icons.person, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          comment.username,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'ID: ${comment.id}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.push_pin_outlined),
+              title: const Text('Pin Comment'),
+              onTap: () {
+                Navigator.pop(context);
+                controller.moderateComment(
+                  comment: comment,
+                  action: 'pin_comment',
+                  reason: 'Pinned by moderator',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock_outlined),
+              title: const Text('Lock Thread'),
+              onTap: () {
+                Navigator.pop(context);
+                controller.moderateComment(
+                  comment: comment,
+                  action: 'lock_thread',
+                  reason: 'Thread locked by moderator',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outlined),
+              title: const Text('Delete Comment'),
+              onTap: () {
+                Navigator.pop(context);
+                controller.moderateComment(
+                  comment: comment,
+                  action: 'delete_comment',
+                  reason: 'Deleted by moderator',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_off_outlined),
+              title: const Text('Manage User'),
+              onTap: () {
+                Navigator.pop(context);
+                _showUserManagementDialog(context, comment, controller);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUserManagementDialog(BuildContext context, Comment comment, CommentSectionController controller) {
+    final TextEditingController reasonController = TextEditingController();
+    String selectedAction = 'warn_user';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: 'Manage User: ${comment.username}',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Select action:'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedAction,
+              decoration: const InputDecoration(
+                labelText: 'Action',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'warn_user', child: Text('Warn User')),
+                DropdownMenuItem(value: 'mute_user', child: Text('Mute User')),
+                DropdownMenuItem(value: 'ban_user', child: Text('Ban User')),
+              ],
+              onChanged: (value) {
+                selectedAction = value!;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (reasonController.text.trim().isNotEmpty) {
+                controller.manageUser(
+                  targetUserId: comment.userId!,
+                  action: selectedAction,
+                  reason: reasonController.text.trim(),
+                );
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReplyDialog(BuildContext context, Comment comment, CommentSectionController controller) {
+    final TextEditingController replyController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reply to ${comment.username}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    comment.username,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    comment.commentText,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: replyController,
+              maxLines: 4,
+              minLines: 2,
+              decoration: const InputDecoration(
+                hintText: 'Write your reply...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (replyController.text.trim().isNotEmpty) {
+                // For now, we'll create a reply as a new comment
+                // In a full implementation, this would be a nested reply
+                controller.addReply(comment, replyController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Reply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context, Comment comment, CommentSectionController controller) {
+    final TextEditingController reasonController = TextEditingController();
+    final TextEditingController notesController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Comment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Please select a reason for reporting this comment:'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: reasonController.text.isEmpty ? null : reasonController.text,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'spam', child: Text('Spam')),
+                DropdownMenuItem(value: 'inappropriate', child: Text('Inappropriate Content')),
+                DropdownMenuItem(value: 'harassment', child: Text('Harassment')),
+                DropdownMenuItem(value: 'offensive', child: Text('Offensive Language')),
+                DropdownMenuItem(value: 'misinformation', child: Text('Misinformation')),
+                DropdownMenuItem(value: 'other', child: Text('Other')),
+              ],
+              onChanged: (value) {
+                reasonController.text = value ?? '';
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Additional notes (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (reasonController.text.trim().isNotEmpty) {
+                controller.reportComment(comment, reasonController.text.trim(), notes: notesController.text.trim());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Report'),
+          ),
+        ],
+      ),
     );
   }
 

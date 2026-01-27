@@ -113,6 +113,35 @@ class CommentSectionController extends GetxController
     }
   }
 
+  Future<void> addReply(Comment parentComment, String replyContent) async {
+    if (replyContent.trim().isEmpty || isSubmitting.value) return;
+
+    isSubmitting.value = true;
+    try {
+      // For now, create a reply as a new comment with parent reference
+      // In a full implementation, this would be a nested reply system
+      final newComment = await commentsDB.addComment(
+        comment: replyContent.trim(),
+        mediaId: mediaId,
+        tag: currentTag ?? 'General',
+      );
+
+      if (newComment != null) {
+        // For now, add as a regular comment. In future, implement nested replies
+        comments.insert(0, newComment);
+        
+        // Optionally show that it's a reply
+        Get.snackbar('Reply posted', 'Your reply has been posted successfully');
+      }
+
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to post reply. Please try again.');
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
   Future<void> addComment() async {
     if (commentController.text.trim().isEmpty || isSubmitting.value) return;
 
@@ -381,7 +410,7 @@ class CommentSectionController extends GetxController
   }
 
   bool canEditComment(Comment comment) {
-    // Users can edit their own comments
+    // Only comment owners can edit their own comments
     return comment.userId == profile.id?.toString();
   }
 
