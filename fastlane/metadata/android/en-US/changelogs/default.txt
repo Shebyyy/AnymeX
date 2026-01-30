@@ -1,5 +1,4 @@
-### 🌟 Features
--  Add markdown support for policy sheets and separate comment policy file by @Shebyyy
--  nested headers in settings (#255) by @Rieversed
+### 🧹 Chores & Documentation
+-  adjust empty comments state layout by @Shebyyy
 
  
