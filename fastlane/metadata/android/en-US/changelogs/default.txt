@@ -1,3 +1,6 @@
+### 🌟 Features
+-  Add markdown support for policy sheets and separate comment policy file by @Shebyyy
+
 ### 🧹 Chores & Documentation
 -  adjust empty comments state layout by @Shebyyy
 
