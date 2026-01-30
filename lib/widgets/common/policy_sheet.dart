@@ -1,6 +1,8 @@
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum PolicyType { tos, commentPolicy }
 
@@ -130,28 +132,56 @@ void _showBottomSheetUI(BuildContext context, String title, String content) {
             Expanded(
               child: Container(
                 width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                child: Scrollbar(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Markdown(
                   controller: scrollController,
-                  thumbVisibility: true,
-                  radius: const Radius.circular(8),
-                  thickness: 6,
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                    child: Text(
-                      content,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            height: 1.6,
-                            letterSpacing: 0.2,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withOpacity(0.85),
-                            fontWeight: FontWeight.w400,
-                          ),
-                    ),
+                  data: content,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    h1: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    h2: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    h3: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          height: 1.6,
+                          letterSpacing: 0.2,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.85),
+                        ),
+                    listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontFamily: 'monospace',
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                    blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.7),
+                        ),
                   ),
+                  onTapLink: (text, href, title) {
+                    if (href != null) {
+                      launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 ),
               ),
             ),
