@@ -46,8 +46,10 @@ Future<void> showPolicySheet(BuildContext context, PolicyType type) async {
         final endIndex = content.indexOf(endMarker);
         
         if (startIndex != -1 && endIndex != -1) {
+          // Skip the heading and start from the next line
+          final contentAfterHeading = content.indexOf('\n', startIndex);
           content = content.substring(
-            startIndex, 
+            contentAfterHeading != -1 ? contentAfterHeading + 1 : startIndex, 
             endIndex + endMarker.length
           );
         }
