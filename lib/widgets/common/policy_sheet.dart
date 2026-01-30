@@ -13,32 +13,15 @@ Future<void> showPolicySheet(BuildContext context, PolicyType type) async {
   snackBar('Fetching $title...');
 
   try {
-    final response = await http.get(Uri.parse(
-        'https://raw.githubusercontent.com/RyanYuuki/AnymeX/master/TOS.md'));
+    // Use different URLs based on policy type
+    final String url = type == PolicyType.tos
+        ? 'https://raw.githubusercontent.com/RyanYuuki/AnymeX/master/TOS.md'
+        : 'https://raw.githubusercontent.com/RyanYuuki/AnymeX/master/COMMENT_POLICY.md';
+    
+    final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       String content = response.body;
-
-      // Logic to extract specific section for Comment Policy
-      if (type == PolicyType.commentPolicy) {
-        const startMarker = '## Comments System & Comment Policy';
-        final startIndex = content.indexOf(startMarker);
-
-        if (startIndex != -1) {
-          // Find the next header (##) to end the selection
-          final nextHeaderIndex =
-              content.indexOf('## ', startIndex + startMarker.length);
-
-          if (nextHeaderIndex != -1) {
-            content = content.substring(startIndex, nextHeaderIndex).trim();
-          } else {
-            content = content.substring(startIndex).trim();
-          }
-        } else {
-          snackBar("Could not find policy section.", duration: 2000);
-          return;
-        }
-      }
 
       if (context.mounted) {
         _showBottomSheetUI(context, title, content);
@@ -130,59 +113,56 @@ void _showBottomSheetUI(BuildContext context, String title, String content) {
               ),
             ),
             Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Markdown(
-                  controller: scrollController,
-                  data: content,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    h1: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                    h2: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                    h3: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                    p: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          height: 1.6,
-                          letterSpacing: 0.2,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.85),
-                        ),
-                    listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                    code: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontFamily: 'monospace',
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                    blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withOpacity(0.7),
-                        ),
-                  ),
-                  onTapLink: (text, href, title) {
-                    if (href != null) {
-                      launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              child: Markdown(
+                controller: scrollController,
+                data: content,
+                selectable: true,
+                shrinkWrap: false,
+                styleSheet: MarkdownStyleSheet(
+                  h1: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  h2: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  h3: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  p: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        height: 1.6,
+                        letterSpacing: 0.2,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.85),
+                      ),
+                  listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  code: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'monospace',
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                  blockquote: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.7),
+                      ),
                 ),
+                onTapLink: (text, href, title) {
+                  if (href != null) {
+                    launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+                  }
+                },
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
               ),
             ),
           ],
