@@ -1,4 +1,8 @@
 ### 🆕 Changelog
+### 🌟 Features
+- [֍](https://github.com/Shebyyy/AnymeX/commit/21d476f) Add markdown support for policy sheets and separate comment policy file by @Shebyyy
+
+
 ### 🧹 Chores & Documentation
 - [֍](https://github.com/Shebyyy/AnymeX/commit/4cfa237) adjust empty comments state layout by @Shebyyy
 
