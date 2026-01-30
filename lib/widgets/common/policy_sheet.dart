@@ -4,14 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-enum PolicyType { tos, commentPolicy, commentsRules }
+enum PolicyType { tos, commentPolicy, commentRules }
 
 Future<void> showPolicySheet(BuildContext context, PolicyType type) async {
   final String title = type == PolicyType.tos 
       ? "Terms of Service" 
       : type == PolicyType.commentPolicy 
         ? "Comment Policy" 
-        : "Comments Rules";
+        : "Comment Rules";
   
   snackBar('Fetching $title...');
 
@@ -38,7 +38,7 @@ Future<void> showPolicySheet(BuildContext context, PolicyType type) async {
             endIndex + endMarker.length
           );
         }
-      } else if (type == PolicyType.commentsRules) {
+      } else if (type == PolicyType.commentRules) {
         final startMarker = '### Comment Rules';
         final endMarker = 'Failure to follow these rules may result in comment deletion, temporary restrictions, or permanent bans from the commenting system.';
         
