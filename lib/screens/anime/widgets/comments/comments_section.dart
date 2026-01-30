@@ -97,8 +97,8 @@ class _CommentSectionState extends State<CommentSection> {
           TextButton(
             onPressed: () {
               Navigator.pop(context); // Close dialog
-              // Show the full rules sheet
-              showPolicySheet(context, PolicyType.commentPolicy);
+              // Show the specific rules sheet
+              showPolicySheet(context, PolicyType.commentRules);
             },
             child: const Text('Read Full Rules'),
           ),
@@ -214,9 +214,10 @@ class _CommentSectionState extends State<CommentSection> {
                 ),
               ),
               const SizedBox(width: 4),
+              // Updated to use commentRules type
               IconButton(
                 onPressed: () =>
-                    showPolicySheet(context, PolicyType.commentPolicy),
+                    showPolicySheet(context, PolicyType.commentRules),
                 icon: Icon(
                   Icons.assignment_outlined,
                   color: colorScheme.primary,
@@ -250,6 +251,16 @@ class _CommentSectionState extends State<CommentSection> {
         ));
   }
 
+  // ... (Rest of the file remains exactly the same as previous full version)
+  // ... _buildCommentInput, _buildTagSelector, _buildUserAvatar, _buildCommentsList
+  // ... _getTotalCommentCount, _countReplies, _buildCommentWithReplies, _buildCommentItem
+  // ... _buildActionButton, _showEditDialog, _showDeleteDialog, _showReportDialog
+  // ... _buildTag, _buildVoteButton
+  
+  // NOTE: For brevity, paste the rest of the previous file here starting from _buildCommentInput
+  // The only functional changes were in _handlePostComment, _showRulesAcceptanceDialog
+  // and _buildHeader.
+  
   Widget _buildCommentInput(
       BuildContext context, CommentSectionController controller) {
     final theme = Theme.of(context);
@@ -399,7 +410,10 @@ class _CommentSectionState extends State<CommentSection> {
           ),
         ));
   }
-
+  
+  // (Include all other helper widgets _buildTagSelector etc. down to _SpoilerText as provided in previous full code)
+  // ... 
+  
   Widget _buildTagSelector(
       BuildContext context, CommentSectionController controller) {
     final theme = Theme.of(context);
