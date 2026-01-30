@@ -1,5 +1,6 @@
 ### 🆕 Changelog
 ### 🌟 Features
+- [֍](https://github.com/Shebyyy/AnymeX/commit/21d476f) Add markdown support for policy sheets and separate comment policy file by @Shebyyy
 - [֍](https://github.com/Shebyyy/AnymeX/commit/bfd9a38) nested headers in settings (#255) by @Rieversed
 
 
