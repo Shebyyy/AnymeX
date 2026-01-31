@@ -1,1 +1,13 @@
+### 🌟 Features
+-  Some manga reader  features  (#261) by @NITHINSPACETIME
+-  full light mode support by @RyanYuuki
+
+### 🔧 Bug Fixes & Improvements
+-  fixed the labels. from animes to anime by @RyanYuuki
+-  fixed an grey screen issue and reverted back to old nav bar by @RyanYuuki
+
+### 🎨 Style Changes
+-  some ui and responsive changes by @RyanYuuki
+-   revamped the banner carousel by @RyanYuuki
+
  
