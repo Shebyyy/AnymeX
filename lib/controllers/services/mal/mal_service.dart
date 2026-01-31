@@ -77,10 +77,10 @@ class MalService extends GetxController implements BaseService, OnlineService {
             ? const Center(child: AnymexProgressIndicator())
             : Column(
                 children: [
-                  buildSectionIfNotEmpty("Trending Animes", trendingAnimes),
-                  buildSectionIfNotEmpty("Popular Animes", popularAnimes),
-                  buildSectionIfNotEmpty("Top Animes", topAnimes),
-                  buildSectionIfNotEmpty("Upcoming Animes", upcomingAnimes),
+                  buildSectionIfNotEmpty("Trending Anime", trendingAnimes),
+                  buildSectionIfNotEmpty("Popular Anime", popularAnimes),
+                  buildSectionIfNotEmpty("Top Anime", topAnimes),
+                  buildSectionIfNotEmpty("Upcoming Anime", upcomingAnimes),
                 ],
               )),
       ].obs;
