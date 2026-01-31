@@ -1,17 +1,1 @@
-### 🔧 Bug Fixes & Improvements
--  fixed bad empty data handling for non logged in users by @RyanYuuki
--  fixed backup and restore ext issues plus optimized the ui builds during io operations by @RyanYuuki
-
-### 🔧 Refactors
--  refactored the dub calendar logic, made it faster and cleaned the redundant code by @RyanYuuki
--  made the library list dialog dependent on media instead of manual prop by @RyanYuuki
-
-### 🎨 Style Changes
--  minor ui changes on segmented tab on library page by @RyanYuuki
--  improved the ui of chapter/episode ranges by @RyanYuuki
--  revamped the banner carousel by @RyanYuuki
--  some responsive changes by @RyanYuuki
--  changed snackbar ui by @RyanYuuki
--  changed nav bar for mobiles by @RyanYuuki
-
  
