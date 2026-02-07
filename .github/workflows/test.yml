@@ -10,20 +10,18 @@ env:
   FLUTTER_VERSION: 3.35.7
 
 jobs:
-  build_android_arm64:
+  anchors:
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-      actions: write
-
     steps:
-      - name: Checkout repository
+      - &checkout
+        name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Prepare Flutter version
+      - &prepare_flutter
+        name: Prepare Flutter version
         shell: bash
         env:
           FLUTTER_VERSION_SECRET: ${{ secrets.FLUTTER_VERSION }}
@@ -34,13 +32,16 @@ jobs:
             echo "FLUTTER_VERSION=${FLUTTER_VERSION}" >> $GITHUB_ENV
           fi
 
-      - name: Setup Flutter
+      - &setup_flutter
+        name: Setup Flutter
         id: setup-flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
-      - name: Cache Flutter dependencies
+      - &cache_flutter_normal
+        name: Cache Flutter dependencies (normal)
+        if: ${{ !contains(github.event.head_commit.message, '[clean]') && !inputs.clean_build }}
         uses: actions/cache@v4
         with:
           path: |
@@ -50,8 +51,46 @@ jobs:
           key: v1-${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock', '**/pubspec.yaml') }}
           restore-keys: |
             v1-${{ runner.os }}-flutter-
+            clean-v1-${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock', '**/pubspec.yaml') }}
 
-      - name: Cache Gradle dependencies
+      - &cache_flutter_clean
+        name: Cache Flutter dependencies (clean)
+        if: contains(github.event.head_commit.message, '[clean]') || inputs.clean_build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.setup-flutter.outputs.pub-cache-path }}
+            build/
+            .dart_tool/
+          key: clean-v1-${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock', '**/pubspec.yaml') }}
+
+      - &setup_env
+        name: Setup env File
+        env:
+          SIMKL_SECRET: ${{ secrets.SIMKL_SECRET }}
+        shell: bash
+        run: |
+          echo "SIMKL_SECRET=$SIMKL_SECRET" > .env
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "hash=$GIT_HASH" >> .env
+
+  build_android:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: read
+
+    steps:
+      - *checkout
+      - *prepare_flutter
+      - *setup_flutter
+      - *cache_flutter_normal
+      - *cache_flutter_clean
+
+      - name: Cache Gradle dependencies (normal)
+        if: ${{ !contains(github.event.head_commit.message, '[clean]') && !inputs.clean_build }}
         uses: actions/cache@v4
         with:
           path: |
@@ -60,24 +99,29 @@ jobs:
           key: v1-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             v1-${{ runner.os }}-gradle-
-
+            clean-v1-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+      - name: Cache Gradle dependencies (clean)
+        if: contains(github.event.head_commit.message, '[clean]') || inputs.clean_build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: clean-v1-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "3.18.1"
-
       - name: Install system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y ninja-build
-
       - name: Create symlink for ninja
         run: |
           mkdir -p /usr/local/lib/android/sdk/cmake/3.18.1/bin
           sudo ln -s /usr/bin/ninja /usr/local/lib/android/sdk/cmake/3.18.1/bin/ninja
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: "oracle"
           java-version: "17"
@@ -85,20 +129,7 @@ jobs:
       - name: Download keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.APK_SIGN }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/dartotsu.jks
-          # Verify the keystore file was created
-          if [ ! -f android/app/dartotsu.jks ]; then
-            echo "Error: Keystore file was not created"
-            exit 1
-          fi
-          # Check file size to ensure it's not empty
-          file_size=$(stat -c%s android/app/dartotsu.jks)
-          if [ $file_size -eq 0 ]; then
-            echo "Error: Keystore file is empty"
-            exit 1
-          fi
-          echo "Keystore file created successfully (size: $file_size bytes)"
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > android/app/dartotsu.jks
 
       - name: Set up signing variables
         env:
@@ -110,22 +141,7 @@ jobs:
           echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
           echo "keyAlias=$KEY_ALIAS" >> android/key.properties
           echo "storeFile=dartotsu.jks" >> android/key.properties
-          
-      - name: Verify keystore
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: |
-          # Try to list the keystore to verify it's valid
-          keytool -list -v -keystore android/app/dartotsu.jks -storepass "$KEYSTORE_PASSWORD" || echo "Warning: Could not verify keystore"
-
-      - name: Setup env File
-        env:
-          SIMKL_SECRET: ${{ secrets.SIMKL_SECRET }}
-        shell: bash
-        run: |
-          echo "SIMKL_SECRET=$SIMKL_SECRET" > .env
-          GIT_HASH=$(git rev-parse --short HEAD)
-          echo "hash=$GIT_HASH" >> .env
+      - *setup_env
 
       - name: Configure Gradle
         run: |
@@ -134,41 +150,13 @@ jobs:
           echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
           echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
 
-      - name: Clean Flutter
-        run: flutter clean
+      - run: flutter clean
+      - run: flutter pub get
+      - run: flutter build apk --release --split-per-abi
 
-      - name: Get Flutter dependencies
-        run: flutter pub get
-
-      - name: Build ARM64 APK
-        run: |
-          # Try to build signed APK first
-          if flutter build apk --release --target-platform android-arm64; then
-            echo "BUILD_TYPE=signed" >> $GITHUB_ENV
-            echo "Successfully built signed APK"
-          else
-            echo "Signed build failed, attempting unsigned build..."
-            # Remove signing config to build unsigned
-            rm -f android/key.properties
-            rm -f android/app/dartotsu.jks
-            flutter clean
-            flutter pub get
-            flutter build apk --release --target-platform android-arm64
-            echo "BUILD_TYPE=unsigned" >> $GITHUB_ENV
-            echo "Successfully built unsigned APK"
-          fi
-
-      - name: Rename APK
-        run: |
-          if [ "$BUILD_TYPE" = "signed" ]; then
-            mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a_signed.apk
-          else
-            mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a_unsigned.apk
-          fi
-
-      - name: Upload ARM64 APK as Artifact
+      - name: Upload arm64 APK as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Dartotsu-ARM64-APK
-          path: build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a*.apk
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 30
