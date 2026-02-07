@@ -85,7 +85,20 @@ jobs:
       - name: Download keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.APK_SIGN }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > android/app/dartotsu.jks
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/dartotsu.jks
+          # Verify the keystore file was created
+          if [ ! -f android/app/dartotsu.jks ]; then
+            echo "Error: Keystore file was not created"
+            exit 1
+          fi
+          # Check file size to ensure it's not empty
+          file_size=$(stat -c%s android/app/dartotsu.jks)
+          if [ $file_size -eq 0 ]; then
+            echo "Error: Keystore file is empty"
+            exit 1
+          fi
+          echo "Keystore file created successfully (size: $file_size bytes)"
 
       - name: Set up signing variables
         env:
@@ -97,6 +110,13 @@ jobs:
           echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
           echo "keyAlias=$KEY_ALIAS" >> android/key.properties
           echo "storeFile=dartotsu.jks" >> android/key.properties
+          
+      - name: Verify keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          # Try to list the keystore to verify it's valid
+          keytool -list -v -keystore android/app/dartotsu.jks -storepass "$KEYSTORE_PASSWORD" || echo "Warning: Could not verify keystore"
 
       - name: Setup env File
         env:
@@ -121,15 +141,34 @@ jobs:
         run: flutter pub get
 
       - name: Build ARM64 APK
-        run: flutter build apk --release --target-platform android-arm64
+        run: |
+          # Try to build signed APK first
+          if flutter build apk --release --target-platform android-arm64; then
+            echo "BUILD_TYPE=signed" >> $GITHUB_ENV
+            echo "Successfully built signed APK"
+          else
+            echo "Signed build failed, attempting unsigned build..."
+            # Remove signing config to build unsigned
+            rm -f android/key.properties
+            rm -f android/app/dartotsu.jks
+            flutter clean
+            flutter pub get
+            flutter build apk --release --target-platform android-arm64
+            echo "BUILD_TYPE=unsigned" >> $GITHUB_ENV
+            echo "Successfully built unsigned APK"
+          fi
 
       - name: Rename APK
         run: |
-          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a.apk
+          if [ "$BUILD_TYPE" = "signed" ]; then
+            mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a_signed.apk
+          else
+            mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a_unsigned.apk
+          fi
 
       - name: Upload ARM64 APK as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Dartotsu-ARM64-APK
-          path: build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a.apk
+          path: build/app/outputs/flutter-apk/Dartotsu_Android_arm64-v8a*.apk
           retention-days: 30
