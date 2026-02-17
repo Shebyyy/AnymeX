@@ -325,43 +325,53 @@ class _ProfilePageState extends State<ProfilePage>
   Widget _buildAboutContent(BuildContext context, String about) {
     var content = about;
 
-    // 1. Strip AniList spoiler tags ~!...!~ — just show the content
+    // 1. Strip AniList spoiler wrappers ~!...!~ but KEEP the inner content
+    //    AND any trailing text after the closing !~ on the same line
     content = content.replaceAllMapped(
         RegExp(r'~!([\s\S]*?)!~'), (m) => m[1] ?? '');
 
-    // 2. Convert MD links → HTML links (handles mixed content)
+    // 2. Convert remaining MD links [text](url) → <a> tags
     content = content.replaceAllMapped(
         RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
         (m) => '<a href="${m[2]}">${m[1]}</a>');
 
-    // 3. If it doesn't look like HTML at all, convert full markdown
+    // 3. If no HTML tags found, treat as pure markdown
     final isHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
     if (!isHtml) content = _mdToHtml(content);
 
-    // 4. Fix icon rows: collapse all invisible Unicode whitespace chars
-    //    (‎ \u200b \u00a0 &lrm; &#8206; regular spaces) between </a> and <a>
-    //    so consecutive icon-links are detected as a group and wrapped in a
-    //    flex row div.
-    //
-    //    Step A: strip the invisible junk between anchor tags
+    // 4. Decode HTML entities that act as spacers between icon links:
+    //    &lrm;  &#8206;  &nbsp;  &#160;  &thinsp;  &emsp;  &ensp;
+    content = content
+        .replaceAll('&lrm;', '')
+        .replaceAll('&#8206;', '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&#160;', ' ')
+        .replaceAll('&thinsp;', '')
+        .replaceAll('&emsp;', '')
+        .replaceAll('&ensp;', '');
+
+    // 5. Strip ALL whitespace / invisible Unicode chars between </a> and <a>
+    //    so back-to-back icon anchors become truly adjacent
     content = content.replaceAllMapped(
       RegExp(
-          r'(</a>)'
-          r'(?:[\s\u200b\u200e\u00a0\u202f\u2009\u2003\u2002\u0020‎ ]*)'
-          r'(<a\s)',
-          dotAll: true),
+        r'(</a>)'
+        r'[\s\u200b\u200e\u200f\u00a0\u202f\u2009\u2003\u2002\u0020\u200c‎\u034f]*'
+        r'(<a[\s>])',
+        dotAll: true,
+      ),
       (m) => '${m[1]}${m[2]}',
     );
 
-    //    Step B: find runs of consecutive <a><img/></a> and wrap in flex div
+    // 6. Wrap every run of 2+ consecutive icon anchors in a centred flex row
     content = content.replaceAllMapped(
       RegExp(
-          r'(<a\b[^>]*>\s*<img\b[^>]*/?>\s*</a>)'
-          r'(?:\s*<a\b[^>]*>\s*<img\b[^>]*/?>\s*</a>)+',
-          dotAll: true),
+        r'(<a\b[^>]*>\s*<img\b[^>]*/?\s*>\s*</a>)'
+        r'(?:<a\b[^>]*>\s*<img\b[^>]*/?\s*>\s*</a>)+',
+        dotAll: true,
+      ),
       (m) =>
           '<div style="display:flex;flex-direction:row;flex-wrap:wrap;'
-          'gap:10px;align-items:flex-end;justify-content:center;">'
+          'gap:12px;align-items:center;justify-content:center;">'
           '${m[0]}</div>',
     );
 
@@ -470,34 +480,41 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// Minimal Markdown → HTML conversion for plain-text AniList bios
+  /// Minimal Markdown → HTML for plain / mixed AniList bios.
   String _mdToHtml(String md) {
-    var html = md
-        // Bold + italic
-        .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
-            (m) => '<strong><em>${m[1]}</em></strong>')
-        // Bold
-        .replaceAllMapped(
-            RegExp(r'\*\*(.*?)\*\*'), (m) => '<strong>${m[1]}</strong>')
-        // Italic
-        .replaceAllMapped(
-            RegExp(r'\*(.*?)\*'), (m) => '<em>${m[1]}</em>')
-        // Strikethrough
-        .replaceAllMapped(
-            RegExp(r'~~(.*?)~~'), (m) => '<del>${m[1]}</del>')
-        // Inline code
-        .replaceAllMapped(
-            RegExp(r'`(.*?)`'), (m) => '<code>${m[1]}</code>')
-        // Headers
-        .replaceAllMapped(RegExp(r'^### (.+)$', multiLine: true),
-            (m) => '<h3>${m[1]}</h3>')
-        .replaceAllMapped(RegExp(r'^## (.+)$', multiLine: true),
-            (m) => '<h2>${m[1]}</h2>')
-        .replaceAllMapped(RegExp(r'^# (.+)$', multiLine: true),
-            (m) => '<h1>${m[1]}</h1>')
-        // Line breaks → <br>
-        .replaceAll('\n', '<br>');
-    return '<p>$html</p>';
+    final lines = md.split('\n');
+    final buffer = StringBuffer();
+    for (final rawLine in lines) {
+      var line = rawLine.trim();
+      if (line.isEmpty) continue;
+
+      // Pass through block-level HTML
+      if (RegExp(r'^<(div|p|h[1-6]|ul|ol|li|blockquote|br)',
+              caseSensitive: false)
+          .hasMatch(line)) {
+        buffer.writeln(line);
+        continue;
+      }
+
+      // Inline markdown conversions
+      line = line
+          .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
+              (m) => '<strong><em>${m[1]}</em></strong>')
+          .replaceAllMapped(
+              RegExp(r'\*\*(.*?)\*\*'), (m) => '<strong>${m[1]}</strong>')
+          .replaceAllMapped(RegExp(r'~~(.*?)~~'), (m) => '<del>${m[1]}</del>')
+          .replaceAllMapped(RegExp(r'`(.*?)`'), (m) => '<code>${m[1]}</code>')
+          .replaceAllMapped(RegExp(r'^### (.+)$'), (m) => '<h3>${m[1]}</h3>')
+          .replaceAllMapped(RegExp(r'^## (.+)$'), (m) => '<h2>${m[1]}</h2>')
+          .replaceAllMapped(RegExp(r'^# (.+)$'), (m) => '<h1>${m[1]}</h1>');
+
+      if (RegExp(r'^<h[1-6]>').hasMatch(line)) {
+        buffer.writeln(line);
+      } else {
+        buffer.writeln('<p>$line</p>');
+      }
+    }
+    return buffer.toString();
   }
 
   Widget _buildSliverAppBar(
