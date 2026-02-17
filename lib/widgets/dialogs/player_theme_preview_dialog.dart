@@ -1,6 +1,3 @@
-/// Player Theme Preview Dialog
-/// Provides a live preview of player control themes with interactive selection
-
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/database/isar_models/video.dart' as model;
@@ -34,7 +31,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
   void initState() {
     super.initState();
     _previewThemeId = widget.initialThemeId;
-    // Create mock controller for preview WITHOUT tag
     _mockController = MockPlayerController();
   }
 
@@ -64,7 +60,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
               child: Row(
@@ -86,13 +81,9 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                 ],
               ),
             ),
-
-            // Content
             Expanded(
               child: _buildContent(),
             ),
-
-            // Buttons
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Row(
@@ -161,15 +152,11 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left side - Preview
           Expanded(
             flex: 3,
             child: _buildPreviewContainer(),
           ),
-
           const SizedBox(width: 16),
-
-          // Right side - List
           Expanded(
             flex: 4,
             child: _buildThemeList(),
@@ -204,7 +191,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Background gradient
                 Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
@@ -218,8 +204,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                     ),
                   ),
                 ),
-
-                // Mock video content
                 Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -240,8 +224,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                     ],
                   ),
                 ),
-
-                // ACTUAL THEME CONTROLS - This is what the user wants!
                 _mockController.buildWithTheme(theme),
               ],
             ),
@@ -374,8 +356,6 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
   }
 }
 
-/// Mock PlayerController that provides minimal implementation for preview
-/// This satisfies GetX dependency injection without requiring actual video player
 class MockPlayerController extends GetxController {
   final RxBool isLocked = false.obs;
   final RxBool showControls = true.obs;
@@ -403,20 +383,17 @@ class MockPlayerController extends GetxController {
   Widget buildWithTheme(PlayerControlTheme theme) {
     return Column(
       children: [
-        // Top controls
         SizedBox(
           height: 60,
-          child: theme.buildTopControls(Get.context!, this),
+          child: theme.buildTopControls(Get.context!, this as PlayerController),
         ),
         const Spacer(),
-        // Center controls
         SizedBox(
           height: 80,
-          child: theme.buildCenterControls(Get.context!, this),
+          child: theme.buildCenterControls(Get.context!, this as PlayerController),
         ),
         const Spacer(),
-        // Bottom controls
-        theme.buildBottomControls(Get.context!, this),
+        theme.buildBottomControls(Get.context!, this as PlayerController),
       ],
     );
   }
