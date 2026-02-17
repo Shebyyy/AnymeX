@@ -7,6 +7,7 @@ import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
 import 'package:anymex/screens/other_features.dart';
+import 'package:anymex/widgets/dialogs/player_theme_preview_dialog.dart';
 import 'package:anymex/utils/subtitle_translator.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/checkmark_tile.dart';
@@ -279,16 +280,16 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
   }
 
   void _showPlayerControlThemeDialog() {
-    showSelectionDialog<String>(
-      title: 'Control Theme',
-      items: PlayerControlThemeRegistry.themes.map((e) => e.id).toList(),
-      selectedItem: settings.playerControlThemeRx,
-      getTitle: (id) => PlayerControlThemeRegistry.resolve(id).name,
-      onItemSelected: (id) {
-        settings.playerControlTheme = id;
-        setState(() {});
-      },
-      leadingIcon: Icons.style_rounded,
+    showDialog(
+      context: context,
+      builder: (context) => PlayerThemePreviewDialog(
+        initialTheme: settings.playerControlTheme,
+        onConfirm: (String themeId) {
+          setState(() {
+            settings.playerControlTheme = themeId;
+          });
+        },
+      ),
     );
   }
 
@@ -386,7 +387,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
   Widget build(BuildContext context) {
     return Glow(
         child: Scaffold(
-            //	backgroundColor: widget.isModal
+            //  backgroundColor: widget.isModal
             //  ? context.colors.surfaceContainer
             //  : Colors.transparent,
             body: Column(children: [
