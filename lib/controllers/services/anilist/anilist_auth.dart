@@ -112,7 +112,6 @@ class AnilistAuth extends GetxController {
         );
         final code = Uri.parse(result).queryParameters['code'];
         if (code != null) {
-          Logger.i("token found: $code");
           await _exchangeCodeForToken(
               code, clientId, clientSecret, redirectUri);
         }
