@@ -7,6 +7,8 @@ import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
 import 'package:anymex/screens/other_features.dart';
+import 'package:anymex/widgets/dialogs/custom_theme_manager_dialog.dart';
+import 'package:anymex/widgets/dialogs/custom_player_theme_manager_dialog.dart';
 import 'package:anymex/utils/subtitle_translator.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/checkmark_tile.dart';
@@ -306,6 +308,20 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
     );
   }
 
+  void _showCustomThemesManager() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const CustomThemeManagerDialog(),
+    );
+  }
+
+  void _showCustomPlayerThemesManager() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const CustomPlayerThemeManagerDialog(),
+    );
+  }
+
   void _showResizeModeDialog() {
     final currentFit = settings.resizeMode;
     final selectedLabel = resizeModeList.firstWhere(
@@ -386,7 +402,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
   Widget build(BuildContext context) {
     return Glow(
         child: Scaffold(
-            //	backgroundColor: widget.isModal
+            //  backgroundColor: widget.isModal
             //  ? context.colors.surfaceContainer
             //  : Colors.transparent,
             body: Column(children: [
@@ -464,6 +480,28 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                                     MediaIndicatorThemeRegistry.resolve(
                                   settings.mediaIndicatorTheme,
                                 ).name,
+                              ),
+                              CustomTile(
+                                padding: 10,
+                                descColor:
+                                    Theme.of(context).colorScheme.primary,
+                                isDescBold: true,
+                                icon: Icons.add_circle_outline,
+                                onTap: _showCustomThemesManager,
+                                title: 'Manage Custom Themes',
+                                description:
+                                    'Create and manage your custom themes',
+                              ),
+                              CustomTile(
+                                padding: 10,
+                                descColor:
+                                    Theme.of(context).colorScheme.primary,
+                                isDescBold: true,
+                                icon: Icons.style_rounded,
+                                onTap: _showCustomPlayerThemesManager,
+                                title: 'Manage Custom Player Themes',
+                                description:
+                                    'Create and manage your custom player themes',
                               ),
                               CustomSwitchTile(
                                   padding: const EdgeInsets.all(10),

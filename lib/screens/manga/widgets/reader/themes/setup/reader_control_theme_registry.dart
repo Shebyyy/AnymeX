@@ -1,35 +1,34 @@
+import 'package:anymex/models/custom_themes/custom_reader_theme.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/default_reader_control_theme.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/ios_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/modern_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/minimal_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/retro_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/cyberpunk_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/glass_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/cinema_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/gaming_reader_control_theme.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/anime_reader_control_theme.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme.dart';
+import 'package:anymex/services/custom_theme_loader.dart';
+import 'package:anymex/utils/logger.dart';
 
 class ReaderControlThemeRegistry {
   static const String defaultThemeId = 'default';
 
-  static List<ReaderControlTheme> themes = [
+  static final List<ReaderControlTheme> builtinThemes = [
     DefaultReaderControlTheme(),
     IOSReaderControlTheme(),
-    ModernReaderControlTheme(),
-    MinimalReaderControlTheme(),
-    RetroReaderControlTheme(),
-    CyberpunkReaderControlTheme(),
-    GlassReaderControlTheme(),
-    CinemaReaderControlTheme(),
-    GamingReaderControlTheme(),
-    AnimeReaderControlTheme(),
   ];
 
+  static Future<List<ReaderControlTheme>> getAllThemes() async {
+    try {
+      final customThemes = await CustomThemeLoader.loadCustomReaderThemes();
+      return [...builtinThemes, ...customThemes];
+    } catch (e) {
+      Logger.i('Error loading custom themes, using built-in only: $e');
+      return builtinThemes;
+    }
+  }
+
+  static List<ReaderControlTheme> get themes => builtinThemes;
+
   static ReaderControlTheme resolve(String id) {
-    return themes.firstWhere(
+    return builtinThemes.firstWhere(
       (theme) => theme.id == id,
-      orElse: () => themes.first,
+      orElse: () => builtinThemes.first,
     );
   }
 }

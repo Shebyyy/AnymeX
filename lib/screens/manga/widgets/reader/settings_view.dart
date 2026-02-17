@@ -5,6 +5,7 @@ import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_
 import 'package:anymex/screens/settings/sub_settings/settings_tap_zones.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
+import 'package:anymex/widgets/dialogs/custom_reader_theme_manager_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:get/get.dart';
@@ -32,6 +33,13 @@ class ReaderSettings {
           settings.readerControlTheme = id;
         },
         leadingIcon: Icons.style_rounded,
+      );
+    }
+
+    void showCustomReaderThemesManager() async {
+      await showDialog(
+        context: context,
+        builder: (context) => const CustomReaderThemeManagerDialog(),
       );
     }
 
@@ -72,6 +80,12 @@ class ReaderSettings {
                       onTap: showReaderControlThemeDialog,
                     );
                   }),
+                  CustomTile(
+                    title: 'Manage Custom Reader Themes',
+                    description: 'Create and manage your custom reader themes',
+                    icon: Icons.add_circle_outline,
+                    onTap: showCustomReaderThemesManager,
+                  ),
                   Obx(() {
                     final currentLayout = controller.readingLayout.value;
                     return CustomTile(
