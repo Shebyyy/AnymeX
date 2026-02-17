@@ -2,12 +2,16 @@
 /// Provides a live preview of player control themes with interactive selection
 /// Similar to logo animation preview dialog
 
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
-import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
+import 'package:anymex/database/isar_models/episode.dart';
+import 'package:anymex/database/isar_models/video.dart' as model;
+import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class PlayerThemePreviewDialog extends StatefulWidget {
   final String initialThemeId;
@@ -15,7 +19,7 @@ class PlayerThemePreviewDialog extends StatefulWidget {
 
   const PlayerThemePreviewDialog({
     Key? key,
-    required this.initialTheme,
+    required this.initialThemeId,
     required this.onConfirm,
   }) : super(key: key);
 
@@ -31,7 +35,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedThemeId = widget.initialTheme;
+    _selectedThemeId = widget.initialThemeId;
     _selectedTheme = PlayerControlThemeRegistry.resolve(_selectedThemeId);
   }
 
@@ -428,48 +432,199 @@ class _ThemePreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create a mock controller for preview
-    final mockController = _MockPlayerController();
-
     return Column(
       children: [
-        // Top controls
+        // Top controls placeholder
         Container(
           height: 60,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: theme.buildTopControls(context, mockController),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.8),
+                Colors.transparent,
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Sample Episode',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Episode 1',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.settings_rounded,
+                  size: 18,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
         ),
 
         const Spacer(),
 
-        // Center controls
+        // Center controls placeholder
         SizedBox(
           height: 80,
-          child: theme.buildCenterControls(context, mockController),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.fast_rewind,
+                  size: 24,
+                  color: Colors.white70,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 24),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.fast_forward,
+                  size: 24,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
         ),
 
         const Spacer(),
 
-        // Bottom controls
+        // Bottom controls placeholder
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: theme.buildBottomControls(context, mockController),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.8),
+              ],
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                height: 4,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(
+                    '1:23',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen_rounded,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
-}
-
-/// Mock player controller for preview purposes
-class _MockPlayerController extends PlayerController {
-  _MockPlayerController()
-      : super(
-          animeId: '',
-          sourceId: '',
-          episodeData: const Episode(
-            number: '1',
-            title: 'Sample Episode',
-            url: '',
-          ),
-        );
 }
