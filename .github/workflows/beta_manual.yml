@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g., 1.0.0)'
+        description: 'Version (e.g., 3.0.4 or 3.0.4+1-beta)'
         required: true
         type: string
 
@@ -17,30 +17,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      
+
       - uses: actions/setup-java@v3
         with:
           distribution: "adopt"
           java-version: "17"
-      
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: false
-      
-      # =================================================================
-      # Install ImageMagick
-      # =================================================================
+
       - name: Install ImageMagick (Linux)
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
-          
+
       - name: Verify ImageMagick Installation
         shell: bash
         run: |
@@ -64,19 +61,40 @@ jobs:
           echo "Input version: ${{ inputs.version }}"
           echo ""
 
-          # Use input version with build number
-          BASE_VERSION="${{ inputs.version }}"
-          BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
-          VERSION="${BASE_VERSION}+${BUILD_NUMBER}"
+          # Extract version from input
+          # Support formats like: "3.0.4" or "3.0.4+1-beta"
+          INPUT_VERSION="${{ inputs.version }}"
 
-          echo "Final beta version: $VERSION"
+          # Check if input has -beta suffix
+          if [[ "$INPUT_VERSION" == *"-beta" ]]; then
+            # Remove -beta suffix for display version
+            VERSION_PART=$(echo "$INPUT_VERSION" | sed 's/-beta$//')
 
-          # Validate version format
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
-            echo "❌ Version format invalid: $VERSION"
-            echo "   Expected format: X.Y.Z+BUILD (e.g., 1.0.0+123)"
-            exit 1
+            # Extract semver for pubspec (before any +)
+            if [[ "$VERSION_PART" == *"+"* ]]; then
+              SEMVER=$(echo "$VERSION_PART" | cut -d'+' -f1 | cut -d'-' -f1)
+            else
+              SEMVER=$(echo "$VERSION_PART" | cut -d'-' -f1)
+            fi
+
+            DISPLAY_VERSION="v${VERSION_PART}"
+          else
+            # Simple version like "3.0.4"
+            SEMVER="$INPUT_VERSION"
+            DISPLAY_VERSION="v${INPUT_VERSION}"
           fi
+
+          echo "Display version: $DISPLAY_VERSION"
+
+          # GitHub build number
+          BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+
+          # pubspec.yaml version (valid Flutter format)
+          PUBSPEC_VERSION="${SEMVER}+${BUILD_NUMBER}"
+
+          echo "Pubspec version: $PUBSPEC_VERSION"
+          echo "Display version: $DISPLAY_VERSION"
+          echo ""
 
           # Check if rename script exists
           if [ ! -f "scripts/rename_app.sh" ]; then
@@ -86,16 +104,16 @@ jobs:
 
           # Make script executable and run
           chmod +x scripts/rename_app.sh
-          echo ""
-          echo "Running rename script with version: $VERSION"
+          echo "Running rename script..."
           echo "════════════════════════════════════════════"
 
-          if ./scripts/rename_app.sh "$VERSION"; then
+          if ./scripts/rename_app.sh "$PUBSPEC_VERSION" "$DISPLAY_VERSION"; then
             echo ""
             echo "✅ Beta rename completed successfully"
             echo "   Package: com.ryan.anymex → com.ryan.anymexbeta"
             echo "   App Name: AnymeX → AnymeX β"
-            echo "   Version: $VERSION"
+            echo "   Pubspec Version: $PUBSPEC_VERSION"
+            echo "   Display Version: $DISPLAY_VERSION"
           else
             echo ""
             echo "❌ Beta rename failed"
@@ -104,28 +122,25 @@ jobs:
 
           echo "════════════════════════════════════════════"
 
-      # =================================================================
-      # Disable Google Services for beta builds
-      # =================================================================
       - name: Disable Google Services for Beta
         shell: bash
         run: |
           echo "🔵 Disabling Google Services for Beta Build"
-          
+
           # Remove google-services plugin from app/build.gradle
           if [ -f "android/app/build.gradle" ]; then
             echo "Modifying android/app/build.gradle..."
             sed -i '/com\.google\.gms\.google-services/d' android/app/build.gradle
             echo "✅ Removed google-services plugin from app/build.gradle"
           fi
-          
+
           # Remove google-services classpath from build.gradle
           if [ -f "android/build.gradle" ]; then
             echo "Modifying android/build.gradle..."
             sed -i '/com\.google\.gms:google-services:/d' android/build.gradle
             echo "✅ Removed google-services classpath from build.gradle"
           fi
-          
+
           # Verify changes
           echo ""
           echo "Verification - checking for remaining google-services references:"
@@ -205,15 +220,25 @@ jobs:
           echo "🎯 FLUTTER"
           echo "────────────────────────────────────────────"
 
-          BASE_VERSION="${{ inputs.version }}"
+          INPUT_VERSION="${{ inputs.version }}"
+          if [[ "$INPUT_VERSION" == *"-beta" ]]; then
+            VERSION_PART=$(echo "$INPUT_VERSION" | sed 's/-beta$//')
+            if [[ "$VERSION_PART" == *"+"* ]]; then
+              SEMVER=$(echo "$VERSION_PART" | cut -d'+' -f1 | cut -d'-' -f1)
+            else
+              SEMVER=$(echo "$VERSION_PART" | cut -d'-' -f1)
+            fi
+          else
+            SEMVER="$INPUT_VERSION"
+          fi
           BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
-          VERSION="${BASE_VERSION}+${BUILD_NUMBER}"
-          
-          if grep -q "version: $VERSION" pubspec.yaml 2>/dev/null; then
-            echo "✅ Version updated in pubspec.yaml: $VERSION"
+          PUBSPEC_VERSION="${SEMVER}+${BUILD_NUMBER}"
+
+          if grep -q "version: $PUBSPEC_VERSION" pubspec.yaml 2>/dev/null; then
+            echo "✅ Version updated in pubspec.yaml: $PUBSPEC_VERSION"
           else
             echo "❌ Version NOT updated in pubspec.yaml"
-            echo "   Expected: version: $VERSION"
+            echo "   Expected: version: $PUBSPEC_VERSION"
             echo "   Found:"
             grep "^version:" pubspec.yaml 2>/dev/null || echo "   No version line found"
             ERRORS=$((ERRORS + 1))
@@ -233,13 +258,13 @@ jobs:
             echo "════════════════════════════════════════════"
             exit 1
           fi
-      
+
       - name: Cache CMake
         uses: actions/cache@v3
         with:
           path: ~/cmake
           key: cmake-3.18.1-linux-x64
-      
+
       - name: Setup Android
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -262,7 +287,7 @@ jobs:
           keyAlias=$KEY_ALIAS
           storeFile=anymex.jks
           EOF
-      
+
       - name: Setup Environment
         shell: bash
         env:
@@ -285,10 +310,7 @@ jobs:
           CALLBACK_SCHEME=$CALLBACK_SCHEME
           GOOGLE_BOOKS_API_KEY=$GOOGLE_BOOKS_API_KEY
           EOF
-      
-      # =================================================================
-      # Apply Beta Assets
-      # =================================================================
+
       - name: Apply Beta Assets
         shell: bash
         run: |
@@ -308,16 +330,16 @@ jobs:
             exit 1
           fi
           echo "✅ Beta assets applied."
-      
+
       - name: Clean Flutter
         run: flutter clean
-      
+
       - name: Build Android APKs
         run: |
           flutter pub get
           flutter build apk --split-per-abi
           flutter build apk --release
-          
+
       - name: Rename APKs
         run: |
           cd build/app/outputs/flutter-apk
@@ -325,28 +347,25 @@ jobs:
           mv app-arm64-v8a-release.apk AnymeX-Android-arm64-v8a.apk
           mv app-x86_64-release.apk AnymeX-Android-x86_64.apk
           mv app-release.apk AnymeX-Android-universal.apk
-      
-      # =================================================================
-      # Upload each APK as a separate artifact
-      # =================================================================
+          
       - name: Upload APK (arm64-v8a)
         uses: actions/upload-artifact@v4
         with:
           name: android-arm64-v8a
           path: build/app/outputs/flutter-apk/AnymeX-Android-arm64-v8a.apk
-      
+
       - name: Upload APK (armeabi-v7a)
         uses: actions/upload-artifact@v4
         with:
           name: android-armeabi-v7a
           path: build/app/outputs/flutter-apk/AnymeX-Android-armeabi-v7a.apk
-      
+
       - name: Upload APK (x86_64)
         uses: actions/upload-artifact@v4
         with:
           name: android-x86_64
           path: build/app/outputs/flutter-apk/AnymeX-Android-x86_64.apk
-      
+
       - name: Upload APK (universal)
         uses: actions/upload-artifact@v4
         with:
