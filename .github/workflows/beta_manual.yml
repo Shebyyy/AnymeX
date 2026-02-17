@@ -68,8 +68,10 @@ jobs:
           BASE_VERSION="${{ inputs.version }}"
           BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
           VERSION="${BASE_VERSION}+${BUILD_NUMBER}"
+          DISPLAY_VERSION="v${BASE_VERSION}-beta"
 
           echo "Final beta version: $VERSION"
+          echo "Display version: $DISPLAY_VERSION"
 
           # Validate version format
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
@@ -87,15 +89,16 @@ jobs:
           # Make script executable and run
           chmod +x scripts/rename_app.sh
           echo ""
-          echo "Running rename script with version: $VERSION"
+          echo "Running rename script with version: $VERSION display: $DISPLAY_VERSION"
           echo "════════════════════════════════════════════"
 
-          if ./scripts/rename_app.sh "$VERSION"; then
+          if ./scripts/rename_app.sh "$VERSION" "$DISPLAY_VERSION"; then
             echo ""
             echo "✅ Beta rename completed successfully"
             echo "   Package: com.ryan.anymex → com.ryan.anymexbeta"
             echo "   App Name: AnymeX → AnymeX β"
-            echo "   Version: $VERSION"
+            echo "   Pubspec Version: $VERSION"
+            echo "   Display Version: $DISPLAY_VERSION"
           else
             echo ""
             echo "❌ Beta rename failed"
