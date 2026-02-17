@@ -87,50 +87,102 @@ class UpdateManager {
     currentVersion = currentVersion.replaceFirst(RegExp(r'^v'), '');
     latestVersion = latestVersion.replaceFirst(RegExp(r'^v'), '');
 
-    final currentSplit = currentVersion.split('-');
-    final latestSplit = latestVersion.split('-');
+    // Parse version: semantic[.+]build[-]tag
+    // Examples: "3.0.7", "3.0.7+1-beta", "3.0.7+1", "3.0.7-beta"
+    final currentParsed = _parseVersion(currentVersion);
+    final latestParsed = _parseVersion(latestVersion);
 
-    final currentNums = currentSplit[0].split('.').map(int.parse).toList();
-    final latestNums = latestSplit[0].split('.').map(int.parse).toList();
-
+    // Compare semantic versions first
     for (int i = 0; i < 3; i++) {
-      final c = i < currentNums.length ? currentNums[i] : 0;
-      final l = i < latestNums.length ? latestNums[i] : 0;
+      final c = i < currentParsed.nums.length ? currentParsed.nums[i] : 0;
+      final l = i < latestParsed.nums.length ? latestParsed.nums[i] : 0;
       if (l > c) return true;
       if (l < c) return false;
     }
 
-    final currentHasTag = currentSplit.length == 2;
-    final latestHasTag = latestSplit.length == 2;
-
-    if (latestHasTag && latestSplit[1].toLowerCase() == 'hotfix') {
-      if (_currentVersionIncludesHotfix) return false;
-      if (currentHasTag && currentSplit[1].toLowerCase() == 'hotfix') {
-        return false;
-      }
-      return true;
+    // If semantic versions equal, compare build numbers
+    if (currentParsed.buildNum != null && latestParsed.buildNum != null) {
+      return latestParsed.buildNum! > currentParsed.buildNum!;
     }
 
-    if (!currentHasTag && latestHasTag) return false;
-
-    if (currentHasTag && !latestHasTag) return true;
-
-    if (currentHasTag && latestHasTag) {
+    // If builds also equal, compare tags (alpha < beta < rc < none)
+    if (currentParsed.tag != null && latestParsed.tag != null) {
       final priority = ['alpha', 'beta', 'rc'];
-      final currentTag = currentSplit[1].toLowerCase();
-      final latestTag = latestSplit[1].toLowerCase();
-
-      final currentIndex = priority.indexOf(currentTag);
-      final latestIndex = priority.indexOf(latestTag);
-
+      final currentIndex = priority.indexOf(currentParsed.tag);
+      final latestIndex = priority.indexOf(latestParsed.tag);
+      
       if (currentIndex != -1 && latestIndex != -1) {
         return latestIndex > currentIndex;
       }
     }
 
+    // Handle hotfix
+    if (latestParsed.tag == 'hotfix') {
+      if (_currentVersionIncludesHotfix) return false;
+      if (currentParsed.tag == 'hotfix') return false;
+      return true;
+    }
+
+    // If current has tag and latest doesn't, update available
+    if (currentParsed.tag != null && latestParsed.tag == null) {
+      return true;
+    }
+
     Logger.i('Current version ($currentVersion) is up to date.');
     return false;
   }
+
+  /// Parse version into components: [major, minor, patch], buildNum, tag
+  _VersionData _parseVersion(String version) {
+    final parts = version.split('+');
+    final semver = parts[0];
+    
+    // Parse semantic version (e.g., "3.0.7")
+    final semverParts = semver.split('.');
+    final nums = semverParts.map((part) {
+      final numStr = part.split(RegExp(r'[^0-9]')).first;
+      return int.tryParse(numStr) ?? 0;
+    }).toList();
+    
+    // Parse build number (after '+')
+    int? buildNum;
+    if (parts.length > 1) {
+      // Parts[1] is like "1-beta" or "1"
+      final buildPart = parts[1].split('-')[0];
+      buildNum = int.tryParse(buildPart);
+    }
+    
+    // Parse tag (after '-' or last part)
+    String? tag;
+    if (parts.length > 1) {
+      final afterPlus = parts[1];
+      final tagParts = afterPlus.split('-');
+      if (tagParts.length > 1) {
+        tag = tagParts[1].toLowerCase();
+      } else {
+        // Check if part after '+' is a known tag
+        final possibleTag = afterPlus.toLowerCase();
+        if (['alpha', 'beta', 'rc', 'hotfix'].contains(possibleTag)) {
+          tag = possibleTag;
+        }
+      }
+    }
+    
+    return _VersionData(nums: nums, buildNum: buildNum, tag: tag);
+  }
+}
+
+class _VersionData {
+  final List<int> nums;
+  final int? buildNum;
+  final String? tag;
+  
+  _VersionData({
+    required this.nums,
+    required this.buildNum,
+    required this.tag,
+  });
+}
 
   Future<String> _getCurrentVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -223,7 +275,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat(reverse: true);
-
     _pulseAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
@@ -303,7 +354,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
     setState(() {
       _downloadStatus = 'Downloading APK...';
     });
-
     final dio = Dio();
     final tempDir = await getTemporaryDirectory();
     final savePath = '${tempDir.path}/app_update.apk';
@@ -347,7 +397,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
     setState(() {
       _downloadStatus = 'Downloading installer...';
     });
-
     final dio = Dio();
     final downloadsDir = await getDownloadsDirectory();
     final savePath =
