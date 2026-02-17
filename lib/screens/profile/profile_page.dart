@@ -1,26 +1,51 @@
 import 'dart:ui';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
-import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:get/get.dart';
 import 'package:iconly/iconly.dart';
 
-extension ColorToCss on Color {
-  String toCssString() => 'rgba(${red}, ${green}, ${blue}, ${opacity})';
-}
-
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authController = Get.find<AnilistAuth>();
-    final handler = Get.find<ServiceHandler>();
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bannerController;
+  late final Animation<Alignment> _bannerAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat(reverse: true);
+    _bannerAnim = Tween<Alignment>(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+    ).animate(CurvedAnimation(
+      parent: _bannerController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _bannerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final handler = Get.find<ServiceHandler>();
     final profileData = handler.profileData;
 
     return Glow(
@@ -33,7 +58,7 @@ class ProfilePage extends StatelessWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildSliverAppBar(context, bannerUrl, user.cover, user.name ?? 'Guest'),
+              _buildSliverAppBar(context, bannerUrl, user.cover, user.name ?? 'Guest', _bannerAnim),
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -156,6 +181,7 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
 
+                    // ── About / Bio ──────────────────────────────────────
                     if (user.about != null && user.about!.trim().isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Padding(
@@ -177,76 +203,12 @@ class ProfilePage extends StatelessWidget {
                                   .withOpacity(0.3),
                             ),
                           ),
-                          child: HtmlWidget(
-                            user.about!,
-                            textStyle: TextStyle(
-                              fontSize: 13.5,
-                              height: 1.65,
-                              color: context.theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'Poppins',
-                            ),
-                            customStylesBuilder: (element) {
-                              if (element.localName == 'strong') {
-                                return {
-                                  'font-weight': '700',
-                                  'color': context.theme.colorScheme.onSurface.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'em') {
-                                return {
-                                  'font-style': 'italic',
-                                  'color': context.theme.colorScheme.onSurface.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'h1') {
-                                return {
-                                  'font-size': '18px',
-                                  'font-weight': 'bold',
-                                  'color': context.theme.colorScheme.onSurface.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'h2') {
-                                return {
-                                  'font-size': '16px',
-                                  'font-weight': 'bold',
-                                  'color': context.theme.colorScheme.onSurface.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'h3') {
-                                return {
-                                  'font-size': '14px',
-                                  'font-weight': 'bold',
-                                  'color': context.theme.colorScheme.onSurface.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'blockquote') {
-                                return {
-                                  'background-color': context.theme.colorScheme.primary.withOpacity(0.07).toCssString(),
-                                  'padding': '8px',
-                                  'border-left': '3px solid ${context.theme.colorScheme.primary.toCssString()}',
-                                };
-                              }
-                              if (element.localName == 'code') {
-                                return {
-                                  'font-family': 'monospace',
-                                  'font-size': '12px',
-                                  'background-color': context.theme.colorScheme.surfaceContainer.toCssString(),
-                                  'color': context.theme.colorScheme.primary.toCssString(),
-                                };
-                              }
-                              if (element.localName == 'a') {
-                                return {
-                                  'color': context.theme.colorScheme.primary.toCssString(),
-                                  'text-decoration': 'underline',
-                                };
-                              }
-                              return null;
-                            },
-                          ),
+                          child: _buildAboutContent(context, user.about!),
                         ),
                       ),
                     ],
 
+                    // ── Favourite Anime ──────────────────────────────────
                     if (user.favourites?.anime.isNotEmpty ?? false) ...[
                       const SizedBox(height: 20),
                       Padding(
@@ -258,6 +220,7 @@ class ProfilePage extends StatelessWidget {
                       _buildMediaFavCarousel(context, user.favourites!.anime),
                     ],
 
+                    // ── Favourite Manga ──────────────────────────────────
                     if (user.favourites?.manga.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -269,6 +232,7 @@ class ProfilePage extends StatelessWidget {
                       _buildMediaFavCarousel(context, user.favourites!.manga),
                     ],
 
+                    // ── Favourite Characters ─────────────────────────────
                     if (user.favourites?.characters.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -285,6 +249,7 @@ class ProfilePage extends StatelessWidget {
                               .toList()),
                     ],
 
+                    // ── Favourite Staff ──────────────────────────────────
                     if (user.favourites?.staff.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -301,6 +266,7 @@ class ProfilePage extends StatelessWidget {
                               .toList()),
                     ],
 
+                    // ── Favourite Studios ────────────────────────────────
                     if (user.favourites?.studios.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -356,8 +322,190 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _buildAboutContent(BuildContext context, String about) {
+    var content = about;
+
+    // 1. Strip AniList spoiler tags ~!...!~ — just show the content
+    content = content.replaceAllMapped(
+        RegExp(r'~!([\s\S]*?)!~'), (m) => m[1] ?? '');
+
+    // 2. Convert MD links → HTML links (handles mixed content)
+    content = content.replaceAllMapped(
+        RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
+        (m) => '<a href="${m[2]}">${m[1]}</a>');
+
+    // 3. If it doesn't look like HTML at all, convert full markdown
+    final isHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
+    if (!isHtml) content = _mdToHtml(content);
+
+    // 4. Fix icon rows: collapse all invisible Unicode whitespace chars
+    //    (‎ \u200b \u00a0 &lrm; &#8206; regular spaces) between </a> and <a>
+    //    so consecutive icon-links are detected as a group and wrapped in a
+    //    flex row div.
+    //
+    //    Step A: strip the invisible junk between anchor tags
+    content = content.replaceAllMapped(
+      RegExp(
+          r'(</a>)'
+          r'(?:[\s\u200b\u200e\u00a0\u202f\u2009\u2003\u2002\u0020‎ ]*)'
+          r'(<a\s)',
+          dotAll: true),
+      (m) => '${m[1]}${m[2]}',
+    );
+
+    //    Step B: find runs of consecutive <a><img/></a> and wrap in flex div
+    content = content.replaceAllMapped(
+      RegExp(
+          r'(<a\b[^>]*>\s*<img\b[^>]*/?>\s*</a>)'
+          r'(?:\s*<a\b[^>]*>\s*<img\b[^>]*/?>\s*</a>)+',
+          dotAll: true),
+      (m) =>
+          '<div style="display:flex;flex-direction:row;flex-wrap:wrap;'
+          'gap:10px;align-items:flex-end;justify-content:center;">'
+          '${m[0]}</div>',
+    );
+
+    return Html(
+      data: content,
+      style: {
+        'body': Style(
+          margin: Margins.zero,
+          padding: HtmlPaddings.zero,
+          fontSize: FontSize(13.5),
+          lineHeight: LineHeight(1.65),
+          color: context.theme.colorScheme.onSurfaceVariant,
+          fontFamily: 'Poppins',
+        ),
+        'div': Style(
+          margin: Margins.only(bottom: 8),
+        ),
+        'p': Style(
+          margin: Margins.only(bottom: 8),
+          color: context.theme.colorScheme.onSurfaceVariant,
+        ),
+        'a': Style(
+          color: context.theme.colorScheme.primary,
+          textDecoration: TextDecoration.none,
+          display: Display.inlineBlock,
+        ),
+        'strong': Style(
+          fontWeight: FontWeight.w700,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'b': Style(
+          fontWeight: FontWeight.w700,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'em': Style(
+          fontStyle: FontStyle.italic,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'i': Style(
+          fontStyle: FontStyle.italic,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'h1': Style(
+          fontSize: FontSize(18),
+          fontWeight: FontWeight.bold,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'h2': Style(
+          fontSize: FontSize(16),
+          fontWeight: FontWeight.bold,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'h3': Style(
+          fontSize: FontSize(14),
+          fontWeight: FontWeight.bold,
+          color: context.theme.colorScheme.onSurface,
+        ),
+        'code': Style(
+          fontFamily: 'monospace',
+          fontSize: FontSize(12),
+          backgroundColor: context.theme.colorScheme.surfaceContainer,
+          color: context.theme.colorScheme.primary,
+        ),
+        'blockquote': Style(
+          backgroundColor:
+              context.theme.colorScheme.primary.withOpacity(0.07),
+          padding: HtmlPaddings.symmetric(horizontal: 12, vertical: 8),
+          margin: Margins.only(left: 0, right: 0, top: 4, bottom: 4),
+          border: Border(
+            left: BorderSide(
+              color: context.theme.colorScheme.primary,
+              width: 3,
+            ),
+          ),
+        ),
+        'img': Style(
+          margin: Margins.only(bottom: 8),
+        ),
+      },
+      extensions: [
+        TagExtension(
+          tagsToExtend: {'img'},
+          builder: (extensionContext) {
+            final src = extensionContext.attributes['src'] ?? '';
+            final widthAttr = extensionContext.attributes['width'];
+            final heightAttr = extensionContext.attributes['height'];
+            final double? w =
+                widthAttr != null ? double.tryParse(widthAttr) : null;
+            final double? h =
+                heightAttr != null ? double.tryParse(heightAttr) : null;
+            // Icon-sized images keep their explicit size; large images go full width
+            final isIcon = w != null && w <= 80;
+            return CachedNetworkImage(
+              imageUrl: src,
+              width: isIcon ? w : double.infinity,
+              height: h ?? (isIcon ? 60 : null),
+              fit: isIcon ? BoxFit.contain : BoxFit.cover,
+              errorWidget: (_, __, ___) =>
+                  SizedBox(width: w ?? 40, height: h ?? 40),
+              placeholder: (_, __) =>
+                  SizedBox(width: w ?? 40, height: h ?? 40),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Minimal Markdown → HTML conversion for plain-text AniList bios
+  String _mdToHtml(String md) {
+    var html = md
+        // Bold + italic
+        .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
+            (m) => '<strong><em>${m[1]}</em></strong>')
+        // Bold
+        .replaceAllMapped(
+            RegExp(r'\*\*(.*?)\*\*'), (m) => '<strong>${m[1]}</strong>')
+        // Italic
+        .replaceAllMapped(
+            RegExp(r'\*(.*?)\*'), (m) => '<em>${m[1]}</em>')
+        // Strikethrough
+        .replaceAllMapped(
+            RegExp(r'~~(.*?)~~'), (m) => '<del>${m[1]}</del>')
+        // Inline code
+        .replaceAllMapped(
+            RegExp(r'`(.*?)`'), (m) => '<code>${m[1]}</code>')
+        // Headers
+        .replaceAllMapped(RegExp(r'^### (.+)$', multiLine: true),
+            (m) => '<h3>${m[1]}</h3>')
+        .replaceAllMapped(RegExp(r'^## (.+)$', multiLine: true),
+            (m) => '<h2>${m[1]}</h2>')
+        .replaceAllMapped(RegExp(r'^# (.+)$', multiLine: true),
+            (m) => '<h1>${m[1]}</h1>')
+        // Line breaks → <br>
+        .replaceAll('\n', '<br>');
+    return '<p>$html</p>';
+  }
+
   Widget _buildSliverAppBar(
-      BuildContext context, String avatarUrl, String? bannerUrl, String name) {
+      BuildContext context,
+      String avatarUrl,
+      String? bannerUrl,
+      String name,
+      Animation<Alignment> bannerAnim) {
     final hasBanner = bannerUrl != null && bannerUrl.trim().isNotEmpty;
     final imageUrl = hasBanner ? bannerUrl : avatarUrl;
 
@@ -382,12 +530,20 @@ class ProfilePage extends StatelessWidget {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(color: context.theme.colorScheme.surfaceContainer),
+            // Animated panning banner (like Dantotsu)
+            AnimatedBuilder(
+              animation: bannerAnim,
+              builder: (context, child) {
+                return CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  fit: hasBanner ? BoxFit.fitHeight : BoxFit.cover,
+                  alignment: hasBanner ? bannerAnim.value : Alignment.center,
+                  errorWidget: (_, __, ___) => Container(
+                      color: context.theme.colorScheme.surfaceContainer),
+                );
+              },
             ),
+            // Blur fallback when no banner
             if (!hasBanner)
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -447,7 +603,7 @@ class ProfilePage extends StatelessWidget {
             child: CircleAvatar(
               radius: 60,
               backgroundColor: context.theme.colorScheme.surfaceContainer,
-              backgroundImage: NetworkImage(avatarUrl),
+              backgroundImage: CachedNetworkImageProvider(avatarUrl),
             ),
           ),
           const SizedBox(height: 10),
@@ -612,6 +768,8 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // ── Favourite carousels (new) ────────────────────────────────────────────
+
   Widget _buildMediaFavCarousel(
       BuildContext context, List<FavouriteMedia> items) {
     return SizedBox(
@@ -639,12 +797,12 @@ class ProfilePage extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: imageUrl != null
-                ? Image.network(
-                    imageUrl,
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl,
                     width: 112,
                     height: 150,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorWidget: (_, __, ___) => Container(
                       width: 112,
                       height: 150,
                       color: context.theme.colorScheme.surfaceContainer,
@@ -698,12 +856,12 @@ class ProfilePage extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(50),
             child: imageUrl != null
-                ? Image.network(
-                    imageUrl,
+                ? CachedNetworkImage(
+                    imageUrl: imageUrl,
                     width: 70,
                     height: 70,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorWidget: (_, __, ___) => Container(
                       width: 70,
                       height: 70,
                       decoration: BoxDecoration(
