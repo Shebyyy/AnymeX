@@ -17,6 +17,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+class _VersionData {
+  final List<int> nums;
+  final int? buildNum;
+  final String? tag;
+
+  _VersionData({
+    required this.nums,
+    required this.buildNum,
+    required this.tag,
+  });
+}
+
 class UpdateManager {
   static const String _stableRepoUrl =
       'https://api.github.com/repos/RyanYuuki/AnymeX/releases/latest';
@@ -103,9 +115,11 @@ class UpdateManager {
 
     if (currentParsed.tag != null && latestParsed.tag != null) {
       final priority = ['alpha', 'beta', 'rc'];
-      final currentIndex = priority.indexOf(currentParsed.tag);
-      final latestIndex = priority.indexOf(latestParsed.tag);
-      
+      final currentTag = currentParsed.tag!;
+      final latestTag = latestParsed.tag!;
+      final currentIndex = priority.indexOf(currentTag);
+      final latestIndex = priority.indexOf(latestTag);
+
       if (currentIndex != -1 && latestIndex != -1) {
         return latestIndex > currentIndex;
       }
@@ -128,19 +142,19 @@ class UpdateManager {
   _VersionData _parseVersion(String version) {
     final parts = version.split('+');
     final semver = parts[0];
-  
+
     final semverParts = semver.split('.');
     final nums = semverParts.map((part) {
       final numStr = part.split(RegExp(r'[^0-9]')).first;
       return int.tryParse(numStr) ?? 0;
     }).toList();
-    
+
     int? buildNum;
     if (parts.length > 1) {
       final buildPart = parts[1].split('-')[0];
       buildNum = int.tryParse(buildPart);
     }
-    
+
     String? tag;
     if (parts.length > 1) {
       final afterPlus = parts[1];
@@ -154,22 +168,9 @@ class UpdateManager {
         }
       }
     }
-    
+
     return _VersionData(nums: nums, buildNum: buildNum, tag: tag);
   }
-}
-
-class _VersionData {
-  final List<int> nums;
-  final int? buildNum;
-  final String? tag;
-  
-  _VersionData({
-    required this.nums,
-    required this.buildNum,
-    required this.tag,
-  });
-}
 
   Future<String> _getCurrentVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -465,7 +466,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // HEADER
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
@@ -540,7 +540,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
                   ),
                   const SizedBox(height: 16),
 
-                  // CHANGELOG
                   Expanded(
                     child: Container(
                       width: double.infinity,
