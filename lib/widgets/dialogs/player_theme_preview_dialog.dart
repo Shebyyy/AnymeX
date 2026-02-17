@@ -263,9 +263,10 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                 ),
               ],
             ),
-          ],
+          ),
         ],
-      );
+      ),
+    );
   }
 
   Widget _buildPreviewContainer() {
@@ -421,7 +422,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
   }
 }
 
-/// Widget that renders a theme preview in the dialog
+/// Widget that renders a theme preview in dialog
 class _ThemePreviewWidget extends StatelessWidget {
   final PlayerControlTheme theme;
 
