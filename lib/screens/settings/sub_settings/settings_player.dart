@@ -283,7 +283,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
     showDialog(
       context: context,
       builder: (context) => PlayerThemePreviewDialog(
-        initialTheme: settings.playerControlTheme,
+        initialThemeId: settings.playerControlTheme,
         onConfirm: (String themeId) {
           setState(() {
             settings.playerControlTheme = themeId;
