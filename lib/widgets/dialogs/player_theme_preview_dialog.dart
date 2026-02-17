@@ -1,7 +1,7 @@
 /// Player Theme Preview Dialog
 /// Provides a live preview of player control themes with interactive selection
 
-import 'package:anymex/controllers/settings/settings.dart';
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/database/isar_models/video.dart' as model;
 import 'package:anymex/models/Media/media.dart' as anymex;
@@ -50,27 +50,19 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
     final dummyVideo = model.Video(
       url: '',
       quality: '1080p',
-      size: '0',
-      isM3u8: false,
-      headers: {},
+      originalUrl: '',
     );
 
     final dummyEpisode = Episode(
       number: '1',
       title: 'Sample Episode',
-      image: '',
     );
 
     final dummyMedia = anymex.Media(
       title: 'Sample Anime',
-      id: '',
+      id: '0',
       poster: '',
-      banner: '',
-      description: '',
-      cover: '',
-      genres: [],
-      status: '',
-      type: anymex.MediaType.anime,
+      serviceType: ServicesType.anilist,
     );
 
     return Get.put(
