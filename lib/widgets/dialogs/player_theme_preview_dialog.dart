@@ -1,14 +1,13 @@
 /// Player Theme Preview Dialog
 /// Provides a live preview of player control themes with interactive selection
-/// Similar to logo animation preview dialog
 
-import 'package:anymex/controllers/service_handler/service_handler.dart';
-import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
-import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
-import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/database/isar_models/video.dart' as model;
-import 'package:anymex/models/Media/media.dart';
+import 'package:anymex/models/Media/media.dart' as anymex;
+import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -28,29 +27,67 @@ class PlayerThemePreviewDialog extends StatefulWidget {
 }
 
 class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
-  late String _selectedThemeId;
-  late PlayerControlTheme _selectedTheme;
-  Key _previewKey = UniqueKey();
+  late RxString _previewThemeId;
+  late PlayerController _previewController;
+  final RxBool _controlsVisible = true.obs;
 
   @override
   void initState() {
     super.initState();
-    _selectedThemeId = widget.initialThemeId;
-    _selectedTheme = PlayerControlThemeRegistry.resolve(_selectedThemeId);
+    _previewThemeId = widget.initialThemeId.obs;
+    // Create a temporary controller for preview
+    _previewController = _createPreviewController();
   }
 
-  void _replayPreview() {
-    setState(() {
-      _previewKey = UniqueKey();
-    });
+  @override
+  void dispose() {
+    _previewController.delete();
+    super.dispose();
+  }
+
+  PlayerController _createPreviewController() {
+    // Create dummy data for preview
+    final dummyVideo = model.Video(
+      url: '',
+      quality: '1080p',
+      size: '0',
+      isM3u8: false,
+      headers: {},
+    );
+
+    final dummyEpisode = Episode(
+      number: '1',
+      title: 'Sample Episode',
+      image: '',
+    );
+
+    final dummyMedia = anymex.Media(
+      title: 'Sample Anime',
+      id: '',
+      poster: '',
+      banner: '',
+      description: '',
+      cover: '',
+      genres: [],
+      status: '',
+      type: anymex.MediaType.anime,
+    );
+
+    return Get.put(
+      PlayerController(
+        dummyVideo,
+        dummyEpisode,
+        [dummyEpisode],
+        dummyMedia,
+        [],
+        shouldTrack: false,
+      ),
+      tag: 'preview_player_${UniqueKey()}',
+    );
   }
 
   void _selectTheme(String themeId) {
-    setState(() {
-      _selectedThemeId = themeId;
-      _selectedTheme = PlayerControlThemeRegistry.resolve(themeId);
-      _previewKey = UniqueKey();
-    });
+    _previewThemeId.value = themeId;
   }
 
   @override
@@ -129,7 +166,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onConfirm(_selectedThemeId);
+                        widget.onConfirm(_previewThemeId.value);
                         Navigator.of(context).pop();
                       },
                       style: ElevatedButton.styleFrom(
@@ -164,7 +201,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Preview Section (Fixed height, not scrollable)
+        // Preview Section
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -175,13 +212,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: _buildPreviewContainer(),
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                icon: const Icon(Icons.replay, size: 18),
-                label: const Text('Replay Preview'),
-                onPressed: _replayPreview,
+                child: _buildPreviewPlayer(),
               ),
               const SizedBox(height: 16),
               const Align(
@@ -230,13 +261,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                     color: Colors.black,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _buildPreviewContainer(),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  icon: const Icon(Icons.replay, size: 18),
-                  label: const Text('Replay Preview'),
-                  onPressed: _replayPreview,
+                  child: _buildPreviewPlayer(),
                 ),
               ],
             ),
@@ -269,13 +294,13 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
     );
   }
 
-  Widget _buildPreviewContainer() {
+  Widget _buildPreviewPlayer() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background gradient simulating video
+          // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -302,7 +327,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sample Video',
+                  'Theme Preview',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
                     fontSize: 14,
@@ -312,85 +337,102 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
             ),
           ),
 
-          // Theme controls overlay
-          Positioned.fill(
-            child: _ThemePreviewWidget(
-              key: _previewKey,
-              theme: _selectedTheme,
-            ),
-          ),
+          // Theme controls
+          Obx(() {
+            final theme = PlayerControlThemeRegistry.resolve(_previewThemeId.value);
+            return Column(
+              children: [
+                // Top controls
+                SizedBox(
+                  height: 60,
+                  child: theme.buildTopControls(context, _previewController),
+                ),
+                const Spacer(),
+                // Center controls
+                SizedBox(
+                  height: 80,
+                  child: theme.buildCenterControls(context, _previewController),
+                ),
+                const Spacer(),
+                // Bottom controls
+                theme.buildBottomControls(context, _previewController),
+              ],
+            );
+          }),
         ],
       ),
     );
   }
 
   Widget _buildThemeList() {
-    return ListView.builder(
-      itemCount: PlayerControlThemeRegistry.themes.length,
-      itemBuilder: (context, index) {
-        final theme = PlayerControlThemeRegistry.themes[index];
-        final isSelected = _selectedThemeId == theme.id;
+    return Obx(
+      () => ListView.builder(
+        itemCount: PlayerControlThemeRegistry.themes.length,
+        itemBuilder: (context, index) {
+          final theme = PlayerControlThemeRegistry.themes[index];
+          final isSelected = _previewThemeId.value == theme.id;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: Material(
-            color: isSelected
-                ? context.colors.primaryContainer
-                : context.colors.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: isSelected
+                  ? context.colors.primaryContainer
+                  : context.colors.surfaceContainer,
               borderRadius: BorderRadius.circular(12),
-              onTap: () => _selectTheme(theme.id),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      isSelected
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: isSelected
-                          ? context.colors.primary
-                          : context.colors.onSurface,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            theme.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isSelected
-                                  ? context.colors.onPrimaryContainer
-                                  : context.colors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _getThemeDescription(theme.id),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isSelected
-                                  ? context.colors.onPrimaryContainer.withOpacity(0.7)
-                                  : context.colors.onSurface.withOpacity(0.7),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _selectTheme(theme.id),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isSelected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        color: isSelected
+                            ? context.colors.primary
+                            : context.colors.onSurface,
+                        size: 20,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              theme.name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isSelected
+                                    ? context.colors.onPrimaryContainer
+                                    : context.colors.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _getThemeDescription(theme.id),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isSelected
+                                    ? context.colors.onPrimaryContainer.withOpacity(0.7)
+                                    : context.colors.onSurface.withOpacity(0.7),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -419,213 +461,5 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
       default:
         return 'Custom player theme with unique design';
     }
-  }
-}
-
-/// Widget that renders a theme preview in dialog
-class _ThemePreviewWidget extends StatelessWidget {
-  final PlayerControlTheme theme;
-
-  const _ThemePreviewWidget({
-    Key? key,
-    required this.theme,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Top controls placeholder
-        Container(
-          height: 60,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withValues(alpha: 0.8),
-                Colors.transparent,
-              ],
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_rounded,
-                  size: 18,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Sample Episode',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Episode 1',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.settings_rounded,
-                  size: 18,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const Spacer(),
-
-        // Center controls placeholder
-        SizedBox(
-          height: 80,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.fast_rewind,
-                  size: 24,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(width: 24),
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow,
-                  size: 32,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 24),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.fast_forward,
-                  size: 24,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const Spacer(),
-
-        // Bottom controls placeholder
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.8),
-              ],
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                height: 4,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(
-                    '1:23',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.fullscreen_rounded,
-                      size: 16,
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
