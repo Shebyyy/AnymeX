@@ -1,16 +1,10 @@
 /// Player Theme Preview Dialog
 /// Provides a live preview of player control themes with interactive selection
 
-import 'package:anymex/controllers/service_handler/service_handler.dart';
-import 'package:anymex/database/isar_models/episode.dart';
-import 'package:anymex/database/isar_models/video.dart' as model;
-import 'package:anymex/models/Media/media.dart' as anymex;
-import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class PlayerThemePreviewDialog extends StatefulWidget {
   final String initialThemeId;
@@ -27,78 +21,31 @@ class PlayerThemePreviewDialog extends StatefulWidget {
 }
 
 class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
-  late RxString _previewThemeId;
-  late PlayerController _previewController;
-  final RxBool _controlsVisible = true.obs;
+  late String _previewThemeId;
 
   @override
   void initState() {
     super.initState();
-    _previewThemeId = widget.initialThemeId.obs;
-    // Create a temporary controller for preview
-    _previewController = _createPreviewController();
-  }
-
-  @override
-  void dispose() {
-    _previewController.delete();
-    super.dispose();
-  }
-
-  PlayerController _createPreviewController() {
-    // Create dummy data for preview
-    final dummyVideo = model.Video(
-      url: '',
-      quality: '1080p',
-      originalUrl: '',
-    );
-
-    final dummyEpisode = Episode(
-      number: '1',
-      title: 'Sample Episode',
-    );
-
-    final dummyMedia = anymex.Media(
-      title: 'Sample Anime',
-      id: '0',
-      poster: '',
-      serviceType: ServicesType.anilist,
-    );
-
-    return Get.put(
-      PlayerController(
-        dummyVideo,
-        dummyEpisode,
-        [dummyEpisode],
-        dummyMedia,
-        [],
-        shouldTrack: false,
-      ),
-      tag: 'preview_player_${UniqueKey()}',
-    );
+    _previewThemeId = widget.initialThemeId;
   }
 
   void _selectTheme(String themeId) {
-    _previewThemeId.value = themeId;
+    setState(() {
+      _previewThemeId = themeId;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isLandscape = screenWidth > screenHeight;
-
     return Dialog(
       backgroundColor: context.colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: isLandscape ? 900 : 700,
-          maxHeight: screenHeight * 0.92,
-        ),
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -108,16 +55,18 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Player Theme',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
+                      color: context.colors.onSurface,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
+                    color: context.colors.onSurface,
                   ),
                 ],
               ),
@@ -125,7 +74,7 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
 
             // Content
             Expanded(
-              child: isLandscape ? _buildLandscapeLayout() : _buildPortraitLayout(),
+              child: _buildContent(),
             ),
 
             // Buttons
@@ -140,16 +89,17 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: context.colors.surfaceContainer,
+                        backgroundColor: context.colors.surfaceContainerHighest,
+                        foregroundColor: context.colors.onSurface,
                       ),
                       child: Text(
                         'Cancel',
                         style: TextStyle(
                           fontSize: 14,
-                          color: context.colors.primary,
                           fontWeight: FontWeight.bold,
+                          color: context.colors.onSurface,
                         ),
                       ),
                     ),
@@ -158,24 +108,25 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        widget.onConfirm(_previewThemeId.value);
+                        widget.onConfirm(_previewThemeId);
                         Navigator.of(context).pop();
                       },
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: context.colors.primaryFixed,
+                        backgroundColor: context.colors.primary,
+                        foregroundColor: context.colors.onPrimary,
                       ),
-                      child: const Text(
+                      child: Text(
                         'Apply',
                         style: TextStyle(
                           fontSize: 14,
                           fontFamily: "LexendDeca",
-                          color: Colors.black,
                           fontWeight: FontWeight.bold,
+                          color: context.colors.onPrimary,
                         ),
                       ),
                     ),
@@ -189,242 +140,336 @@ class _PlayerThemePreviewDialogState extends State<PlayerThemePreviewDialog> {
     );
   }
 
-  Widget _buildPortraitLayout() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Preview Section
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _buildPreviewPlayer(),
-              ),
-              const SizedBox(height: 16),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Select Theme',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-
-        // Theme List (Scrollable)
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildThemeList(),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildLandscapeLayout() {
+  Widget _buildContent() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Left side - Preview
           Expanded(
-            flex: 2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  height: 280,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: _buildPreviewPlayer(),
-                ),
-              ],
-            ),
+            flex: 3,
+            child: _buildPreviewContainer(),
           ),
 
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
 
           // Right side - List
           Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Select Theme',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _buildThemeList(),
-                ),
-              ],
-            ),
+            flex: 4,
+            child: _buildThemeList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPreviewPlayer() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1A1A2E),
-                  Color(0xFF16213E),
-                  Color(0xFF0F0F23),
-                ],
+  Widget _buildPreviewContainer() {
+    final theme = PlayerControlThemeRegistry.resolve(_previewThemeId);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Preview',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          height: 280,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            children: [
+              // Background gradient
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF1A1A2E),
+                      Color(0xFF16213E),
+                      Color(0xFF0F0F23),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Mock video content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.play_circle_outline,
-                  size: 80,
-                  color: Colors.white.withOpacity(0.3),
+              // Mock video content
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.play_circle_outline,
+                      size: 80,
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      theme.name,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Theme Preview',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 14,
+              ),
+
+              // Static mock controls overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.6),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Theme controls
-          Obx(() {
-            final theme = PlayerControlThemeRegistry.resolve(_previewThemeId.value);
-            return Column(
-              children: [
-                // Top controls
-                SizedBox(
-                  height: 60,
-                  child: theme.buildTopControls(context, _previewController),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_rounded,
+                            size: 20,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Sample Episode',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Episode 1',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.lock_rounded,
+                            size: 18,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                // Center controls
-                SizedBox(
-                  height: 80,
-                  child: theme.buildCenterControls(context, _previewController),
+              ),
+
+              // Center play button
+              Center(
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    size: 36,
+                    color: Colors.white,
+                  ),
                 ),
-                const Spacer(),
-                // Bottom controls
-                theme.buildBottomControls(context, _previewController),
-              ],
-            );
-          }),
-        ],
-      ),
-    );
-  }
+              ),
 
-  Widget _buildThemeList() {
-    return Obx(
-      () => ListView.builder(
-        itemCount: PlayerControlThemeRegistry.themes.length,
-        itemBuilder: (context, index) {
-          final theme = PlayerControlThemeRegistry.themes[index];
-          final isSelected = _previewThemeId.value == theme.id;
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: isSelected
-                  ? context.colors.primaryContainer
-                  : context.colors.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _selectTheme(theme.id),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
+              // Bottom controls placeholder
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.7),
+                      ],
+                    ),
+                  ),
                   child: Row(
                     children: [
-                      Icon(
-                        isSelected
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
-                        color: isSelected
-                            ? context.colors.primary
-                            : context.colors.onSurface,
-                        size: 20,
+                      const Text(
+                        '1:23',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              theme.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: isSelected
-                                    ? context.colors.onPrimaryContainer
-                                    : context.colors.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _getThemeDescription(theme.id),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isSelected
-                                    ? context.colors.onPrimaryContainer.withOpacity(0.7)
-                                    : context.colors.onSurface.withOpacity(0.7),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      const Spacer(),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.fullscreen_rounded,
+                          size: 18,
+                          color: Colors.white70,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThemeList() {
+    final themes = PlayerControlThemeRegistry.themes;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Select Theme',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            itemCount: themes.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final theme = themes[index];
+              final isSelected = _previewThemeId == theme.id;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? context.colors.primary
+                      : context.colors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? context.colors.primary
+                        : context.colors.outlineVariant.withOpacity(0.3),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _selectTheme(theme.id),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: isSelected
+                              ? context.colors.onPrimary
+                              : context.colors.onSurface,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                theme.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: isSelected
+                                      ? context.colors.onPrimary
+                                      : context.colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _getThemeDescription(theme.id),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected
+                                      ? context.colors.onPrimary.withOpacity(0.85)
+                                      : context.colors.onSurfaceVariant,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
