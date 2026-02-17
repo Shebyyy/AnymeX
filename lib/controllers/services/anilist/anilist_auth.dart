@@ -406,7 +406,7 @@ class AnilistAuth extends GetxController {
     Viewer {
       id
       name
-      about(asHtml: false)
+      about(asHtml: true)
       avatar {
         large
       }
