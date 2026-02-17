@@ -87,12 +87,9 @@ class UpdateManager {
     currentVersion = currentVersion.replaceFirst(RegExp(r'^v'), '');
     latestVersion = latestVersion.replaceFirst(RegExp(r'^v'), '');
 
-    // Parse version: semantic[.+]build[-]tag
-    // Examples: "3.0.7", "3.0.7+1-beta", "3.0.7+1", "3.0.7-beta"
     final currentParsed = _parseVersion(currentVersion);
     final latestParsed = _parseVersion(latestVersion);
 
-    // Compare semantic versions first
     for (int i = 0; i < 3; i++) {
       final c = i < currentParsed.nums.length ? currentParsed.nums[i] : 0;
       final l = i < latestParsed.nums.length ? latestParsed.nums[i] : 0;
@@ -100,12 +97,10 @@ class UpdateManager {
       if (l < c) return false;
     }
 
-    // If semantic versions equal, compare build numbers
     if (currentParsed.buildNum != null && latestParsed.buildNum != null) {
       return latestParsed.buildNum! > currentParsed.buildNum!;
     }
 
-    // If builds also equal, compare tags (alpha < beta < rc < none)
     if (currentParsed.tag != null && latestParsed.tag != null) {
       final priority = ['alpha', 'beta', 'rc'];
       final currentIndex = priority.indexOf(currentParsed.tag);
@@ -116,14 +111,12 @@ class UpdateManager {
       }
     }
 
-    // Handle hotfix
     if (latestParsed.tag == 'hotfix') {
       if (_currentVersionIncludesHotfix) return false;
       if (currentParsed.tag == 'hotfix') return false;
       return true;
     }
 
-    // If current has tag and latest doesn't, update available
     if (currentParsed.tag != null && latestParsed.tag == null) {
       return true;
     }
@@ -132,27 +125,22 @@ class UpdateManager {
     return false;
   }
 
-  /// Parse version into components: [major, minor, patch], buildNum, tag
   _VersionData _parseVersion(String version) {
     final parts = version.split('+');
     final semver = parts[0];
-    
-    // Parse semantic version (e.g., "3.0.7")
+  
     final semverParts = semver.split('.');
     final nums = semverParts.map((part) {
       final numStr = part.split(RegExp(r'[^0-9]')).first;
       return int.tryParse(numStr) ?? 0;
     }).toList();
     
-    // Parse build number (after '+')
     int? buildNum;
     if (parts.length > 1) {
-      // Parts[1] is like "1-beta" or "1"
       final buildPart = parts[1].split('-')[0];
       buildNum = int.tryParse(buildPart);
     }
     
-    // Parse tag (after '-' or last part)
     String? tag;
     if (parts.length > 1) {
       final afterPlus = parts[1];
@@ -160,7 +148,6 @@ class UpdateManager {
       if (tagParts.length > 1) {
         tag = tagParts[1].toLowerCase();
       } else {
-        // Check if part after '+' is a known tag
         final possibleTag = afterPlus.toLowerCase();
         if (['alpha', 'beta', 'rc', 'hotfix'].contains(possibleTag)) {
           tag = possibleTag;
@@ -575,7 +562,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
 
                   const SizedBox(height: 24),
 
-                  // DOWNLOAD STATUS
                   if (_isDownloading) ...[
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -620,7 +606,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet>
                     const SizedBox(height: 16)
                   ],
 
-                  // ACTION BUTTONS
                   Row(
                     children: [
                       Expanded(
