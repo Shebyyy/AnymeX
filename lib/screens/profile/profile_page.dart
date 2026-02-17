@@ -181,7 +181,6 @@ class _ProfilePageState extends State<ProfilePage>
                       ),
                     ),
 
-                    // ── About / Bio ──────────────────────────────────────
                     if (user.about != null && user.about!.trim().isNotEmpty) ...[
                       const SizedBox(height: 20),
                       Padding(
@@ -207,8 +206,7 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                       ),
                     ],
-
-                    // ── Favourite Anime ──────────────────────────────────
+                    
                     if (user.favourites?.anime.isNotEmpty ?? false) ...[
                       const SizedBox(height: 20),
                       Padding(
@@ -220,7 +218,6 @@ class _ProfilePageState extends State<ProfilePage>
                       _buildMediaFavCarousel(context, user.favourites!.anime),
                     ],
 
-                    // ── Favourite Manga ──────────────────────────────────
                     if (user.favourites?.manga.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -232,7 +229,6 @@ class _ProfilePageState extends State<ProfilePage>
                       _buildMediaFavCarousel(context, user.favourites!.manga),
                     ],
 
-                    // ── Favourite Characters ─────────────────────────────
                     if (user.favourites?.characters.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -249,7 +245,6 @@ class _ProfilePageState extends State<ProfilePage>
                               .toList()),
                     ],
 
-                    // ── Favourite Staff ──────────────────────────────────
                     if (user.favourites?.staff.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -266,7 +261,6 @@ class _ProfilePageState extends State<ProfilePage>
                               .toList()),
                     ],
 
-                    // ── Favourite Studios ────────────────────────────────
                     if (user.favourites?.studios.isNotEmpty ?? false) ...[
                       const SizedBox(height: 10),
                       Padding(
@@ -324,23 +318,17 @@ class _ProfilePageState extends State<ProfilePage>
 
   Widget _buildAboutContent(BuildContext context, String about) {
     var content = about;
-
-    // 1. Strip AniList spoiler wrappers ~!...!~ but KEEP the inner content
-    //    AND any trailing text after the closing !~ on the same line
+    
     content = content.replaceAllMapped(
         RegExp(r'~!([\s\S]*?)!~'), (m) => m[1] ?? '');
 
-    // 2. Convert remaining MD links [text](url) → <a> tags
     content = content.replaceAllMapped(
         RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
         (m) => '<a href="${m[2]}">${m[1]}</a>');
 
-    // 3. If no HTML tags found, treat as pure markdown
     final isHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
     if (!isHtml) content = _mdToHtml(content);
 
-    // 4. Decode HTML entities that act as spacers between icon links:
-    //    &lrm;  &#8206;  &nbsp;  &#160;  &thinsp;  &emsp;  &ensp;
     content = content
         .replaceAll('&lrm;', '')
         .replaceAll('&#8206;', '')
@@ -350,8 +338,6 @@ class _ProfilePageState extends State<ProfilePage>
         .replaceAll('&emsp;', '')
         .replaceAll('&ensp;', '');
 
-    // 5. Strip ALL whitespace / invisible Unicode chars between </a> and <a>
-    //    so back-to-back icon anchors become truly adjacent
     content = content.replaceAllMapped(
       RegExp(
         r'(</a>)'
@@ -362,7 +348,6 @@ class _ProfilePageState extends State<ProfilePage>
       (m) => '${m[1]}${m[2]}',
     );
 
-    // 6. Wrap every run of 2+ consecutive icon anchors in a centred flex row
     content = content.replaceAllMapped(
       RegExp(
         r'(<a\b[^>]*>\s*<img\b[^>]*/?\s*>\s*</a>)'
@@ -462,7 +447,6 @@ class _ProfilePageState extends State<ProfilePage>
                 widthAttr != null ? double.tryParse(widthAttr) : null;
             final double? h =
                 heightAttr != null ? double.tryParse(heightAttr) : null;
-            // Icon-sized images keep their explicit size; large images go full width
             final isIcon = w != null && w <= 80;
             return CachedNetworkImage(
               imageUrl: src,
@@ -480,7 +464,6 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  /// Minimal Markdown → HTML for plain / mixed AniList bios.
   String _mdToHtml(String md) {
     final lines = md.split('\n');
     final buffer = StringBuffer();
@@ -488,7 +471,6 @@ class _ProfilePageState extends State<ProfilePage>
       var line = rawLine.trim();
       if (line.isEmpty) continue;
 
-      // Pass through block-level HTML
       if (RegExp(r'^<(div|p|h[1-6]|ul|ol|li|blockquote|br)',
               caseSensitive: false)
           .hasMatch(line)) {
@@ -496,7 +478,6 @@ class _ProfilePageState extends State<ProfilePage>
         continue;
       }
 
-      // Inline markdown conversions
       line = line
           .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
               (m) => '<strong><em>${m[1]}</em></strong>')
@@ -547,7 +528,6 @@ class _ProfilePageState extends State<ProfilePage>
         background: Stack(
           fit: StackFit.expand,
           children: [
-            // Animated panning banner (like Dantotsu)
             AnimatedBuilder(
               animation: bannerAnim,
               builder: (context, child) {
@@ -560,7 +540,6 @@ class _ProfilePageState extends State<ProfilePage>
                 );
               },
             ),
-            // Blur fallback when no banner
             if (!hasBanner)
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
@@ -784,8 +763,6 @@ class _ProfilePageState extends State<ProfilePage>
       ],
     );
   }
-
-  // ── Favourite carousels (new) ────────────────────────────────────────────
 
   Widget _buildMediaFavCarousel(
       BuildContext context, List<FavouriteMedia> items) {
