@@ -275,7 +275,7 @@ class YouTubePlayerControlTheme extends PlayerControlTheme {
               ignoring: true,
               child: Opacity(
                 opacity: 0.5,
-                child: const ProgressSlider(style: SliderStyle.material),
+                child: const ProgressSlider(style: SliderStyle.capsule),
               ),
             ),
           ),
@@ -362,7 +362,7 @@ class YouTubePlayerControlTheme extends PlayerControlTheme {
       mainAxisSize: MainAxisSize.min,
       children: [
         // YouTube-style scrubber with red progress
-        const ProgressSlider(style: SliderStyle.material),
+        const ProgressSlider(style: SliderStyle.capsule),
         const SizedBox(height: 2),
         // Bottom row
         Row(
