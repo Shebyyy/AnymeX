@@ -39,10 +39,24 @@ class MediaIndicatorThemeRegistry {
 
   static List<MediaIndicatorTheme> get themes => builtinThemes;
 
-  static MediaIndicatorTheme resolve(String id) {
-    return builtinThemes.firstWhere(
-      (theme) => theme.id == id,
-      orElse: () => builtinThemes.first,
-    );
+  static Future<MediaIndicatorTheme> resolve(String id) async {
+    // First check builtin themes
+    try {
+      final builtinTheme = builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
+      return builtinTheme;
+    } catch (_) {
+      // If not in builtin, check custom themes
+      final customThemes = await CustomThemeLoader.loadCustomMediaIndicatorThemes();
+      if (customThemes.isNotEmpty) {
+        return customThemes.firstWhere(
+          (theme) => theme.id == id,
+          orElse: () => customThemes.first,
+        );
+      }
+      return builtinThemes.first;
+    }
   }
 }

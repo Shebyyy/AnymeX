@@ -39,10 +39,24 @@ class PlayerControlThemeRegistry {
 
   static List<PlayerControlTheme> get themes => builtinThemes;
 
-  static PlayerControlTheme resolve(String id) {
-    return builtinThemes.firstWhere(
-      (theme) => theme.id == id,
-      orElse: () => builtinThemes.first,
-    );
+  static Future<PlayerControlTheme> resolve(String id) async {
+    // First check builtin themes
+    try {
+      final builtinTheme = builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
+      return builtinTheme;
+    } catch (_) {
+      // If not in builtin, check custom themes
+      final customThemes = await CustomThemeLoader.loadCustomPlayerThemes();
+      if (customThemes.isNotEmpty) {
+        return customThemes.firstWhere(
+          (theme) => theme.id == id,
+          orElse: () => customThemes.first,
+        );
+      }
+      return builtinThemes.first;
+    }
   }
 }

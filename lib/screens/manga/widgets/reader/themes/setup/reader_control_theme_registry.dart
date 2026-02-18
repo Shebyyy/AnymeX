@@ -25,10 +25,24 @@ class ReaderControlThemeRegistry {
 
   static List<ReaderControlTheme> get themes => builtinThemes;
 
-  static ReaderControlTheme resolve(String id) {
-    return builtinThemes.firstWhere(
-      (theme) => theme.id == id,
-      orElse: () => builtinThemes.first,
-    );
+  static Future<ReaderControlTheme> resolve(String id) async {
+    // First check builtin themes
+    try {
+      final builtinTheme = builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
+      return builtinTheme;
+    } catch (_) {
+      // If not in builtin, check custom themes
+      final customThemes = await CustomThemeLoader.loadCustomReaderThemes();
+      if (customThemes.isNotEmpty) {
+        return customThemes.firstWhere(
+          (theme) => theme.id == id,
+          orElse: () => customThemes.first,
+        );
+      }
+      return builtinThemes.first;
+    }
   }
 }

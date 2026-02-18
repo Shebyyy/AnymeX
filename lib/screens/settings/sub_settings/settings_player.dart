@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:anymex/constants/contants.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/data_keys/keys.dart';
+import 'package:anymex/models/custom_themes/custom_media_indicator_theme.dart';
+import 'package:anymex/models/custom_themes/custom_player_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
 import 'package:anymex/screens/other_features.dart';
@@ -280,31 +282,203 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
         });
   }
 
-  void _showPlayerControlThemeDialog() {
-    showSelectionDialog<String>(
-      title: 'Control Theme',
-      items: PlayerControlThemeRegistry.themes.map((e) => e.id).toList(),
-      selectedItem: settings.playerControlThemeRx,
-      getTitle: (id) => PlayerControlThemeRegistry.resolve(id).name,
-      onItemSelected: (id) {
-        settings.playerControlTheme = id;
-        setState(() {});
-      },
-      leadingIcon: Icons.style_rounded,
+  void _showPlayerControlThemeDialog() async {
+    // Load all themes including custom ones
+    final allThemes = await PlayerControlThemeRegistry.getAllThemes();
+
+    final context = Get.context!;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: context.colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: getResponsiveValue(
+            context,
+            mobileValue: null,
+            desktopValue: 500.0,
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Control Theme',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Obx(() => SingleChildScrollView(
+                  child: Column(
+                    children: allThemes.map((theme) {
+                      final isSelected = theme.id == settings.playerControlThemeRx.value;
+                      final isCustom = theme is CustomPlayerTheme;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 7),
+                        child: ListTileWithCheckMark(
+                          leading: Icon(Icons.style_rounded),
+                          color: context.colors.primary,
+                          active: isSelected,
+                          title: isCustom ? '★ ${theme.name}' : theme.name,
+                          onTap: () {
+                            settings.playerControlTheme = theme.id;
+                            setState(() {});
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => const CustomPlayerThemeManagerDialog(),
+                        );
+                        // Refresh the dialog after importing
+                        if (mounted) {
+                          Navigator.pop(context);
+                          _showPlayerControlThemeDialog();
+                        }
+                      },
+                      icon: const Icon(Icons.file_upload_rounded),
+                      label: const Text('Import Theme'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.colors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Close'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: context.colors.primaryFixed,
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  void _showMediaIndicatorThemeDialog() {
-    showSelectionDialog<String>(
-      title: 'Swipe Indicator Theme',
-      items: MediaIndicatorThemeRegistry.themes.map((e) => e.id).toList(),
-      selectedItem: settings.mediaIndicatorThemeRx,
-      getTitle: (id) => MediaIndicatorThemeRegistry.resolve(id).name,
-      onItemSelected: (id) {
-        settings.mediaIndicatorTheme = id;
-        setState(() {});
-      },
-      leadingIcon: Icons.tune_rounded,
+  void _showMediaIndicatorThemeDialog() async {
+    // Load all themes including custom ones
+    final allThemes = await MediaIndicatorThemeRegistry.getAllThemes();
+
+    final context = Get.context!;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: context.colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: getResponsiveValue(
+            context,
+            mobileValue: null,
+            desktopValue: 500.0,
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Swipe Indicator Theme',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Obx(() => SingleChildScrollView(
+                  child: Column(
+                    children: allThemes.map((theme) {
+                      final isSelected = theme.id == settings.mediaIndicatorThemeRx.value;
+                      final isCustom = theme is CustomMediaIndicatorTheme;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 7),
+                        child: ListTileWithCheckMark(
+                          leading: Icon(Icons.tune_rounded),
+                          color: context.colors.primary,
+                          active: isSelected,
+                          title: isCustom ? '★ ${theme.name}' : theme.name,
+                          onTap: () {
+                            settings.mediaIndicatorTheme = theme.id;
+                            setState(() {});
+                            Navigator.pop(context);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await showDialog(
+                          context: context,
+                          builder: (context) => const CustomThemeManagerDialog(),
+                        );
+                        // Refresh the dialog after importing
+                        if (mounted) {
+                          Navigator.pop(context);
+                          _showMediaIndicatorThemeDialog();
+                        }
+                      },
+                      icon: const Icon(Icons.file_upload_rounded),
+                      label: const Text('Import Theme'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: context.colors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Close'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: context.colors.primaryFixed,
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -464,9 +638,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                                 icon: HugeIcons.strokeRoundedPlaySquare,
                                 onTap: _showPlayerControlThemeDialog,
                                 title: 'Player Theme',
-                                description: PlayerControlThemeRegistry.resolve(
-                                  settings.playerControlTheme,
-                                ).name,
+                                description: 'Tap to select theme',
                               ),
                               CustomTile(
                                 padding: 10,
@@ -476,32 +648,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
                                 icon: Icons.tune_rounded,
                                 onTap: _showMediaIndicatorThemeDialog,
                                 title: 'Swipe Indicator Theme',
-                                description:
-                                    MediaIndicatorThemeRegistry.resolve(
-                                  settings.mediaIndicatorTheme,
-                                ).name,
-                              ),
-                              CustomTile(
-                                padding: 10,
-                                descColor:
-                                    Theme.of(context).colorScheme.primary,
-                                isDescBold: true,
-                                icon: Icons.add_circle_outline,
-                                onTap: _showCustomThemesManager,
-                                title: 'Manage Custom Themes',
-                                description:
-                                    'Create and manage your custom themes',
-                              ),
-                              CustomTile(
-                                padding: 10,
-                                descColor:
-                                    Theme.of(context).colorScheme.primary,
-                                isDescBold: true,
-                                icon: Icons.style_rounded,
-                                onTap: _showCustomPlayerThemesManager,
-                                title: 'Manage Custom Player Themes',
-                                description:
-                                    'Create and manage your custom player themes',
+                                description: 'Tap to select theme',
                               ),
                               CustomSwitchTile(
                                   padding: const EdgeInsets.all(10),
