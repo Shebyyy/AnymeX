@@ -79,6 +79,7 @@ enum AuthKeys {
   malAuthToken,
   malRefreshToken,
   simklAuthToken,
+  malSessionId, // Added for MAL session cookie
 }
 
 enum SearchKeys { novelSearchedQueries }
