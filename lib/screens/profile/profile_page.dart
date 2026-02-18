@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/utils/function.dart';
@@ -308,12 +309,11 @@ class _ProfilePageState extends State<ProfilePage>
       ),
     );
   }
-
-  /// Preprocesses AniList-flavored markdown/HTML into clean HTML for flutter_html.
+  
   String _preprocessAbout(String raw) {
     var c = raw;
 
-    // 1. Strip zero-width / invisible characters and common HTML entities
+    // Clean up zero-width spaces and other invisible characters
     c = c
         .replaceAll('\u200e', '')
         .replaceAll('\u200f', '')
@@ -331,13 +331,57 @@ class _ProfilePageState extends State<ProfilePage>
         .replaceAll('&emsp;', '')
         .replaceAll('&ensp;', '');
 
-    // 2. AniList img###(url) → <img src="url" width="###">
+    // FIX: Handle spoilers that are inside <a> tags
+    // This regex finds <a> tags that contain spoiler content and restructures them
+    c = c.replaceAllMapped(
+      RegExp(r'<a([^>]*)>([\s\S]*?)~!([\s\S]*?)!~([\s\S]*?)</a>'),
+      (m) {
+        final attrs = m[1] ?? '';
+        final beforeSpoiler = m[2] ?? '';
+        final spoilerContent = m[3] ?? '';
+        final afterSpoiler = m[4] ?? '';
+        
+        // Return restructured HTML with spoiler outside the link
+        String result = '';
+        if (beforeSpoiler.isNotEmpty) {
+          result += '<a$attrs>$beforeSpoiler</a>';
+        }
+        result += '<spoiler>$spoilerContent</spoiler>';
+        if (afterSpoiler.isNotEmpty) {
+          result += '<a$attrs>$afterSpoiler</a>';
+        }
+        return result;
+      },
+    );
+
+    // Also handle cases where the spoiler is at the start or end of the <a> tag
+    c = c.replaceAllMapped(
+      RegExp(r'<a([^>]*)>(~![\s\S]*?!~)([\s\S]*?)</a>'),
+      (m) {
+        final attrs = m[1] ?? '';
+        final spoilerContent = m[2] ?? '';
+        final afterSpoiler = m[3] ?? '';
+        
+        return '<spoiler>${spoilerContent.replaceAll('~!', '').replaceAll('!~', '')}</spoiler><a$attrs>$afterSpoiler</a>';
+      },
+    );
+
+    c = c.replaceAllMapped(
+      RegExp(r'<a([^>]*)>([\s\S]*?)(~![\s\S]*?!~)</a>'),
+      (m) {
+        final attrs = m[1] ?? '';
+        final beforeSpoiler = m[2] ?? '';
+        final spoilerContent = m[3] ?? '';
+        
+        return '<a$attrs>$beforeSpoiler</a><spoiler>${spoilerContent.replaceAll('~!', '').replaceAll('!~', '')}</spoiler>';
+      },
+    );
+
     c = c.replaceAllMapped(
       RegExp(r'img(\d+)\(([^)]+)\)'),
       (m) => '<img src="${m[2] ?? ''}" width="${m[1] ?? ''}">',
     );
 
-    // 3. youtube(url) → <youtube id="VIDEO_ID">
     c = c.replaceAllMapped(
       RegExp(r'youtube\(([^)]+)\)'),
       (m) {
@@ -348,37 +392,32 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
 
-    // 4. webm(url) → <a href="url">▶ View video</a>
     c = c.replaceAllMapped(
       RegExp(r'webm\(([^)]+)\)'),
       (m) => '<a href="${(m[1] ?? '').trim()}">&#9654; View video</a>',
     );
 
-    // 5. Markdown links [text](url) → <a href="url">text</a>
     c = c.replaceAllMapped(
       RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
       (m) => '<a href="${m[2] ?? ''}">${m[1] ?? ''}</a>',
     );
 
-    // 6. Spoilers ~!...!~ → <spoiler>...</spoiler>
-    //    Use non-greedy dotAll so nested HTML inside spoilers is preserved.
+    // Convert remaining standalone spoilers
     c = c.replaceAllMapped(
       RegExp(r'~!([\s\S]*?)!~'),
       (m) => '<spoiler>${m[1] ?? ''}</spoiler>',
     );
 
-    // 7. AniList ~~~...~~~ or <center>...</center> centering
     c = c.replaceAllMapped(
       RegExp(r'~~~([\s\S]*?)~~~'),
       (m) => '<div style="text-align:center;">${m[1] ?? ''}</div>',
     );
+    
     c = c.replaceAllMapped(
       RegExp(r'<center>([\s\S]*?)</center>', caseSensitive: false),
       (m) => '<div style="text-align:center;">${m[1] ?? ''}</div>',
     );
 
-    // 8. align="..." attribute → style="text-align:...;"
-    //    Handles both single and double quotes, with or without other attributes.
     c = c.replaceAllMapped(
       RegExp(
         r'<(div|p)(\s[^>]*)?\salign=(["\x27])(\w+)\3([^>]*)>',
@@ -389,7 +428,6 @@ class _ProfilePageState extends State<ProfilePage>
         final before = m[2] ?? '';
         final align = m[4] ?? 'left';
         final after = m[5] ?? '';
-        // Avoid injecting duplicate style if one already exists
         if (before.contains('style=') || after.contains('style=')) {
           return '<$tag$before$after>';
         }
@@ -397,14 +435,12 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
 
-    // 9. <div rel="spoiler">...</div> (old AniList spoiler syntax)
     c = c.replaceAllMapped(
       RegExp(r'<div\s+rel=["\x27]spoiler["\x27][^>]*>([\s\S]*?)</div>',
           caseSensitive: false),
       (m) => '<spoiler>${m[1] ?? ''}</spoiler>',
     );
-
-    // 10. If content has no HTML at all, convert markdown to HTML
+    
     final hasHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(c);
     if (!hasHtml) {
       c = _mdToHtml(c);
@@ -418,7 +454,6 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       content = _preprocessAbout(about);
     } catch (_) {
-      // Fallback: render raw as plain text if preprocessing throws
       return Text(
         about,
         style: TextStyle(
@@ -526,7 +561,6 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       },
       extensions: [
-        // ── Custom img rendering ──────────────────────────────────────────
         TagExtension(
           tagsToExtend: {'img'},
           builder: (ext) {
@@ -549,7 +583,6 @@ class _ProfilePageState extends State<ProfilePage>
             );
           },
         ),
-        // ── Spoiler ───────────────────────────────────────────────────────
         TagExtension(
           tagsToExtend: {'spoiler'},
           builder: (ext) {
@@ -569,7 +602,6 @@ class _ProfilePageState extends State<ProfilePage>
             );
           },
         ),
-        // ── YouTube embed ─────────────────────────────────────────────────
         TagExtension(
           tagsToExtend: {'youtube'},
           builder: (ext) {
@@ -627,7 +659,6 @@ class _ProfilePageState extends State<ProfilePage>
     for (final rawLine in lines) {
       var line = rawLine.trim();
       if (line.isEmpty) continue;
-      // Pass through lines that are already HTML or custom tags
       if (RegExp(
               r'^<(div|p|h[1-6]|ul|ol|li|blockquote|br|hr|pre|spoiler|youtube)',
               caseSensitive: false)
@@ -635,7 +666,6 @@ class _ProfilePageState extends State<ProfilePage>
         buffer.writeln(line);
         continue;
       }
-      // Inline markdown transformations
       line = line
           .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
               (m) => '<strong><em>${m[1]}</em></strong>')
