@@ -263,7 +263,7 @@ class JsonReaderThemeBuilder {
       result = ClipRRect(
         borderRadius: BorderRadius.circular(layout?.cornerRadius ?? 0),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: background.blur!, sigmaY: background.blur!),
+          filter: ImageFilter.blur(sigmaX: background.blur!, sigmaY: background.blur!),
           child: result,
         ),
       );

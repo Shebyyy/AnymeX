@@ -104,7 +104,7 @@ class JsonMediaIndicatorBuilder {
       return ClipRRect(
         borderRadius: BorderRadius.circular(_parseBorderRadius(container)),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: bg.blur!, sigmaY: bg.blur!),
+          filter: ImageFilter.blur(sigmaX: bg.blur!, sigmaY: bg.blur!),
           child: Container(
             width: width,
             height: height,

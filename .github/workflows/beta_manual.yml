@@ -77,7 +77,7 @@ jobs:
               SEMVER=$(echo "$VERSION_PART" | cut -d'-' -f1)
             fi
 
-            DISPLAY_VERSION="v${VERSION_PART}"
+            DISPLAY_VERSION="v${INPUT_VERSION}"
           else
             # Simple version like "3.0.4"
             SEMVER="$INPUT_VERSION"
