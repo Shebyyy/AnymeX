@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:anymex/database/data_keys/keys.dart';
+import 'package:anymex/utils/logger.dart'; // Add this import
 
 enum ExportService { anilist, mal }
 
@@ -417,12 +418,15 @@ class _ListExporterPageState extends State<ListExporterPage> {
                       size: 16,
                     ),
                     const SizedBox(height: 10),
-                    CustomSearchBar(
-                      controller: _usernameController,
-                      hintText: serviceHandler.profileData.value.name ?? "Enter username",
-                      disableIcons: true,
-                      enabled: false, // Disable editing since we use logged-in user
-                      onSubmitted: (_) {},
+                    // Wrap with AbsorbPointer to disable instead of using non-existent enabled parameter
+                    AbsorbPointer(
+                      absorbing: true,
+                      child: CustomSearchBar(
+                        controller: _usernameController,
+                        hintText: serviceHandler.profileData.value.name ?? "Enter username",
+                        disableIcons: true,
+                        onSubmitted: (_) {},
+                      ),
                     ),
                     const SizedBox(height: 10),
                     if (!isLoggedIn)
