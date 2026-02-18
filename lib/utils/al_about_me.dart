@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AnilistAboutMe extends StatefulWidget {
   final String about;
@@ -14,9 +15,9 @@ class AnilistAboutMe extends StatefulWidget {
 class _AnilistAboutMeState extends State<AnilistAboutMe> {
   late final WebViewController _controller;
   bool isLoading = true;
+  late String processedContent;
 
   String _generateHtml() {
-    final about = widget.about;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Background color based on theme
@@ -228,20 +229,20 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
             
             if (content.style.display === 'none' || !content.style.display) {
                 content.style.display = 'block';
-                button.innerHTML = `
+                button.innerHTML = \`
                     <svg viewBox="0 0 24 24">
                         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                     </svg>
-                    <span>Spoiler \u2014 tap to hide</span>
-                `;
+                    <span>Spoiler — tap to hide</span>
+                \`;
             } else {
                 content.style.display = 'none';
-                button.innerHTML = `
+                button.innerHTML = \`
                     <svg viewBox="0 0 24 24">
                         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                     </svg>
-                    <span>Spoiler \u2014 tap to reveal</span>
-                `;
+                    <span>Spoiler — tap to reveal</span>
+                \`;
             }
         }
         
@@ -261,7 +262,7 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
     </script>
 </head>
 <body>
-    $about
+    {{CONTENT}}
 </body>
 </html>
     ''';
@@ -491,6 +492,7 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
   @override
   void initState() {
     super.initState();
+    processedContent = _preprocessAbout(widget.about);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.transparent)
@@ -501,11 +503,11 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
           },
           onNavigationRequest: (request) {
             if (request.url.startsWith('https://www.youtube.com/watch')) {
-              launchUrl(Uri.parse(request.url));
+              launchUrl(Uri.parse(request.url), mode: LaunchMode.externalApplication);
               return NavigationDecision.prevent;
             }
             if (request.url.startsWith('http')) {
-              launchUrl(Uri.parse(request.url));
+              launchUrl(Uri.parse(request.url), mode: LaunchMode.externalApplication);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -514,8 +516,8 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
       );
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final processed = _preprocessAbout(widget.about);
-      _controller.loadHtmlString(_generateHtml().replaceFirst('$about', processed));
+      final html = _generateHtml().replaceFirst('{{CONTENT}}', processedContent);
+      _controller.loadHtmlString(html);
     });
   }
 
@@ -527,7 +529,7 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
         if (isLoading)
           Center(
             child: CircularProgressIndicator(
-              color: context.theme.colorScheme.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
       ],
