@@ -1,6 +1,22 @@
 import 'package:flutter/material.dart';
 
-/// Background configuration for a theme section
+class JsonColorParser {
+  static Color parse(String? colorString) {
+    if (colorString == null || colorString.isEmpty) {
+      return Colors.transparent;
+    }
+
+    String hex = colorString.trim().toUpperCase();
+    hex = hex.replaceAll('#', '').replaceAll('0X', '');
+
+    if (hex.length == 6) {
+      hex = 'FF$hex';
+    }
+
+    return Color(int.parse(hex, radix: 16));
+  }
+}
+
 class JsonBackgroundConfig {
   final String? color;
   final double? opacity;
@@ -20,54 +36,36 @@ class JsonBackgroundConfig {
 
   factory JsonBackgroundConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null) return JsonBackgroundConfig();
-    
+
     return JsonBackgroundConfig(
       color: json['color'] as String?,
       opacity: (json['opacity'] as num?)?.toDouble(),
       blur: (json['blur'] as num?)?.toDouble(),
-      border: json['border'] != null 
-          ? JsonBorderConfig.fromJson(json['border'] as Map<String, dynamic>)
+      border: json['border'] != null
+          ? JsonBorderConfig.fromJson(json['border'])
           : null,
       shadow: json['shadow'] != null
-          ? JsonShadowConfig.fromJson(json['shadow'] as Map<String, dynamic>)
+          ? JsonShadowConfig.fromJson(json['shadow'])
           : null,
       gradient: json['gradient'] != null
-          ? JsonGradientConfig.fromJson(json['gradient'] as Map<String, dynamic>)
+          ? JsonGradientConfig.fromJson(json['gradient'])
           : null,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      if (color != null) 'color': color,
-      if (opacity != null) 'opacity': opacity,
-      if (blur != null) 'blur': blur,
-      if (border != null) 'border': border?.toJson(),
-      if (shadow != null) 'shadow': shadow?.toJson(),
-      if (gradient != null) 'gradient': gradient?.toJson(),
-    };
   }
 
   BoxDecoration buildDecoration(BuildContext context) {
     return BoxDecoration(
-      color: color != null ? _parseColor(color!) : null,
+      color: color != null
+          ? JsonColorParser.parse(color!).withOpacity(opacity ?? 1.0)
+          : null,
       gradient: gradient?.buildGradient(),
       border: border?.buildBorder(),
-      boxShadow: shadow != null ? shadow!.buildShadows() : null,
-      borderRadius: BorderRadius.circular(12),
+      boxShadow: shadow?.buildShadows(),
+      borderRadius: BorderRadius.circular(border?.radius ?? 12),
     );
-  }
-
-  Color _parseColor(String colorString) {
-    String hex = colorString;
-    if (hex.startsWith('#')) {
-      hex = hex.substring(1);
-    }
-    return Color(int.parse('FF$hex', radix: 16));
   }
 }
 
-/// Border configuration
 class JsonBorderConfig {
   final String? color;
   final double? width;
@@ -81,7 +79,7 @@ class JsonBorderConfig {
 
   factory JsonBorderConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null) return JsonBorderConfig();
-    
+
     return JsonBorderConfig(
       color: json['color'] as String?,
       width: (json['width'] as num?)?.toDouble(),
@@ -89,39 +87,17 @@ class JsonBorderConfig {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (color != null) 'color': color,
-      if (width != null) 'width': width,
-      if (radius != null) 'radius': radius,
-    };
-  }
-
   Border? buildBorder() {
-    if (color == null && width == null && radius == null) return null;
-    
+    if (color == null) return null;
+
     return Border.all(
-      color: _parseColor(color),
+      color: JsonColorParser.parse(color),
       width: width ?? 1.0,
       strokeAlign: BorderSide.strokeAlignInside,
     );
   }
-
-  Color _parseColor(String? colorString) {
-    if (colorString == null) return Colors.transparent;
-    
-    // Handle hex colors (with or without #)
-    String hex = colorString;
-    if (hex.startsWith('#')) {
-      hex = hex.substring(1);
-    }
-    
-    // Parse hex color
-    return Color(int.parse('FF$hex', radix: 16));
-  }
 }
 
-/// Shadow configuration
 class JsonShadowConfig {
   final String? color;
   final double? blur;
@@ -137,7 +113,7 @@ class JsonShadowConfig {
 
   factory JsonShadowConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null) return JsonShadowConfig();
-    
+
     return JsonShadowConfig(
       color: json['color'] as String?,
       blur: (json['blur'] as num?)?.toDouble(),
@@ -148,21 +124,12 @@ class JsonShadowConfig {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (color != null) 'color': color,
-      if (blur != null) 'blur': blur,
-      if (spread != null) 'spread': spread,
-      if (offset != null && offset!.length >= 2) 'offset': offset,
-    };
-  }
-
   List<BoxShadow> buildShadows() {
     if (color == null) return [];
-    
+
     return [
       BoxShadow(
-        color: Color(int.parse(color!.replaceFirst('#', '0xFF'), radix: 16)).withOpacity(0.3),
+        color: JsonColorParser.parse(color).withOpacity(0.3),
         blurRadius: blur ?? 0,
         spreadRadius: spread ?? 0,
         offset: Offset(
@@ -174,7 +141,6 @@ class JsonShadowConfig {
   }
 }
 
-/// Gradient configuration
 class JsonGradientConfig {
   final String? type;
   final List<String>? colors;
@@ -188,7 +154,7 @@ class JsonGradientConfig {
 
   factory JsonGradientConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null) return JsonGradientConfig();
-    
+
     return JsonGradientConfig(
       type: json['type'] as String?,
       colors: (json['colors'] as List<dynamic>?)
@@ -198,25 +164,17 @@ class JsonGradientConfig {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (type != null) 'type': type,
-      if (colors != null) 'colors': colors,
-      if (direction != null) 'direction': direction,
-    };
-  }
-
   Gradient? buildGradient() {
-    if (type != 'linear' || colors == null || colors!.isEmpty) return null;
-    
-    List<Color> gradientColors = colors!.map((c) => _parseColor(c)).toList();
-    
-    if (gradientColors.length < 2) return null;
-    
-    // Determine begin and end based on direction
+    if (type != 'linear' || colors == null || colors!.length < 2) {
+      return null;
+    }
+
+    final gradientColors =
+        colors!.map((c) => JsonColorParser.parse(c)).toList();
+
     Alignment begin = Alignment.centerLeft;
     Alignment end = Alignment.centerRight;
-    
+
     switch (direction) {
       case 'top_to_bottom':
         begin = Alignment.topCenter;
@@ -232,28 +190,17 @@ class JsonGradientConfig {
         break;
       case 'left_to_right':
       default:
-        begin = Alignment.centerLeft;
-        end = Alignment.centerRight;
         break;
     }
-    
+
     return LinearGradient(
       begin: begin,
       end: end,
       colors: gradientColors,
     );
   }
-
-  Color _parseColor(String colorString) {
-    String hex = colorString;
-    if (hex.startsWith('#')) {
-      hex = hex.substring(1);
-    }
-    return Color(int.parse('FF$hex', radix: 16));
-  }
 }
 
-/// Layout configuration
 class JsonLayoutConfig {
   final double? paddingH;
   final double? paddingV;
@@ -275,9 +222,9 @@ class JsonLayoutConfig {
 
   factory JsonLayoutConfig.fromJson(Map<String, dynamic>? json) {
     if (json == null) return JsonLayoutConfig();
-    
+
     final padding = json['padding'] as Map<String, dynamic>?;
-    
+
     return JsonLayoutConfig(
       paddingH: (padding?['horizontal'] as num?)?.toDouble(),
       paddingV: (padding?['vertical'] as num?)?.toDouble(),
@@ -289,24 +236,10 @@ class JsonLayoutConfig {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'padding': {
-        if (paddingH != null) 'horizontal': paddingH,
-        if (paddingV != null) 'vertical': paddingV,
-      },
-      if (spacing != null) 'spacing': spacing,
-      if (alignment != null) 'alignment': alignment,
-      if (mainAxis != null) 'main_axis_alignment': mainAxis,
-      if (crossAxis != null) 'cross_axis_alignment': crossAxis,
-      if (cornerRadius != null) 'corner_radius': cornerRadius,
-    };
-  }
-
   EdgeInsets get padding => EdgeInsets.symmetric(
-    horizontal: paddingH ?? 16,
-    vertical: paddingV ?? 12,
-  );
+        horizontal: paddingH ?? 16,
+        vertical: paddingV ?? 12,
+      );
 
   MainAxisAlignment get mainAxisAlign {
     switch (mainAxis) {
