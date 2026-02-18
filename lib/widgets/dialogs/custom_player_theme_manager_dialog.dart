@@ -31,7 +31,7 @@ class _CustomPlayerThemeManagerDialogState extends State<CustomPlayerThemeManage
 
   Future<void> _loadCustomThemes() async {
     final loaded = await PlayerControlThemeRegistry.getAllThemes();
-    final customOnly = loaded.whereType<CustomPlayerTheme>();
+    final customOnly = loaded.where((theme) => theme is CustomPlayerTheme).toList();
     customThemes.value = customOnly;
   }
 

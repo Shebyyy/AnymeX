@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:anymex/models/custom_themes/theme_widgets/json_theme_config.dart';
 import 'package:anymex/models/custom_themes/theme_widgets/json_widget_builder.dart';
 import 'package:anymex/screens/manga/controller/reader_controller.dart';
@@ -39,12 +41,6 @@ class CustomReaderTheme implements ReaderControlTheme {
   }
 
   @override
-  String get name => this.name;
-
-  @override
-  String get id => this.id;
-
-  @override
   Widget buildTopControls(BuildContext context, ReaderController controller) {
     final topControlsConfig = config['top_controls'] as Map<String, dynamic>?;
     
@@ -60,14 +56,14 @@ class CustomReaderTheme implements ReaderControlTheme {
     ReaderController controller,
     Map<String, dynamic> config,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map?);
-    final layout = JsonThemeLayout.fromJson(config['layout'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map<String, dynamic>?);
+    final layout = JsonThemeLayout.fromJson(config['layout'] as Map<String, dynamic>?);
     final childrenJson = config['components'] as List?;
 
     final contextData = {
-      'manga': controller.manga?.title ?? 'Unknown',
-      'title': controller.manga?.title ?? 'Unknown',
-      'chapter': 'Chapter ${controller.currentChapter.value}',
+      'manga': controller.media.title ?? 'Unknown',
+      'title': controller.media.title ?? 'Unknown',
+      'chapter': 'Chapter ${controller.currentChapter.value?.number ?? '?'}',
       'controller': controller,
     };
 
@@ -97,7 +93,7 @@ class CustomReaderTheme implements ReaderControlTheme {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -110,7 +106,7 @@ class CustomReaderTheme implements ReaderControlTheme {
       bottom: false,
       child: Container(
         decoration: decoration.build(),
-        padding: (layout.padding?.padding) as EdgeInsets?,
+        padding: layout.padding?.padding,
         child: child,
       ),
     );
@@ -147,7 +143,7 @@ class CustomReaderTheme implements ReaderControlTheme {
                 children: [
                   if (showTitle)
                     Text(
-                      controller.manga?.title ?? 'Unknown',
+                      controller.media.title ?? 'Unknown',
                       style: TextStyle(
                         color: colors.onSurface,
                         fontSize: (config['title_size'] as num?)?.toDouble() ?? 16.0,
@@ -159,7 +155,7 @@ class CustomReaderTheme implements ReaderControlTheme {
                   if (showChapter && showTitle) const SizedBox(height: 4),
                   if (showChapter)
                     Obx(() => Text(
-                          'Chapter ${controller.currentChapter.value}',
+                          'Chapter ${controller.currentChapter.value?.number ?? '?'}',
                           style: TextStyle(
                             color: colors.onSurface.withOpacity(0.7),
                             fontSize: (config['subtitle_size'] as num?)?.toDouble() ?? 14.0,
@@ -191,16 +187,16 @@ class CustomReaderTheme implements ReaderControlTheme {
     ReaderController controller,
     Map<String, dynamic> config,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map?);
-    final layout = JsonThemeLayout.fromJson(config['layout'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map<String, dynamic>?);
+    final layout = JsonThemeLayout.fromJson(config['layout'] as Map<String, dynamic>?);
     final childrenJson = config['components'] as List?;
 
     final contextData = {
       'controller': controller,
-      'current_page': controller.currentPage.value,
-      'total_pages': controller.totalPages.value,
-      'progress': controller.totalPages.value > 0 
-          ? controller.currentPage.value / controller.totalPages.value 
+      'current_page': controller.currentPageIndex.value,
+      'total_pages': controller.pageList.length,
+      'progress': controller.pageList.length > 0 
+          ? controller.currentPageIndex.value / controller.pageList.length 
           : 0.0,
     };
 
@@ -230,7 +226,7 @@ class CustomReaderTheme implements ReaderControlTheme {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -243,7 +239,7 @@ class CustomReaderTheme implements ReaderControlTheme {
       top: false,
       child: Container(
         decoration: decoration.build(),
-        padding: (layout.padding?.padding) as EdgeInsets?,
+        padding: layout.padding?.padding,
         child: child,
       ),
     );
@@ -316,7 +312,9 @@ class CustomReaderTheme implements ReaderControlTheme {
             icon: Icon(Icons.more_vert_rounded),
             color: iconColor,
             iconSize: iconSize,
-            onPressed: () => controller.openSettings(),
+            onPressed: () {
+              // Settings button - currently no-op as openSettings doesn't exist
+            },
           ),
       ],
     );
@@ -337,9 +335,9 @@ class CustomReaderTheme implements ReaderControlTheme {
           context,
           Icons.first_page_rounded,
           'First',
-          () => controller.jumpToFirst(),
+          () => controller.navigateToPage(0),
           iconSize,
-          iconColor,
+          iconColor!,
           showTextLabels,
         ),
         const SizedBox(width: 8),
@@ -347,14 +345,14 @@ class CustomReaderTheme implements ReaderControlTheme {
           context,
           Icons.chevron_left_rounded,
           'Prev',
-          () => controller.prevPage(),
+          () => controller.navigateBackward(),
           iconSize,
-          iconColor,
+          iconColor!,
           showTextLabels,
         ),
         const SizedBox(width: 16),
         Obx(() => Text(
-              '${controller.currentPage.value}/${controller.totalPages.value}',
+              '${controller.currentPageIndex.value}/${controller.pageList.length}',
               style: TextStyle(
                 color: iconColor,
                 fontSize: (themeConfig['page_text_size'] as num?)?.toDouble() ?? 16.0,
@@ -366,9 +364,9 @@ class CustomReaderTheme implements ReaderControlTheme {
           context,
           Icons.chevron_right_rounded,
           'Next',
-          () => controller.nextPage(),
+          () => controller.navigateForward(),
           iconSize,
-          iconColor,
+          iconColor!,
           showTextLabels,
         ),
         const SizedBox(width: 8),
@@ -376,9 +374,9 @@ class CustomReaderTheme implements ReaderControlTheme {
           context,
           Icons.last_page_rounded,
           'Last',
-          () => controller.jumpToLast(),
+          () => controller.navigateToPage(controller.pageList.length - 1),
           iconSize,
-          iconColor,
+          iconColor!,
           showTextLabels,
         ),
       ],
@@ -433,7 +431,9 @@ class CustomReaderTheme implements ReaderControlTheme {
       icon: Icon(Icons.settings_rounded),
       color: iconColor,
       iconSize: iconSize,
-      onPressed: () => controller.openSettings(),
+      onPressed: () {
+        // Settings button - currently no-op as openSettings doesn't exist
+      },
     );
   }
 
@@ -447,8 +447,8 @@ class CustomReaderTheme implements ReaderControlTheme {
     final height = (themeConfig['progress_height'] as num?)?.toDouble() ?? 4.0;
 
     return Obx(() {
-      final current = controller.currentPage.value;
-      final total = controller.totalPages.value;
+      final current = controller.currentPageIndex.value;
+      final total = controller.pageList.length;
       final progress = total > 0 ? current / total : 0.0;
 
       return SliderTheme(
@@ -459,13 +459,13 @@ class CustomReaderTheme implements ReaderControlTheme {
           activeTrackColor: progressColor,
           inactiveTrackColor: trackColor,
           thumbColor: progressColor,
-          overlayColor: progressColor.withOpacity(0.3),
+          overlayColor: progressColor?.withOpacity(0.3) ?? Colors.blue.withOpacity(0.3),
         ),
         child: Slider(
           value: progress.clamp(0.0, 1.0),
           onChanged: (value) {
             final page = (value * total).round().clamp(1, total);
-            controller.jumpToPage(page);
+            controller.navigateToPage(page - 1);
           },
         ),
       );

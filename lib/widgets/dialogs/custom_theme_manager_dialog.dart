@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/models/custom_themes/custom_media_indicator_theme.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
 import 'package:anymex/services/custom_theme_loader.dart';
 import 'package:anymex/utils/theme_extensions.dart';
@@ -32,7 +33,7 @@ class _CustomThemeManagerDialogState extends State<CustomThemeManagerDialog> {
 
   Future<void> _loadCustomThemes() async {
     final loaded = await MediaIndicatorThemeRegistry.getAllThemes();
-    final customOnly = loaded.whereType<CustomMediaIndicatorTheme>();
+    final customOnly = loaded.where((theme) => theme is CustomMediaIndicatorTheme).toList();
     customThemes.value = customOnly;
   }
 

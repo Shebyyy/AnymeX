@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:anymex/models/custom_themes/theme_widgets/json_theme_config.dart';
 import 'package:anymex/models/custom_themes/theme_widgets/json_widget_builder.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
@@ -39,12 +41,6 @@ class CustomPlayerTheme implements PlayerControlTheme {
   }
 
   @override
-  String get name => this.name;
-
-  @override
-  String get id => this.id;
-
-  @override
   Widget buildTopControls(BuildContext context, PlayerController controller) {
     final topControlsConfig = config['top_controls'] as Map<String, dynamic>?;
     
@@ -63,13 +59,13 @@ class CustomPlayerTheme implements PlayerControlTheme {
     PlayerController controller,
     Map<String, dynamic> config,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map?);
-    final layout = JsonThemeLayout.fromJson(config['layout'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map<String, dynamic>?);
+    final layout = JsonThemeLayout.fromJson(config['layout'] as Map<String, dynamic>?);
     final childrenJson = config['components'] as List?;
 
     // Build context data for widgets
     final contextData = {
-      'title': controller.title ?? 'Unknown',
+      'title': controller.anilistData.title ?? 'Unknown',
       'controller': controller,
     };
 
@@ -101,7 +97,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -113,7 +109,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
     // Build container
     return Container(
       decoration: decoration.build(),
-      padding: (layout.padding?.padding) as EdgeInsets?,
+      padding: layout.padding?.padding,
       child: child,
     );
   }
@@ -142,7 +138,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                controller.title ?? 'Unknown',
+                controller.anilistData.title ?? 'Unknown',
                 style: TextStyle(
                   color: colors.onSurface,
                   fontSize: (config['title_size'] as num?)?.toDouble() ?? 18.0,
@@ -175,8 +171,8 @@ class CustomPlayerTheme implements PlayerControlTheme {
     PlayerController controller,
     Map<String, dynamic> config,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map?);
-    final layout = JsonThemeLayout.fromJson(config['layout'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map<String, dynamic>?);
+    final layout = JsonThemeLayout.fromJson(config['layout'] as Map<String, dynamic>?);
     final childrenJson = config['components'] as List?;
 
     final contextData = {
@@ -210,7 +206,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -221,7 +217,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
 
     return Container(
       decoration: decoration.build(),
-      padding: (layout.padding?.padding) as EdgeInsets?,
+      padding: layout.padding?.padding,
       child: child,
     );
   }
@@ -243,9 +239,9 @@ class CustomPlayerTheme implements PlayerControlTheme {
           _buildCenterButton(
             context,
             Icons.replay_10_rounded,
-            () => controller.seekRelative(-10),
+            () => controller.megaSeek(-10),
             iconSize * 0.7,
-            iconColor,
+            iconColor!,
           ),
         if (showPlayPause)
           Obx(() => _buildCenterButton(
@@ -253,15 +249,15 @@ class CustomPlayerTheme implements PlayerControlTheme {
             controller.isPlaying.value ? Icons.pause_rounded : Icons.play_arrow_rounded,
             () => controller.togglePlayPause(),
             iconSize,
-            iconColor,
+            iconColor!,
           )),
         if (showSkipButtons)
           _buildCenterButton(
             context,
             Icons.forward_10_rounded,
-            () => controller.seekRelative(10),
+            () => controller.megaSeek(10),
             iconSize * 0.7,
-            iconColor,
+            iconColor!,
           ),
       ],
     );
@@ -283,19 +279,19 @@ class CustomPlayerTheme implements PlayerControlTheme {
     PlayerController controller,
     Map<String, dynamic> config,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map?);
-    final layout = JsonThemeLayout.fromJson(config['layout'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(config['decoration'] as Map<String, dynamic>?);
+    final layout = JsonThemeLayout.fromJson(config['layout'] as Map<String, dynamic>?);
     final childrenJson = config['components'] as List?;
 
-    final position = controller.position.value.inMilliseconds;
-    final duration = controller.duration.value.inMilliseconds;
+    final position = controller.currentPosition.value.inMilliseconds;
+    final duration = controller.episodeDuration.value.inMilliseconds;
     final progress = duration > 0 ? position / duration : 0.0;
 
     final contextData = {
       'controller': controller,
       'progress': progress,
-      'position': _formatDuration(controller.position.value),
-      'duration': _formatDuration(controller.duration.value),
+      'position': _formatDuration(controller.currentPosition.value),
+      'duration': _formatDuration(controller.episodeDuration.value),
     };
 
     List<Widget> children = [];
@@ -324,7 +320,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -335,7 +331,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
 
     return Container(
       decoration: decoration.build(),
-      padding: (layout.padding?.padding) as EdgeInsets?,
+      padding: layout.padding?.padding,
       child: child,
     );
   }
@@ -399,7 +395,9 @@ class CustomPlayerTheme implements PlayerControlTheme {
             icon: Icon(Icons.more_vert_rounded),
             color: iconColor,
             iconSize: iconSize,
-            onPressed: () => controller.openSettings(),
+            onPressed: () {
+              // Settings button - currently no-op as openSettings doesn't exist
+            },
           ),
       ],
     );
@@ -439,8 +437,8 @@ class CustomPlayerTheme implements PlayerControlTheme {
     final height = (themeConfig['progress_height'] as num?)?.toDouble() ?? 4.0;
 
     return Obx(() {
-      final position = controller.position.value.inMilliseconds;
-      final duration = controller.duration.value.inMilliseconds;
+      final position = controller.currentPosition.value.inMilliseconds;
+      final duration = controller.episodeDuration.value.inMilliseconds;
       final progress = duration > 0 ? position / duration : 0.0;
 
       return SliderTheme(
@@ -451,7 +449,7 @@ class CustomPlayerTheme implements PlayerControlTheme {
           activeTrackColor: progressColor,
           inactiveTrackColor: trackColor,
           thumbColor: progressColor,
-          overlayColor: progressColor.withOpacity(0.3),
+          overlayColor: progressColor?.withOpacity(0.3) ?? Colors.blue.withOpacity(0.3),
         ),
         child: Slider(
           value: progress.clamp(0.0, 1.0),
@@ -473,8 +471,8 @@ class CustomPlayerTheme implements PlayerControlTheme {
     final fontSize = (themeConfig['time_size'] as num?)?.toDouble() ?? 14.0;
 
     return Obx(() {
-      final position = _formatDuration(controller.position.value);
-      final duration = _formatDuration(controller.duration.value);
+      final position = _formatDuration(controller.currentPosition.value);
+      final duration = _formatDuration(controller.episodeDuration.value);
 
       return Row(
         children: [

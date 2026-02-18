@@ -271,6 +271,7 @@ class JsonThemeDecoration {
     if (side == null || side is! Map) return null;
     final color = JsonThemeColor.fromJson(side['color']).solid ?? defaultColor;
     final width = (side['width'] as num?)?.toDouble() ?? defaultWidth;
+    if (color == null) return null;
     return BorderSide(color: color, width: width);
   }
 

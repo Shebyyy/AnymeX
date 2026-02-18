@@ -37,12 +37,6 @@ class CustomMediaIndicatorTheme implements MediaIndicatorTheme {
   }
 
   @override
-  String get name => this.name;
-
-  @override
-  String get id => this.id;
-
-  @override
   Widget buildIndicator(BuildContext context, MediaIndicatorThemeData data) {
     final colors = Theme.of(context).colorScheme;
     final themeConfig = config['theme'] ?? {};

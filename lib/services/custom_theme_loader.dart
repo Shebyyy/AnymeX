@@ -16,8 +16,15 @@ class CustomThemeLoader {
   }
 
   static Future<Directory> _getCustomThemesDirectory() async {
-    final appDocDir = await getApplicationDocumentsDirectory();
-    final customThemesDir = Directory('${appDocDir.path}/$_themesDir');
+    // Use public AnymeX folder instead of app's private documents
+    final anymexDir = Directory('/storage/emulated/0/AnymeX');
+
+    if (!await anymexDir.exists()) {
+      await anymexDir.create(recursive: true);
+      Logger.i('Created AnymeX directory: ${anymexDir.path}');
+    }
+
+    final customThemesDir = Directory('${anymexDir.path}/$_themesDir');
 
     if (!await customThemesDir.exists()) {
       await customThemesDir.create(recursive: true);
@@ -30,17 +37,17 @@ class CustomThemeLoader {
   // Media Indicator Themes
   static Future<List<CustomMediaIndicatorTheme>> loadCustomMediaIndicatorThemes() async {
     try {
-      final directory = await _getCustomThemesDirectory();
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/media_indicator');
 
       if (!await directory.exists()) {
-        Logger.i('Custom themes directory does not exist');
-        return [];
+        await directory.create(recursive: true);
+        Logger.i('Created media_indicator themes directory: ${directory.path}');
       }
 
       final files = directory.listSync();
       final themeFiles = files
           .where((file) => file.path.endsWith('.json'))
-          .where((file) => file.path.contains('media_indicator'))
           .toList();
 
       Logger.i('Found ${themeFiles.length} custom media indicator themes');
@@ -48,13 +55,15 @@ class CustomThemeLoader {
       final themes = <CustomMediaIndicatorTheme>[];
       for (final file in themeFiles) {
         try {
-          final jsonString = await file.readAsString();
-          final jsonData = json.decode(jsonString);
+          if (file is File) {
+            final jsonString = await file.readAsString();
+            final jsonData = json.decode(jsonString);
 
-          if (jsonData['type'] == 'media_indicator') {
-            final theme = CustomMediaIndicatorTheme.fromJson(jsonData);
-            themes.add(theme);
-            Logger.i('Loaded custom media indicator theme: ${theme.name}');
+            if (jsonData['type'] == 'media_indicator') {
+              final theme = CustomMediaIndicatorTheme.fromJson(jsonData);
+              themes.add(theme);
+              Logger.i('Loaded custom media indicator theme: ${theme.name}');
+            }
           }
         } catch (e) {
           Logger.i('Error loading theme from ${file.path}: $e');
@@ -70,8 +79,12 @@ class CustomThemeLoader {
 
   static Future<bool> saveCustomMediaIndicatorTheme(CustomMediaIndicatorTheme theme) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'media_indicator_${theme.id}.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/media_indicator');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      final fileName = '${theme.id}.json';
       final file = File('${directory.path}/$fileName');
 
       final jsonString = json.encode(theme.toJson());
@@ -87,8 +100,9 @@ class CustomThemeLoader {
 
   static Future<bool> deleteCustomMediaIndicatorTheme(String themeId) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'media_indicator_$themeId.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/media_indicator');
+      final fileName = '$themeId.json';
       final file = File('${directory.path}/$fileName');
 
       if (await file.exists()) {
@@ -107,17 +121,17 @@ class CustomThemeLoader {
   // Player Themes
   static Future<List<CustomPlayerTheme>> loadCustomPlayerThemes() async {
     try {
-      final directory = await _getCustomThemesDirectory();
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/player');
 
       if (!await directory.exists()) {
-        Logger.i('Custom themes directory does not exist');
-        return [];
+        await directory.create(recursive: true);
+        Logger.i('Created player themes directory: ${directory.path}');
       }
 
       final files = directory.listSync();
       final themeFiles = files
           .where((file) => file.path.endsWith('.json'))
-          .where((file) => file.path.contains('player'))
           .toList();
 
       Logger.i('Found ${themeFiles.length} custom player themes');
@@ -125,19 +139,20 @@ class CustomThemeLoader {
       final themes = <CustomPlayerTheme>[];
       for (final file in themeFiles) {
         try {
-          final jsonString = await file.readAsString();
-          final jsonData = json.decode(jsonString);
+          if (file is File) {
+            final jsonString = await file.readAsString();
+            final jsonData = json.decode(jsonString);
 
-          if (jsonData['type'] == 'player') {
-            final theme = CustomPlayerTheme.fromJson(jsonData);
-            themes.add(theme);
-            Logger.i('Loaded custom player theme: ${theme.name}');
+            if (jsonData['type'] == 'player') {
+              final theme = CustomPlayerTheme.fromJson(jsonData);
+              themes.add(theme);
+              Logger.i('Loaded custom player theme: ${theme.name}');
+            }
           }
         } catch (e) {
           Logger.i('Error loading theme from ${file.path}: $e');
         }
       }
-
       return themes;
     } catch (e) {
       Logger.i('Error loading custom player themes: $e');
@@ -147,8 +162,12 @@ class CustomThemeLoader {
 
   static Future<bool> saveCustomPlayerTheme(CustomPlayerTheme theme) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'player_${theme.id}.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/player');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      final fileName = '${theme.id}.json';
       final file = File('${directory.path}/$fileName');
 
       final jsonString = json.encode(theme.toJson());
@@ -164,8 +183,9 @@ class CustomThemeLoader {
 
   static Future<bool> deleteCustomPlayerTheme(String themeId) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'player_$themeId.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/player');
+      final fileName = '$themeId.json';
       final file = File('${directory.path}/$fileName');
 
       if (await file.exists()) {
@@ -184,17 +204,17 @@ class CustomThemeLoader {
   // Reader Themes
   static Future<List<CustomReaderTheme>> loadCustomReaderThemes() async {
     try {
-      final directory = await _getCustomThemesDirectory();
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/reader');
 
       if (!await directory.exists()) {
-        Logger.i('Custom themes directory does not exist');
-        return [];
+        await directory.create(recursive: true);
+        Logger.i('Created reader themes directory: ${directory.path}');
       }
 
       final files = directory.listSync();
       final themeFiles = files
           .where((file) => file.path.endsWith('.json'))
-          .where((file) => file.path.contains('reader'))
           .toList();
 
       Logger.i('Found ${themeFiles.length} custom reader themes');
@@ -224,8 +244,12 @@ class CustomThemeLoader {
 
   static Future<bool> saveCustomReaderTheme(CustomReaderTheme theme) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'reader_${theme.id}.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/reader');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      final fileName = '${theme.id}.json';
       final file = File('${directory.path}/$fileName');
 
       final jsonString = json.encode(theme.toJson());
@@ -241,8 +265,9 @@ class CustomThemeLoader {
 
   static Future<bool> deleteCustomReaderTheme(String themeId) async {
     try {
-      final directory = await _getCustomThemesDirectory();
-      final fileName = 'reader_$themeId.json';
+      final baseDirectory = await _getCustomThemesDirectory();
+      final directory = Directory('${baseDirectory.path}/reader');
+      final fileName = '$themeId.json';
       final file = File('${directory.path}/$fileName');
 
       if (await file.exists()) {

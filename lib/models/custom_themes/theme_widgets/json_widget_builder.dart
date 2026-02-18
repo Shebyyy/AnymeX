@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:anymex/models/custom_themes/theme_widgets/json_theme_config.dart';
 import 'package:flutter/material.dart';
@@ -53,10 +54,10 @@ class JsonWidgetBuilder {
     final icon = _parseIcon(json['icon']);
     final size = (json['size'] as num?)?.toDouble() ?? 24.0;
     final color = JsonThemeColor.fromJson(json['color']).solid;
-    final background = JsonThemeDecoration.fromJson(json['background'] as Map?);
+    final background = JsonThemeDecoration.fromJson(json['background'] as Map<String, dynamic>?);
     final onTap = json['on_tap'] as String?;
-    final animations = JsonThemeAnimations.fromJson(json['animations'] as Map?);
-    final glow = JsonThemeGlow.fromJson(json['glow'] as Map?);
+    final animations = JsonThemeAnimations.fromJson(json['animations'] as Map<String, dynamic>?);
+    final glow = JsonThemeGlow.fromJson(json['glow'] as Map<String, dynamic>?);
     final margin = JsonThemeMargin.fromJson(json['margin']);
     final padding = JsonThemePadding.fromJson(json['padding']);
     final disabled = json['disabled'] == true;
@@ -70,25 +71,27 @@ class JsonWidgetBuilder {
     // Add glow effect
     if (glow.build() != null && !disabled) {
       iconWidget = Container(
-        decoration: BoxDecoration(boxShadow: [glow.build()!]),
-        child: iconWidget,
+          decoration: BoxDecoration(boxShadow: [glow.build()!]),
+          child: iconWidget,
       );
     }
 
     // Wrap in background if specified
     if (background.background != null || background.border != null) {
       iconWidget = Container(
-        decoration: background.build(),
-        padding: padding.padding as EdgeInsets?,
-        child: iconWidget,
+          decoration: background.build(),
+          padding: padding.padding,
+          child: iconWidget,
       );
     } else {
-      iconWidget = Padding(padding: padding.padding as EdgeInsets?, child: iconWidget);
+      if (padding.padding != null) {
+        iconWidget = Padding(padding: padding.padding!, child: iconWidget);
+      }
     }
 
     // Apply margin
     if (margin.margin != null) {
-      iconWidget = Padding(padding: margin.margin as EdgeInsets?, child: iconWidget);
+      iconWidget = Padding(padding: margin.margin!, child: iconWidget);
     }
 
     // Handle tap action if specified
@@ -115,10 +118,10 @@ class JsonWidgetBuilder {
       json['content'] as String? ?? '',
       contextData,
     );
-    final style = JsonThemeTextStyle.fromJson(json['style'] as Map?);
+    final style = JsonThemeTextStyle.fromJson(json['style'] as Map<String, dynamic>?);
     final margin = JsonThemeMargin.fromJson(json['margin']);
     final padding = JsonThemePadding.fromJson(json['padding']);
-    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map<String, dynamic>?);
     final textAlign = _parseTextAlign(json['align']);
     final maxLines = (json['max_lines'] as num?)?.toInt();
     final overflow = _parseTextOverflow(json['overflow']);
@@ -135,16 +138,18 @@ class JsonWidgetBuilder {
     if (decoration.background != null || decoration.border != null) {
       textWidget = Container(
         decoration: decoration.build(),
-        padding: padding.padding as EdgeInsets?,
+        padding: padding.padding,
         child: textWidget,
       );
     } else {
-      textWidget = Padding(padding: padding.padding as EdgeInsets?, child: textWidget);
+      if (padding.padding != null) {
+        textWidget = Padding(padding: padding.padding!, child: textWidget);
+      }
     }
 
     // Apply margin
     if (margin.margin != null) {
-      textWidget = Padding(padding: margin.margin as EdgeInsets?, child: textWidget);
+      textWidget = Padding(padding: margin.margin!, child: textWidget);
     }
 
     return textWidget;
@@ -155,12 +160,12 @@ class JsonWidgetBuilder {
     Map<String, dynamic> json,
     Map<String, dynamic> contextData,
   ) {
-    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map<String, dynamic>?);
     final margin = JsonThemeMargin.fromJson(json['margin']);
     final padding = JsonThemePadding.fromJson(json['padding']);
-    final layout = JsonThemeLayout.fromJson(json['layout'] as Map?);
+    final layout = JsonThemeLayout.fromJson(json['layout'] as Map<String, dynamic>?);
     final childrenJson = json['children'] as List?;
-    final child = json['child'] as Map?;
+    final child = json['child'] as Map<String, dynamic>?;
 
     // Build children
     List<Widget> children = [];
@@ -196,7 +201,7 @@ class JsonWidgetBuilder {
       containerChild = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -208,13 +213,13 @@ class JsonWidgetBuilder {
     // Build container with decoration
     Widget container = Container(
       decoration: decoration.build(),
-      padding: padding.padding as EdgeInsets?,
+      padding: padding.padding,
       child: containerChild,
     );
 
     // Apply margin
     if (margin.margin != null) {
-      container = Padding(padding: margin.margin as EdgeInsets?, child: container);
+      container = Padding(padding: margin.margin!, child: container);
     }
 
     return container;
@@ -228,12 +233,12 @@ class JsonWidgetBuilder {
     final height = (json['height'] as num?)?.toDouble() ?? 4.0;
     final trackColor = JsonThemeColor.fromJson(json['track_color']).solid ?? Colors.white24;
     final progressColor = JsonThemeColor.fromJson(json['progress_color']).solid ?? Colors.blue;
-    final thumbJson = json['thumb'] as Map?;
+    final thumbJson = json['thumb'] as Map<String, dynamic>?;
     final margin = JsonThemeMargin.fromJson(json['margin']);
     
     final thumbSize = (thumbJson?['size'] as num?)?.toDouble() ?? 14.0;
     final thumbColor = JsonThemeColor.fromJson(thumbJson?['color']).solid ?? progressColor;
-    final thumbGlow = JsonThemeGlow.fromJson(thumbJson?['glow'] as Map?);
+    final thumbGlow = JsonThemeGlow.fromJson(thumbJson?['glow'] as Map<String, dynamic>?);
     
     // Get progress value from context
     final progress = (contextData['progress'] as double? ?? 0.0).clamp(0.0, 1.0);
@@ -286,7 +291,7 @@ class JsonWidgetBuilder {
 
     // Apply margin
     if (margin.margin != null) {
-      slider = Padding(padding: margin.margin as EdgeInsets?, child: slider);
+      slider = Padding(padding: margin.margin!, child: slider);
     }
 
     return slider;
@@ -297,9 +302,9 @@ class JsonWidgetBuilder {
     Map<String, dynamic> json,
     Map<String, dynamic> contextData,
   ) {
-    final layout = JsonThemeLayout.fromJson(json['layout'] as Map?);
+    final layout = JsonThemeLayout.fromJson(json['layout'] as Map<String, dynamic>?);
     final childrenJson = json['children'] as List?;
-    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map?);
+    final decoration = JsonThemeDecoration.fromJson(json['decoration'] as Map<String, dynamic>?);
     final margin = JsonThemeMargin.fromJson(json['margin']);
     final padding = JsonThemePadding.fromJson(json['padding']);
 
@@ -331,7 +336,7 @@ class JsonWidgetBuilder {
       child = ClipRRect(
         borderRadius: decoration.borderRadius ?? BorderRadius.zero,
         child: BackdropFilter(
-          filter: ImageFilter.blur(
+          filter: ui.ImageFilter.blur(
             sigmaX: decoration.blur?.sigma ?? 10.0,
             sigmaY: decoration.blur?.sigma ?? 10.0,
           ),
@@ -343,13 +348,13 @@ class JsonWidgetBuilder {
     // Build container with decoration
     Widget container = Container(
       decoration: decoration.build(),
-      padding: padding.padding as EdgeInsets?,
+      padding: padding.padding,
       child: child,
     );
 
     // Apply margin
     if (margin.margin != null) {
-      container = Padding(padding: margin.margin as EdgeInsets?, child: container);
+      container = Padding(padding: margin.margin!, child: container);
     }
 
     return container;
@@ -403,8 +408,8 @@ class JsonWidgetBuilder {
         'check_circle': Icons.check_circle,
         'chevron_left': Icons.chevron_left,
         'chevron_right': Icons.chevron_right,
-        'chevron_up': Icons.chevron_up,
-        'chevron_down': Icons.chevron_down,
+        'expand_less': Icons.expand_less,
+        'expand_more': Icons.expand_more,
         'first_page': Icons.first_page,
         'last_page': Icons.last_page,
         'menu': Icons.menu,
