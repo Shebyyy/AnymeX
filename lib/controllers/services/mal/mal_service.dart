@@ -230,7 +230,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
                   buttonText: "MANGA LIST",
                   borderRadius: 16.multiplyRadius(),
                   backgroundImage:
-                      trendingManga.firstWhere((e) => e.cover != null).cover ??
+                      trendingMangas.firstWhere((e) => e.cover != null).cover ??
                           '',
                   onPressed: () {
                     navigate(() => const AnilistMangaList());
@@ -246,7 +246,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
                   borderRadius: 16.multiplyRadius(),
                   backgroundImage: [
                         ...popularAnimes,
-                        ...trendingManga,
+                        ...trendingMangas,
                         ...trendingAnimes
                       ].where((e) => e.cover != null).last.cover ??
                       '',
