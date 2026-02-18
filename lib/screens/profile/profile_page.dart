@@ -273,158 +273,93 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildAboutContent(BuildContext context, String about) {
-    final segments = _splitSpoilers(about);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: segments.map((seg) {
-        if (seg.isSpoiler) {
-          return _SpoilerBlock(
-            rawContent: seg.content,
-            htmlStyle: _htmlStyle(context),
-            imgExtension: _imgExtension(context),
-            preprocessHtml: (raw) => _preprocessHtml(raw, context),
-          );
-        }
-        return Html(
-          data: _preprocessHtml(seg.content, context),
-          style: _htmlStyle(context),
-          extensions: [_imgExtension(context)],
-        );
-      }).toList(),
-    );
-  }
-
-  List<_ContentSegment> _splitSpoilers(String content) {
-    final result = <_ContentSegment>[];
-    final spoilerPattern = RegExp(r'~!([\s\S]*?)!~');
-    int lastEnd = 0;
-    for (final match in spoilerPattern.allMatches(content)) {
-      if (match.start > lastEnd) {
-        result.add(_ContentSegment(content: content.substring(lastEnd, match.start), isSpoiler: false));
-      }
-      result.add(_ContentSegment(content: match.group(1) ?? '', isSpoiler: true));
-      lastEnd = match.end;
-    }
-    if (lastEnd < content.length) {
-      result.add(_ContentSegment(content: content.substring(lastEnd), isSpoiler: false));
-    }
-    return result;
-  }
-
-  String _preprocessHtml(String raw, BuildContext context) {
-    var content = raw;
-
-    content = content.replaceAllMapped(
-        RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
-        (m) => '<a href="${m[2]}">${m[1]}</a>');
-
-    final isHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
-    if (!isHtml) content = _mdToHtml(content);
-
+    var content = about;
     content = content
         .replaceAll('\u200e', '')
         .replaceAll('\u200f', '')
         .replaceAll('\u200b', '')
-        .replaceAll('\u200c', '')
-        .replaceAll('\u200d', '')
-        .replaceAll('\u034f', '')
         .replaceAll('&lrm;', '')
-        .replaceAll('&#8206;', '')
-        .replaceAll('&nbsp;', '\u00a0')
-        .replaceAll('&#160;', '\u00a0')
-        .replaceAll('&thinsp;', '')
-        .replaceAll('&emsp;', '')
-        .replaceAll('&ensp;', '');
-    
+        .replaceAll('&#8206;', '');
     content = content.replaceAllMapped(
-      RegExp(
-        r'(<a\b[^>]*>\s*<img\b[^>]*/?\s*>\s*</a>)'
-        r'(?:\s*<a\b[^>]*>\s*<img\b[^>]*/?\s*>\s*</a>)+',
-        dotAll: true,
-      ),
-      (m) => '<div style="display:flex;flex-direction:row;flex-wrap:wrap;'
-          'gap:8px;align-items:center;justify-content:center;">'
-          '${m[0]}</div>',
+      RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
+      (m) => '<a href="${m[2]}">${m[1]}</a>',
     );
-
-    return content;
-  }
-
-  Map<String, Style> _htmlStyle(BuildContext context) => {
-        'body': Style(
+    final hasHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(content);
+    if (!hasHtml) {
+      content = _mdToHtml(content);
+    }
+    content = content.replaceAllMapped(
+      RegExp(r'~!([\s\S]*?)!~'),
+      (m) => '<spoiler>${m[1]}</spoiler>',
+    );
+    return Html(
+      data: content,
+      style: {
+        "body": Style(
           margin: Margins.zero,
           padding: HtmlPaddings.zero,
           fontSize: FontSize(13.5),
-          lineHeight: LineHeight(1.65),
+          lineHeight: LineHeight(1.6),
           color: context.theme.colorScheme.onSurfaceVariant,
           fontFamily: 'Poppins',
         ),
-        'div': Style(
+        "div": Style(
           margin: Margins.only(bottom: 8),
-          textAlign: TextAlign.center,
         ),
-        'p': Style(
+        "p": Style(
           margin: Margins.only(bottom: 8),
-          color: context.theme.colorScheme.onSurfaceVariant,
         ),
-        'a': Style(
-          color: context.theme.colorScheme.primary,
+        "a": Style(
+          display: Display.inline,
           textDecoration: TextDecoration.none,
-          display: Display.inlineBlock,
-        ),
-        'strong': Style(
-          fontWeight: FontWeight.w700,
-          color: context.theme.colorScheme.onSurface,
-        ),
-        'b': Style(
-          fontWeight: FontWeight.w700,
-          color: context.theme.colorScheme.onSurface,
-        ),
-        'em': Style(
-          fontStyle: FontStyle.italic,
-          color: context.theme.colorScheme.onSurface,
-        ),
-        'i': Style(
-          fontStyle: FontStyle.italic,
-          color: context.theme.colorScheme.onSurface,
-        ),
-        'h1': Style(fontSize: FontSize(18), fontWeight: FontWeight.bold, color: context.theme.colorScheme.onSurface),
-        'h2': Style(fontSize: FontSize(16), fontWeight: FontWeight.bold, color: context.theme.colorScheme.onSurface),
-        'h3': Style(fontSize: FontSize(14), fontWeight: FontWeight.bold, color: context.theme.colorScheme.onSurface),
-        'code': Style(
-          fontFamily: 'monospace',
-          fontSize: FontSize(12),
-          backgroundColor: context.theme.colorScheme.surfaceContainer,
           color: context.theme.colorScheme.primary,
         ),
-        'blockquote': Style(
-          backgroundColor: context.theme.colorScheme.primary.withOpacity(0.07),
-          padding: HtmlPaddings.symmetric(horizontal: 12, vertical: 8),
-          margin: Margins.only(left: 0, right: 0, top: 4, bottom: 4),
-          border: Border(left: BorderSide(color: context.theme.colorScheme.primary, width: 3)),
+        "img": Style(
+          display: Display.inline,
+          margin: Margins.only(right: 6, bottom: 6),
         ),
-        'img': Style(margin: Margins.only(bottom: 8)),
-      };
-
-  TagExtension _imgExtension(BuildContext context) => TagExtension(
-        tagsToExtend: {'img'},
-        builder: (extensionContext) {
-          final src = extensionContext.attributes['src'] ?? '';
-          final widthAttr = extensionContext.attributes['width'];
-          final heightAttr = extensionContext.attributes['height'];
-          final double? w = widthAttr != null ? double.tryParse(widthAttr) : null;
-          final double? h = heightAttr != null ? double.tryParse(heightAttr) : null;
-          final isIcon = w != null && w <= 80;
-          return CachedNetworkImage(
-            imageUrl: src,
-            width: isIcon ? w : double.infinity,
-            height: h ?? (isIcon ? 60 : null),
-            fit: isIcon ? BoxFit.contain : BoxFit.fitWidth,
-            errorWidget: (_, __, ___) => SizedBox(width: w ?? 40, height: h ?? 40),
-            placeholder: (_, __) => SizedBox(width: w ?? 40, height: h ?? 40),
-          );
-        },
-      );
+      },
+      extensions: [
+        TagExtension(
+          tagsToExtend: {"img"},
+          builder: (contextExtension) {
+            final src = contextExtension.attributes["src"] ?? "";
+            final widthAttr = contextExtension.attributes["width"];
+            final heightAttr = contextExtension.attributes["height"];
+            double? parsePx(String? value) {
+              if (value == null) return null;
+              return double.tryParse(value.replaceAll("px", ""));
+            }
+            final w = parsePx(widthAttr);
+            final h = parsePx(heightAttr);
+            return CachedNetworkImage(
+              imageUrl: src,
+              width: w,
+              height: h,
+              fit: BoxFit.contain,
+              errorWidget: (_, __, ___) =>
+                  SizedBox(width: w ?? 40, height: h ?? 40),
+              placeholder: (_, __) =>
+                  SizedBox(width: w ?? 40, height: h ?? 40),
+            );
+          },
+        ),
+        TagExtension(
+          tagsToExtend: {"spoiler"},
+          builder: (extensionContext) {
+            return _SpoilerWidget(
+              child: Html(
+                data: extensionContext.innerHtml,
+                style: {
+                  "body": Style(margin: Margins.zero),
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   String _mdToHtml(String md) {
     final lines = md.split('\n');
@@ -728,105 +663,58 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-class _ContentSegment {
-  final String content;
-  final bool isSpoiler;
-  const _ContentSegment({required this.content, required this.isSpoiler});
-}
-
 class _PersonItem {
   final String? name;
   final String? image;
   const _PersonItem({this.name, this.image});
 }
 
-class _SpoilerBlock extends StatefulWidget {
-  final String rawContent;
-  final Map<String, Style> htmlStyle;
-  final TagExtension imgExtension;
-  final String Function(String) preprocessHtml;
-
-  const _SpoilerBlock({
-    required this.rawContent,
-    required this.htmlStyle,
-    required this.imgExtension,
-    required this.preprocessHtml,
-  });
-
+class _SpoilerWidget extends StatefulWidget {
+  final Widget child;
+  const _SpoilerWidget({required this.child});
   @override
-  State<_SpoilerBlock> createState() => _SpoilerBlockState();
+  State<_SpoilerWidget> createState() => _SpoilerWidgetState();
 }
 
-class _SpoilerBlockState extends State<_SpoilerBlock> {
-  bool _revealed = false;
-
+class _SpoilerWidgetState extends State<_SpoilerWidget> {
+  bool open = false;
   @override
   Widget build(BuildContext context) {
-    final scheme = context.theme.colorScheme;
-
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainer.withOpacity(0.6),
+        color: context.theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withOpacity(0.4)),
       ),
-      child: _revealed ? _buildRevealed(context, scheme) : _buildHidden(context, scheme),
-    );
-  }
-
-  Widget _buildHidden(BuildContext context, ColorScheme scheme) {
-    return InkWell(
-      onTap: () => setState(() => _revealed = true),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.visibility_off_rounded,
-                size: 16, color: scheme.onSurfaceVariant.withOpacity(0.7)),
-            const SizedBox(width: 8),
-            Text(
-              'Spoiler, tap to reveal',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurfaceVariant.withOpacity(0.7),
-                fontStyle: FontStyle.italic,
+      child: open
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() => open = false),
+                ),
+                widget.child,
+              ],
+            )
+          : InkWell(
+              onTap: () => setState(() => open = true),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.visibility_off, size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Spoiler, click to view",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRevealed(BuildContext context, ColorScheme scheme) {
-    final html = widget.preprocessHtml(widget.rawContent);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Align(
-          alignment: Alignment.topRight,
-          child: InkWell(
-            onTap: () => setState(() => _revealed = false),
-            borderRadius: const BorderRadius.only(topRight: Radius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(Icons.close_rounded, size: 18, color: scheme.onSurfaceVariant),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: Html(
-            data: html,
-            style: widget.htmlStyle,
-            extensions: [widget.imgExtension],
-          ),
-        ),
-      ],
     );
   }
 }
