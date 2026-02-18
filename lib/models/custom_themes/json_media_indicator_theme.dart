@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme.dart';
 import 'package:flutter/material.dart';
 
 import 'json_theme_base.dart';
 import 'json_media_indicator_config.dart';
-import '../theme_builder/json_media_indicator_builder.dart';
+import 'theme_builder/json_media_indicator_builder.dart';
 
 /// JSON-based media indicator theme
 class JsonMediaIndicatorTheme extends JsonThemeBase implements MediaIndicatorTheme {

@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme.dart';
 import 'package:anymex/screens/manga/controller/reader_controller.dart';
 import 'package:flutter/material.dart';
 
 import 'json_theme_base.dart';
 import 'json_reader_controls_config.dart';
-import '../theme_builder/json_reader_theme_builder.dart';
+import 'theme_builder/json_reader_theme_builder.dart';
 
 /// JSON-based reader control theme
 class JsonReaderTheme extends JsonThemeBase implements ReaderControlTheme {

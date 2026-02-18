@@ -6,6 +6,7 @@ import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
 import 'package:anymex/screens/other_features.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_player.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -30,8 +31,8 @@ class JsonPlayerThemeBuilder {
       children: children,
     );
 
-    if (background != null && background.color != null) {
-      child = _applyBackground(context, child, background, layout);
+    if (background != null && background?.color != null) {
+      child = _applyBackground(context, child, background!, layout);
     }
 
     if (layout != null) {
@@ -62,8 +63,8 @@ class JsonPlayerThemeBuilder {
       children: children,
     );
 
-    if (config.background != null && config.background.color != null) {
-      child = _applyBackground(context, child, config.background, layout);
+    if (config.background != null && config.background?.color != null) {
+      child = _applyBackground(context, child, config.background!, layout);
     }
 
     return Align(
@@ -92,7 +93,7 @@ class JsonPlayerThemeBuilder {
 
     // Time display
     if (progressBar?.showTime == true) {
-      children.add(_buildTimeDisplay(context, controller, progressBar));
+      children.add(_buildTimeDisplay(context, controller, progressBar!));
       children.add(const SizedBox(width: 16));
     }
 
@@ -107,8 +108,8 @@ class JsonPlayerThemeBuilder {
       children: children,
     );
 
-    if (background != null && background.color != null) {
-      child = _applyBackground(context, child, background, layout);
+    if (background != null && background?.color != null) {
+      child = _applyBackground(context, child, background!, layout);
     }
 
     if (layout != null) {
@@ -137,8 +138,8 @@ class JsonPlayerThemeBuilder {
     switch (element.type) {
       case 'back_button':
         child = _buildIconButton(
-          context: controller,
-          element: element as JsonBackButtonElement,
+          context,
+          element as JsonBackButtonElement,
           () => Get.back(),
         );
         break;

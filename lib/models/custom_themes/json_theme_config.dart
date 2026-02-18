@@ -47,6 +47,24 @@ class JsonBackgroundConfig {
       if (gradient != null) 'gradient': gradient?.toJson(),
     };
   }
+
+  BoxDecoration buildDecoration(BuildContext context) {
+    return BoxDecoration(
+      color: color != null ? _parseColor(color!) : null,
+      gradient: gradient?.buildGradient(),
+      border: border?.buildBorder(),
+      boxShadow: shadow != null ? shadow!.buildShadows() : null,
+      borderRadius: BorderRadius.circular(12),
+    );
+  }
+
+  Color _parseColor(String colorString) {
+    String hex = colorString;
+    if (hex.startsWith('#')) {
+      hex = hex.substring(1);
+    }
+    return Color(int.parse('FF$hex'));
+  }
 }
 
 /// Border configuration

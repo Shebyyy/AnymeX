@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'json_theme_config.dart';
 import 'json_theme_elements.dart';
+import 'json_player_controls_config.dart';
 
 /// Reader top controls configuration
 class JsonReaderTopControlsConfig {
