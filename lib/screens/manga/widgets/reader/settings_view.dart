@@ -298,7 +298,7 @@ class ReaderSettings {
                               isSelected: mode == currentMode,
                               style: IconButton.styleFrom(
                                 backgroundColor: mode == currentMode
-                                    ? Theme.of(context).colorScheme.withOpacity(0.2)
+                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
                                     : Theme.of(context).colorScheme.surfaceContainer,
                                 foregroundColor: mode == currentMode
                                     ? Theme.of(context).colorScheme.primary
