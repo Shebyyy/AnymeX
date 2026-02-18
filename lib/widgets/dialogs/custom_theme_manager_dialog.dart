@@ -19,7 +19,7 @@ class CustomThemeManagerDialog extends StatefulWidget {
 }
 
 class _CustomThemeManagerDialogState extends State<CustomThemeManagerDialog> {
-  late RxList<MediaIndicatorTheme> allThemes;
+  late RxList<dynamic> allThemes;
   late RxList<CustomMediaIndicatorTheme> customThemes;
   final RxString selectedThemeId = ''.obs;
 
@@ -33,7 +33,7 @@ class _CustomThemeManagerDialogState extends State<CustomThemeManagerDialog> {
 
   Future<void> _loadCustomThemes() async {
     final loaded = await MediaIndicatorThemeRegistry.getAllThemes();
-    final customOnly = loaded.where((theme) => theme is CustomMediaIndicatorTheme).toList();
+    final customOnly = loaded.whereType<CustomMediaIndicatorTheme>().toList();
     customThemes.value = customOnly;
   }
 
@@ -312,13 +312,17 @@ class _CustomThemeManagerDialogState extends State<CustomThemeManagerDialog> {
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.single;
-      final success = await CustomThemeLoader.importTheme(file.path);
-      
-      if (success) {
-        snackBar('Theme imported successfully!');
-        await _loadCustomThemes();
+      if (file.path != null) {
+        final success = await CustomThemeLoader.importTheme(file.path!);
+        
+        if (success) {
+          snackBar('Theme imported successfully!');
+          await _loadCustomThemes();
+        } else {
+          snackBar('Failed to import theme');
+        }
       } else {
-        snackBar('Failed to import theme');
+        snackBar('Failed to get file path');
       }
     }
   }

@@ -17,7 +17,7 @@ class CustomReaderThemeManagerDialog extends StatefulWidget {
 }
 
 class _CustomReaderThemeManagerDialogState extends State<CustomReaderThemeManagerDialog> {
-  late RxList<ReaderControlTheme> allThemes;
+  late RxList<dynamic> allThemes;
   late RxList<CustomReaderTheme> customThemes;
   final RxString selectedThemeId = ''.obs;
 
@@ -31,7 +31,7 @@ class _CustomReaderThemeManagerDialogState extends State<CustomReaderThemeManage
 
   Future<void> _loadCustomThemes() async {
     final loaded = await ReaderControlThemeRegistry.getAllThemes();
-    final customOnly = loaded.whereType<CustomReaderTheme>();
+    final customOnly = loaded.whereType<CustomReaderTheme>().toList();
     customThemes.value = customOnly;
   }
 

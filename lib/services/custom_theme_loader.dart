@@ -222,13 +222,15 @@ class CustomThemeLoader {
       final themes = <CustomReaderTheme>[];
       for (final file in themeFiles) {
         try {
-          final jsonString = await file.readAsString();
-          final jsonData = json.decode(jsonString);
+          if (file is File) {
+            final jsonString = await file.readAsString();
+            final jsonData = json.decode(jsonString);
 
-          if (jsonData['type'] == 'reader') {
-            final theme = CustomReaderTheme.fromJson(jsonData);
-            themes.add(theme);
-            Logger.i('Loaded custom reader theme: ${theme.name}');
+            if (jsonData['type'] == 'reader') {
+              final theme = CustomReaderTheme.fromJson(jsonData);
+              themes.add(theme);
+              Logger.i('Loaded custom reader theme: ${theme.name}');
+            }
           }
         } catch (e) {
           Logger.i('Error loading theme from ${file.path}: $e');

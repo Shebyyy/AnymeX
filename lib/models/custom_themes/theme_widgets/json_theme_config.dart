@@ -254,10 +254,10 @@ class JsonThemeDecoration {
 
       if (top != null || bottom != null || left != null || right != null) {
         return Border(
-          top: _parseBorderSide(top, color, width),
-          bottom: _parseBorderSide(bottom, color, width),
-          left: _parseBorderSide(left, color, width),
-          right: _parseBorderSide(right, color, width),
+          top: _parseBorderSide(top, color, width) ?? BorderSide.none,
+          bottom: _parseBorderSide(bottom, color, width) ?? BorderSide.none,
+          left: _parseBorderSide(left, color, width) ?? BorderSide.none,
+          right: _parseBorderSide(right, color, width) ?? BorderSide.none,
         );
       }
 

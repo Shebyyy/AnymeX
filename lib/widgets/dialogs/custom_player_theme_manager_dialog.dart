@@ -17,7 +17,7 @@ class CustomPlayerThemeManagerDialog extends StatefulWidget {
 }
 
 class _CustomPlayerThemeManagerDialogState extends State<CustomPlayerThemeManagerDialog> {
-  late RxList<PlayerControlTheme> allThemes;
+  late RxList<dynamic> allThemes;
   late RxList<CustomPlayerTheme> customThemes;
   final RxString selectedThemeId = ''.obs;
 
@@ -31,7 +31,7 @@ class _CustomPlayerThemeManagerDialogState extends State<CustomPlayerThemeManage
 
   Future<void> _loadCustomThemes() async {
     final loaded = await PlayerControlThemeRegistry.getAllThemes();
-    final customOnly = loaded.where((theme) => theme is CustomPlayerTheme).toList();
+    final customOnly = loaded.whereType<CustomPlayerTheme>().toList();
     customThemes.value = customOnly;
   }
 
