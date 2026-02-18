@@ -14,7 +14,7 @@ import 'package:anymex/utils/logger.dart';
 
 class MediaIndicatorThemeRegistry {
   static const String defaultThemeId = 'default';
-
+  
   static final List<MediaIndicatorTheme> builtinThemes = [
     DefaultMediaIndicatorTheme(),
     IosMediaIndicatorTheme(),
@@ -27,36 +27,36 @@ class MediaIndicatorThemeRegistry {
     GamingMediaIndicatorTheme(),
   ];
 
+  // Cache for all themes (builtin + custom)
+  static List<MediaIndicatorTheme> _allThemesCache = [];
+
   static Future<List<MediaIndicatorTheme>> getAllThemes() async {
     try {
       final customThemes = await CustomThemeLoader.loadCustomMediaIndicatorThemes();
-      return [...builtinThemes, ...customThemes];
+      _allThemesCache = [...builtinThemes, ...customThemes];
+      return _allThemesCache;
     } catch (e) {
       Logger.i('Error loading custom themes, using built-in only: $e');
+      _allThemesCache = builtinThemes;
       return builtinThemes;
     }
   }
 
   static List<MediaIndicatorTheme> get themes => builtinThemes;
 
-  static Future<MediaIndicatorTheme> resolve(String id) async {
-    // First check builtin themes
+  static MediaIndicatorTheme resolve(String id) {
+    // Search in all cached themes first (includes custom)
     try {
-      final builtinTheme = builtinThemes.firstWhere(
+      return _allThemesCache.firstWhere(
         (theme) => theme.id == id,
         orElse: () => builtinThemes.first,
       );
-      return builtinTheme;
     } catch (_) {
-      // If not in builtin, check custom themes
-      final customThemes = await CustomThemeLoader.loadCustomMediaIndicatorThemes();
-      if (customThemes.isNotEmpty) {
-        return customThemes.firstWhere(
-          (theme) => theme.id == id,
-          orElse: () => customThemes.first,
-        );
-      }
-      return builtinThemes.first;
+      // Fallback to builtin if cache is empty
+      return builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
     }
   }
 }

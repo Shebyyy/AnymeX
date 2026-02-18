@@ -5,6 +5,7 @@ import 'package:anymex/screens/manga/controller/reader_controller.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme_registry.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_tap_zones.dart';
 import 'package:anymex/utils/function.dart';
+import 'package:anymex/widgets/common/checkmark_tile.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/dialogs/custom_reader_theme_manager_dialog.dart';
 import 'package:flutter/material.dart';
@@ -27,16 +28,17 @@ class ReaderSettings {
     void showReaderControlThemeDialog() async {
       // Load all themes including custom ones
       final allThemes = await ReaderControlThemeRegistry.getAllThemes();
+      final dialogContext = Get.context!;
 
       showDialog(
-        context: context,
+        context: dialogContext,
         builder: (context) => Dialog(
-          backgroundColor: context.colors.surface,
+          backgroundColor: dialogContext.colors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
+            width: MediaQuery.of(dialogContext).size.width * 0.9,
             constraints: const BoxConstraints(maxWidth: 500),
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -52,7 +54,7 @@ class ReaderSettings {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.5,
+                  height: MediaQuery.of(dialogContext).size.height * 0.5,
                   child: Obx(() => SingleChildScrollView(
                     child: Column(
                       children: allThemes.map((theme) {
@@ -62,7 +64,7 @@ class ReaderSettings {
                           margin: const EdgeInsets.only(bottom: 7),
                           child: ListTileWithCheckMark(
                             leading: Icon(Icons.style_rounded),
-                            color: context.colors.primary,
+                            color: dialogContext.colors.primary,
                             active: isSelected,
                             title: isCustom ? '★ ${theme.name}' : theme.name,
                             onTap: () {
@@ -85,16 +87,13 @@ class ReaderSettings {
                             context: context,
                             builder: (context) => const CustomReaderThemeManagerDialog(),
                           );
-                          // Refresh the dialog after importing
-                          if (mounted) {
-                            Navigator.pop(context);
-                            showReaderControlThemeDialog();
-                          }
+                          Navigator.pop(context);
+                          showReaderControlThemeDialog();
                         },
                         icon: const Icon(Icons.file_upload_rounded),
                         label: const Text('Import Theme'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: context.colors.primary,
+                          foregroundColor: dialogContext.colors.primary,
                         ),
                       ),
                     ),
@@ -105,7 +104,7 @@ class ReaderSettings {
                         icon: const Icon(Icons.check_rounded),
                         label: const Text('Close'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: context.colors.primaryFixed,
+                          backgroundColor: dialogContext.colors.primaryFixed,
                           foregroundColor: Colors.black,
                         ),
                       ),
@@ -148,8 +147,8 @@ class ReaderSettings {
                     child: Center(
                       child: Text(
                         'Reader Settings',
-                        style: TextStyle(
-                            fontSize: 18, fontFamily: 'Poppins-SemiBold'),
+                        style:
+                            TextStyle(fontSize: 18, fontFamily: 'Poppins-SemiBold'),
                       ),
                     ),
                   ),
@@ -299,7 +298,7 @@ class ReaderSettings {
                               isSelected: mode == currentMode,
                               style: IconButton.styleFrom(
                                 backgroundColor: mode == currentMode
-                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                                    ? Theme.of(context).colorScheme.withOpacity(0.2)
                                     : Theme.of(context).colorScheme.surfaceContainer,
                                 foregroundColor: mode == currentMode
                                     ? Theme.of(context).colorScheme.primary
@@ -447,7 +446,6 @@ class ReaderSettings {
         );
       },
     ).then((_) {
-     
       if (wasVolumeEnabled) {
         controller.resumeVolumeKeys();
       }

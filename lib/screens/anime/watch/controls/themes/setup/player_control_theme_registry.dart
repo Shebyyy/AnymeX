@@ -14,7 +14,6 @@ import 'package:anymex/utils/logger.dart';
 
 class PlayerControlThemeRegistry {
   static const String defaultThemeId = 'default';
-
   static final List<PlayerControlTheme> builtinThemes = [
     DefaultPlayerControlTheme(),
     Ios26PlayerControlTheme(),
@@ -27,36 +26,36 @@ class PlayerControlThemeRegistry {
     RetroVhsPlayerControlTheme(),
   ];
 
+  // Cache for all themes (builtin + custom)
+  static List<PlayerControlTheme> _allThemesCache = [];
+
   static Future<List<PlayerControlTheme>> getAllThemes() async {
     try {
       final customThemes = await CustomThemeLoader.loadCustomPlayerThemes();
-      return [...builtinThemes, ...customThemes];
+      _allThemesCache = [...builtinThemes, ...customThemes];
+      return _allThemesCache;
     } catch (e) {
       Logger.i('Error loading custom themes, using built-in only: $e');
+      _allThemesCache = builtinThemes;
       return builtinThemes;
     }
   }
 
   static List<PlayerControlTheme> get themes => builtinThemes;
 
-  static Future<PlayerControlTheme> resolve(String id) async {
-    // First check builtin themes
+  static PlayerControlTheme resolve(String id) {
+    // Search in all cached themes first (includes custom)
     try {
-      final builtinTheme = builtinThemes.firstWhere(
+      return _allThemesCache.firstWhere(
         (theme) => theme.id == id,
         orElse: () => builtinThemes.first,
       );
-      return builtinTheme;
     } catch (_) {
-      // If not in builtin, check custom themes
-      final customThemes = await CustomThemeLoader.loadCustomPlayerThemes();
-      if (customThemes.isNotEmpty) {
-        return customThemes.firstWhere(
-          (theme) => theme.id == id,
-          orElse: () => customThemes.first,
-        );
-      }
-      return builtinThemes.first;
+      // Fallback to builtin if cache is empty
+      return builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
     }
   }
 }

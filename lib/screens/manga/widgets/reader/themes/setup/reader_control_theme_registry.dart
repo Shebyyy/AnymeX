@@ -13,36 +13,36 @@ class ReaderControlThemeRegistry {
     IOSReaderControlTheme(),
   ];
 
+  // Cache for all themes (builtin + custom)
+  static List<ReaderControlTheme> _allThemesCache = [];
+
   static Future<List<ReaderControlTheme>> getAllThemes() async {
     try {
       final customThemes = await CustomThemeLoader.loadCustomReaderThemes();
-      return [...builtinThemes, ...customThemes];
+      _allThemesCache = [...builtinThemes, ...customThemes];
+      return _allThemesCache;
     } catch (e) {
       Logger.i('Error loading custom themes, using built-in only: $e');
+      _allThemesCache = builtinThemes;
       return builtinThemes;
     }
   }
 
   static List<ReaderControlTheme> get themes => builtinThemes;
 
-  static Future<ReaderControlTheme> resolve(String id) async {
-    // First check builtin themes
+  static ReaderControlTheme resolve(String id) {
+    // Search in all cached themes first (includes custom)
     try {
-      final builtinTheme = builtinThemes.firstWhere(
+      return _allThemesCache.firstWhere(
         (theme) => theme.id == id,
         orElse: () => builtinThemes.first,
       );
-      return builtinTheme;
     } catch (_) {
-      // If not in builtin, check custom themes
-      final customThemes = await CustomThemeLoader.loadCustomReaderThemes();
-      if (customThemes.isNotEmpty) {
-        return customThemes.firstWhere(
-          (theme) => theme.id == id,
-          orElse: () => customThemes.first,
-        );
-      }
-      return builtinThemes.first;
+      // Fallback to builtin if cache is empty
+      return builtinThemes.firstWhere(
+        (theme) => theme.id == id,
+        orElse: () => builtinThemes.first,
+      );
     }
   }
 }
