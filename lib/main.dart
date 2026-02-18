@@ -21,12 +21,12 @@ import 'package:anymex/models/ui/ui_adaptor.dart';
 import 'package:anymex/screens/anime/home_page.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
+import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme_registry.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
 import 'package:anymex/screens/home_page.dart';
 import 'package:anymex/screens/library/my_library.dart';
 import 'package:anymex/screens/manga/home_page.dart';
-import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme_registry.dart';
-import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme_registry.dart';
-import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme_registry.dart';
 import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/deeplink.dart';
 import 'package:anymex/utils/logger.dart';
@@ -108,6 +108,14 @@ void main(List<String> args) async {
     initDeepLinkListener();
     initializeDateFormatting();
     MediaKit.ensureInitialized();
+    
+    // Initialize custom theme registries (loads themes from device storage)
+    await Future.wait([
+      PlayerControlThemeRegistry.initialize(),
+      ReaderControlThemeRegistry.initialize(),
+      MediaIndicatorThemeRegistry.initialize(),
+    ]);
+    
     if (!Platform.isAndroid && !Platform.isIOS) {
       await windowManager.ensureInitialized();
       if (Platform.isWindows) {
@@ -205,11 +213,6 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
-
-    // Preload custom themes into registries
-    PlayerControlThemeRegistry.getAllThemes();
-    MediaIndicatorThemeRegistry.getAllThemes();
-    ReaderControlThemeRegistry.getAllThemes();
 
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {

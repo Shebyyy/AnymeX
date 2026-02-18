@@ -1,13 +1,10 @@
 import 'dart:io';
 import 'package:anymex/controllers/settings/settings.dart';
-import 'package:anymex/models/custom_themes/custom_reader_theme.dart';
 import 'package:anymex/screens/manga/controller/reader_controller.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme_registry.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_tap_zones.dart';
 import 'package:anymex/utils/function.dart';
-import 'package:anymex/widgets/common/checkmark_tile.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
-import 'package:anymex/widgets/dialogs/custom_reader_theme_manager_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:get/get.dart';
@@ -25,103 +22,16 @@ class ReaderSettings {
       controller.pauseVolumeKeys();
     }
 
-    void showReaderControlThemeDialog() async {
-      // Load all themes including custom ones
-      final allThemes = await ReaderControlThemeRegistry.getAllThemes();
-      final dialogContext = Get.context!;
-
-      showDialog(
-        context: dialogContext,
-        builder: (context) => Dialog(
-          backgroundColor: dialogContext.colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            width: MediaQuery.of(dialogContext).size.width * 0.9,
-            constraints: const BoxConstraints(maxWidth: 500),
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Reader Control Theme',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: MediaQuery.of(dialogContext).size.height * 0.5,
-                  child: Obx(() => SingleChildScrollView(
-                    child: Column(
-                      children: allThemes.map((theme) {
-                        final isSelected = theme.id == settings.readerControlThemeRx.value;
-                        final isCustom = theme is CustomReaderTheme;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 7),
-                          child: ListTileWithCheckMark(
-                            leading: Icon(Icons.style_rounded),
-                            color: dialogContext.colors.primary,
-                            active: isSelected,
-                            title: isCustom ? '★ ${theme.name}' : theme.name,
-                            onTap: () {
-                              settings.readerControlTheme = theme.id;
-                              Navigator.pop(context);
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  )),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await showDialog(
-                            context: context,
-                            builder: (context) => const CustomReaderThemeManagerDialog(),
-                          );
-                          Navigator.pop(context);
-                          showReaderControlThemeDialog();
-                        },
-                        icon: const Icon(Icons.file_upload_rounded),
-                        label: const Text('Import Theme'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: dialogContext.colors.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.check_rounded),
-                        label: const Text('Close'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: dialogContext.colors.primaryFixed,
-                          foregroundColor: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    void showCustomReaderThemesManager() async {
-      await showDialog(
-        context: context,
-        builder: (context) => const CustomReaderThemeManagerDialog(),
+    void showReaderControlThemeDialog() {
+      showSelectionDialog<String>(
+        title: 'Reader Control Theme',
+        items: ReaderControlThemeRegistry.themes.map((e) => e.id).toList(),
+        selectedItem: settings.readerControlThemeRx,
+        getTitle: (id) => ReaderControlThemeRegistry.resolve(id).name,
+        onItemSelected: (id) {
+          settings.readerControlTheme = id;
+        },
+        leadingIcon: Icons.style_rounded,
       );
     }
 
@@ -147,8 +57,8 @@ class ReaderSettings {
                     child: Center(
                       child: Text(
                         'Reader Settings',
-                        style:
-                            TextStyle(fontSize: 18, fontFamily: 'Poppins-SemiBold'),
+                        style: TextStyle(
+                            fontSize: 18, fontFamily: 'Poppins-SemiBold'),
                       ),
                     ),
                   ),
@@ -156,7 +66,8 @@ class ReaderSettings {
                     final themeId = settings.readerControlThemeRx.value;
                     return CustomTile(
                       title: 'Control Theme',
-                      description: 'Tap to select theme',
+                      description:
+                          ReaderControlThemeRegistry.resolve(themeId).name,
                       icon: Icons.style_rounded,
                       onTap: showReaderControlThemeDialog,
                     );
@@ -446,6 +357,7 @@ class ReaderSettings {
         );
       },
     ).then((_) {
+     
       if (wasVolumeEnabled) {
         controller.resumeVolumeKeys();
       }
