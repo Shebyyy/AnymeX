@@ -179,6 +179,7 @@ class JsonShadowConfig {
     ),
   ];
   }
+}
 
 /// Gradient configuration
 class JsonGradientConfig {
