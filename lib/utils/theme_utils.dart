@@ -5,14 +5,14 @@ import 'package:anymex/utils/theme_extensions.dart';
 class ThemeUtils {
   /// Parse a hex color string to Color
   static Color parseColor(String? colorString) {
-    if (colorString == null || colorString.isEmpty) return null;
+    if (colorString == null || colorString.isEmpty) return Colors.white;
     
     String hex = colorString;
     if (hex.startsWith('#')) {
       hex = hex.substring(1);
     }
     
-    return Color(int.parse('FF$hex'));
+    return Color(int.parse('FF$hex', radix: 16));
   }
 
   /// Create a BoxDecoration from a JsonBackgroundConfig

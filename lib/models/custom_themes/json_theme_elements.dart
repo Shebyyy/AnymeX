@@ -48,7 +48,7 @@ abstract class JsonThemeElement {
     if (hex.startsWith('#')) {
       hex = hex.substring(1);
     }
-    return Color(int.parse('FF$hex'));
+    return Color(int.parse('FF$hex', radix: 16));
   }
 
   List<BoxShadow>? get glowShadows {

@@ -63,7 +63,7 @@ class JsonBackgroundConfig {
     if (hex.startsWith('#')) {
       hex = hex.substring(1);
     }
-    return Color(int.parse('FF$hex'));
+    return Color(int.parse('FF$hex', radix: 16));
   }
 }
 
@@ -117,7 +117,7 @@ class JsonBorderConfig {
     }
     
     // Parse hex color
-    return Color(int.parse('FF$hex'));
+    return Color(int.parse('FF$hex', radix: 16));
   }
 }
 
@@ -162,7 +162,7 @@ class JsonShadowConfig {
     
     return [
       BoxShadow(
-        color: Color(int.parse(color!.replaceFirst('#', '0xFF'))).withOpacity(0.3),
+        color: Color(int.parse(color!.replaceFirst('#', '0xFF'), radix: 16)).withOpacity(0.3),
         blurRadius: blur ?? 0,
         spreadRadius: spread ?? 0,
         offset: Offset(
@@ -249,7 +249,7 @@ class JsonGradientConfig {
     if (hex.startsWith('#')) {
       hex = hex.substring(1);
     }
-    return Color(int.parse('FF$hex'));
+    return Color(int.parse('FF$hex', radix: 16));
   }
 }
 
