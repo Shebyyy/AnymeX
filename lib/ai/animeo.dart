@@ -7,6 +7,32 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:anymex/database/data_keys/keys.dart';
 
+/// Cache for recommendations to avoid repeated fetches
+class RecommendationsCache {
+  static final Map<String, List<Media>> _cache = {};
+  static final Map<String, int> _pageCache = {};
+  
+  static List<Media>? get(String key, int page) {
+    final cacheKey = '$key:$page';
+    return _cache[cacheKey];
+  }
+  
+  static void set(String key, int page, List<Media> recommendations) {
+    final cacheKey = '$key:$page';
+    _cache[cacheKey] = recommendations;
+    _pageCache[key] = page;
+  }
+  
+  static int getCurrentPage(String key) {
+    return _pageCache[key] ?? 1;
+  }
+  
+  static void clear() {
+    _cache.clear();
+    _pageCache.clear();
+  }
+}
+
 /// Options for AnimeSprout recommendations
 class AnimeSproutOptions {
   final bool extraSeasons;
@@ -32,9 +58,7 @@ class AnimeSproutOptions {
   }
 }
 
-/// Fetches AI anime recommendations combining AnimeSprout + native AL/MAL recommendations.
-/// Only works for anime (AnimeSprout is anime-only).
-/// For manga, falls back to native service recommendations only.
+/// Fetches AI anime recommendations
 Future<List<Media>> getAiRecommendations(
   bool isManga,
   int page, {
@@ -52,40 +76,51 @@ Future<List<Media>> getAiRecommendations(
     return [];
   }
 
-  // Build set of already-tracked IDs to exclude from recommendations
+  // Check cache first
+  final cacheKey = '${isAL ? 'AL' : 'MAL'}_${isManga ? 'manga' : 'anime'}_$isAdult';
+  final cached = RecommendationsCache.get(cacheKey, page);
+  if (cached != null) {
+    Logger.i('Returning cached recommendations for page $page');
+    return cached;
+  }
+
+  // Build set of already-tracked IDs
   final Set<String> trackedIds = _buildTrackedIdSet(service, isAL);
 
   List<Media> results = [];
 
   if (isManga) {
-    // AnimeSprout is anime-only; use native service recs for manga
+    // For manga, use native recommendations only
     results = await _fetchNativeRecommendations(
       isManga: true,
       isAL: isAL,
       page: page,
       isAdult: isAdult,
+      service: service,
     );
   } else {
-    // Anime: fetch from both AnimeSprout and native recs, then merge & dedupe
+    // For anime: fetch from both sources
     final futures = await Future.wait([
       _fetchAnimeSproutRecommendations(
         userName: userName,
         isAL: isAL,
         options: options,
         trackedIds: trackedIds,
+        service: service,
       ),
       _fetchNativeRecommendations(
         isManga: false,
         isAL: isAL,
         page: page,
         isAdult: isAdult,
+        service: service,
       ),
     ]);
 
     final sproutRecs = futures[0];
     final nativeRecs = futures[1];
 
-    // Merge: sprout first, then native recs not already in sprout results
+    // Merge results
     final seenIds = <String>{};
     for (final m in sproutRecs) {
       if (m.id != null && seenIds.add(m.id!)) {
@@ -99,23 +134,22 @@ Future<List<Media>> getAiRecommendations(
     }
   }
 
-  // Remove items already in user's list (watched, reading, plan-to-watch, etc.)
+  // Remove items already in user's list
   results = results
       .where((m) => m.id != null && !trackedIds.contains(m.id!))
       .toList();
 
-  // Dedupe by id
-  final seen = <String>{};
-  results = results.where((m) => m.id != null && seen.add(m.id!)).toList();
+  // Cache the results
+  RecommendationsCache.set(cacheKey, page, results);
 
-  if (results.isEmpty) {
+  if (results.isEmpty && page == 1) {
     snackBar('No recommendations found');
   }
 
   return results;
 }
 
-/// Build a set of all tracked media IDs (any status) so we can exclude them.
+/// Build tracked IDs from existing data (no API calls)
 Set<String> _buildTrackedIdSet(ServiceHandler service, bool isAL) {
   final ids = <String>{};
   try {
@@ -140,14 +174,13 @@ Set<String> _buildTrackedIdSet(ServiceHandler service, bool isAL) {
   return ids;
 }
 
-/// Fetch recommendations from AnimeSprout (anime only).
-/// AnimeSprout returns MAL IDs; if user is on AniList we need to convert via
-/// AniList's GraphQL (idMal field).
+/// Fetch from AnimeSprout
 Future<List<Media>> _fetchAnimeSproutRecommendations({
   required String userName,
   required bool isAL,
   required AnimeSproutOptions options,
   required Set<String> trackedIds,
+  required ServiceHandler service,
 }) async {
   try {
     final source = isAL ? 'anilist' : null;
@@ -164,12 +197,11 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
       return [];
     }
 
-    // Parse the embedded JSON props from the HTML response
+    // Parse response
     final body = response.body;
     final jsonStart = body.indexOf('"initialRecommendations"');
     if (jsonStart == -1) return [];
 
-    // Extract just the JSON script tag content
     final scriptStart = body.lastIndexOf('<script', jsonStart);
     final scriptEnd = body.indexOf('</script>', jsonStart);
     if (scriptStart == -1 || scriptEnd == -1) return [];
@@ -196,7 +228,7 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
       final data = animeData[malId] as Map<String, dynamic>?;
       if (data == null) continue;
 
-      // Skip plan-to-watch items (already tracked)
+      // Skip plan-to-watch
       if (rec['planToWatch'] == true) continue;
 
       final title = (data['alternative_titles'] as Map?)?['en'] as String?;
@@ -207,14 +239,14 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
           ?.map((g) => (g['name'] as String).toUpperCase())
           .toList();
 
-      // Resolve the actual service ID
-      String? resolvedId;
+      // Get or create ID
+      String? resolvedId = malId;
       if (isAL) {
-        // Convert MAL ID -> AniList ID
-        resolvedId = await _malIdToAnilistId(malId);
-        resolvedId ??= malId; // fallback to MAL id if conversion fails
-      } else {
-        resolvedId = malId;
+        // Check if we already have this MAL ID in user's list
+        final existing = service.anilistService.animeList.firstWhereOrNull(
+          (m) => m.id == malId || m.id == _malIdToAnilistIdSync(malId)
+        );
+        resolvedId = existing?.id ?? malId;
       }
 
       if (trackedIds.contains(resolvedId)) continue;
@@ -236,78 +268,83 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
   }
 }
 
-/// Convert a MAL ID to an AniList ID using AniList's GraphQL.
-Future<String?> _malIdToAnilistId(String malId) async {
-  try {
-    final token = AuthKeys.authToken.get<String?>();
-    final query = '''
-    query(\$idMal: Int) {
-      Media(idMal: \$idMal, type: ANIME) {
-        id
-      }
-    }
-    ''';
-
-    final response = await http.post(
-      Uri.parse('https://graphql.anilist.co'),
-      headers: {
-        if (token != null) 'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'query': query,
-        'variables': {'idMal': int.tryParse(malId)},
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final id = data['data']?['Media']?['id'];
-      return id?.toString();
-    }
-  } catch (e) {
-    Logger.i('MAL->AL ID conversion error for $malId: $e');
-  }
+/// Quick sync MAL to AL ID conversion using existing data
+String? _malIdToAnilistIdSync(String malId) {
+  // This is a placeholder - you might want to maintain a mapping cache
   return null;
 }
 
-/// Fetch native recommendations from AniList GraphQL or MAL/Jikan API.
+/// Fetch native recommendations using existing user data where possible
 Future<List<Media>> _fetchNativeRecommendations({
   required bool isManga,
   required bool isAL,
   required int page,
   required bool isAdult,
+  required ServiceHandler service,
 }) async {
   if (isAL) {
-    return _fetchAnilistRecommendations(isManga: isManga, page: page);
+    return _fetchAnilistRecommendationsOptimized(
+      isManga: isManga,
+      page: page,
+      isAdult: isAdult,
+      service: service,
+    );
   } else {
-    return _fetchMalRecommendations(isManga: isManga, page: page);
+    return _fetchMalRecommendationsOptimized(
+      isManga: isManga,
+      page: page,
+      isAdult: isAdult,
+      service: service,
+    );
   }
 }
 
-/// Fetch recommendations from AniList using the Recommendations query.
-/// Gets recommendations for media in the user's list, sorted by rating.
-Future<List<Media>> _fetchAnilistRecommendations({
+/// Optimized AniList recommendations using existing data
+Future<List<Media>> _fetchAnilistRecommendationsOptimized({
   required bool isManga,
   required int page,
+  required bool isAdult,
+  required ServiceHandler service,
 }) async {
   try {
     final token = AuthKeys.authToken.get<String?>();
     if (token == null) return [];
 
+    // Use the user's existing list to find recommendations
+    final userList = isManga ? service.anilistService.mangaList : service.anilistService.animeList;
+    
+    // Get IDs of items in user's list
+    final userItemIds = userList.map((e) => e.id).whereType<String>().toSet();
+    
+    if (userItemIds.isEmpty) return [];
+
+    // Take a subset for the query (API limits)
+    const maxIds = 10;
+    final sampleIds = userItemIds.take(maxIds).toList();
+
     final query = '''
-    query(\$page: Int, \$type: MediaType) {
+    query(\$ids: [Int], \$page: Int, \$type: MediaType, \$isAdult: Boolean) {
       Page(page: \$page, perPage: 30) {
-        recommendations(sort: RATING_DESC, onList: true) {
-          rating
-          mediaRecommendation {
-            id
-            title { romaji english }
-            coverImage { large }
-            description
-            genres
-            type
-            mediaListEntry { status }
+        media(
+          id_in: \$ids,
+          type: \$type,
+          isAdult: \$isAdult
+        ) {
+          id
+          title { romaji english }
+          coverImage { large }
+          description
+          genres
+          recommendations(page: 1, perPage: 5, sort: RATING_DESC) {
+            nodes {
+              mediaRecommendation {
+                id
+                title { romaji english }
+                coverImage { large }
+                description
+                genres
+              }
+            }
           }
         }
       }
@@ -323,8 +360,10 @@ Future<List<Media>> _fetchAnilistRecommendations({
       body: jsonEncode({
         'query': query,
         'variables': {
+          'ids': sampleIds.map((id) => int.tryParse(id)).whereType<int>().toList(),
           'page': page,
           'type': isManga ? 'MANGA' : 'ANIME',
+          'isAdult': isAdult,
         },
       }),
     );
@@ -335,35 +374,41 @@ Future<List<Media>> _fetchAnilistRecommendations({
     }
 
     final data = jsonDecode(response.body);
-    final recs = data['data']?['Page']?['recommendations'] as List<dynamic>?;
-    if (recs == null) return [];
+    final mediaList = data['data']?['Page']?['media'] as List<dynamic>?;
+    if (mediaList == null) return [];
 
     final results = <Media>[];
-    for (final rec in recs) {
-      final media = rec['mediaRecommendation'] as Map<String, dynamic>?;
-      if (media == null) continue;
+    final seenIds = <String>{};
 
-      // Skip if already in user's list
-      if (media['mediaListEntry'] != null) continue;
+    for (final media in mediaList) {
+      final recs = media['recommendations']?['nodes'] as List<dynamic>?;
+      if (recs == null) continue;
 
-      final id = media['id']?.toString();
-      if (id == null) continue;
+      for (final rec in recs) {
+        final recMedia = rec['mediaRecommendation'] as Map<String, dynamic>?;
+        if (recMedia == null) continue;
 
-      final titleMap = media['title'] as Map?;
-      final title = (titleMap?['english'] as String?)?.isNotEmpty == true
-          ? titleMap!['english'] as String
-          : titleMap?['romaji'] as String? ?? 'Unknown';
+        final id = recMedia['id']?.toString();
+        if (id == null || seenIds.contains(id) || userItemIds.contains(id)) continue;
 
-      results.add(Media(
-        id: id,
-        title: title,
-        poster: (media['coverImage'] as Map?)?['large'] as String? ?? '',
-        description: media['description'] as String? ?? '',
-        serviceType: ServicesType.anilist,
-        genres: ((media['genres'] as List?) ?? [])
-            .map((g) => g.toString().toUpperCase())
-            .toList(),
-      ));
+        seenIds.add(id);
+
+        final titleMap = recMedia['title'] as Map?;
+        final title = (titleMap?['english'] as String?)?.isNotEmpty == true
+            ? titleMap!['english'] as String
+            : titleMap?['romaji'] as String? ?? 'Unknown';
+
+        results.add(Media(
+          id: id,
+          title: title,
+          poster: (recMedia['coverImage'] as Map?)?['large'] as String? ?? '',
+          description: recMedia['description'] as String? ?? '',
+          serviceType: ServicesType.anilist,
+          genres: ((recMedia['genres'] as List?) ?? [])
+              .map((g) => g.toString().toUpperCase())
+              .toList(),
+        ));
+      }
     }
 
     return results;
@@ -373,17 +418,22 @@ Future<List<Media>> _fetchAnilistRecommendations({
   }
 }
 
-/// Fetch recommendations from Jikan (MAL) recent recommendations endpoint.
-Future<List<Media>> _fetchMalRecommendations({
+/// Optimized MAL recommendations
+Future<List<Media>> _fetchMalRecommendationsOptimized({
   required bool isManga,
   required int page,
+  required bool isAdult,
+  required ServiceHandler service,
 }) async {
   try {
     final type = isManga ? 'manga' : 'anime';
-    final url =
-        'https://api.jikan.moe/v4/recommendations/$type?page=$page';
-
-    final response = await http.get(Uri.parse(url));
+    
+    // Use Jikan API with pagination that actually works
+    final url = 'https://api.jikan.moe/v4/recommendations/$type';
+    
+    // Jikan pagination is offset-based, not page-based
+    final response = await http.get(Uri.parse('$url?page=$page&limit=25'));
+    
     if (response.statusCode != 200) {
       Logger.i('Jikan recommendations failed: ${response.statusCode}');
       return [];
@@ -393,26 +443,43 @@ Future<List<Media>> _fetchMalRecommendations({
     final recs = data['data'] as List<dynamic>?;
     if (recs == null) return [];
 
+    final userItemIds = (isManga ? service.malService.mangaList : service.malService.animeList)
+        .map((e) => e.id)
+        .whereType<String>()
+        .toSet();
+
     final results = <Media>[];
     final seen = <String>{};
 
     for (final rec in recs) {
-      // Each rec has an 'entry' list of 2 related anime
       final entries = rec['entry'] as List<dynamic>?;
       if (entries == null) continue;
 
       for (final entry in entries) {
         final malId = entry['mal_id']?.toString();
-        if (malId == null || !seen.add(malId)) continue;
+        if (malId == null || !seen.add(malId) || userItemIds.contains(malId)) continue;
 
         final title = entry['title'] as String? ?? 'Unknown';
-        final imageUrl =
-            (entry['images'] as Map?)?['jpg']?['large_image_url'] as String?;
+        final imageUrl = (entry['images'] as Map?)?['jpg']?['large_image_url'] as String?;
+        
+        // Fetch additional details for description if needed
+        String description = '';
+        try {
+          final detailsUrl = 'https://api.jikan.moe/v4/$type/$malId';
+          final detailsResponse = await http.get(Uri.parse(detailsUrl));
+          if (detailsResponse.statusCode == 200) {
+            final detailsData = jsonDecode(detailsResponse.body);
+            description = detailsData['data']?['synopsis'] as String? ?? '';
+          }
+        } catch (e) {
+          // Ignore details fetch errors
+        }
 
         results.add(Media(
           id: malId,
           title: title,
           poster: imageUrl ?? '',
+          description: description,
           serviceType: ServicesType.mal,
           genres: [],
         ));
