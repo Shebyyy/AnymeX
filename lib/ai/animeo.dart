@@ -222,8 +222,8 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
       results.add(Media(
         id: resolvedId,
         title: (title?.isNotEmpty == true ? title : titleFallback) ?? 'Unknown',
-        poster: picture,
-        description: synopsis,
+        poster: picture ?? '',
+        description: synopsis ?? '',
         serviceType: isAL ? ServicesType.anilist : ServicesType.mal,
         genres: genres ?? [],
       ));
@@ -357,8 +357,8 @@ Future<List<Media>> _fetchAnilistRecommendations({
       results.add(Media(
         id: id,
         title: title,
-        poster: (media['coverImage'] as Map?)?['large'] as String?,
-        description: media['description'] as String?,
+        poster: (media['coverImage'] as Map?)?['large'] as String? ?? '',
+        description: media['description'] as String? ?? '',
         serviceType: ServicesType.anilist,
         genres: ((media['genres'] as List?) ?? [])
             .map((g) => g.toString().toUpperCase())
@@ -412,7 +412,7 @@ Future<List<Media>> _fetchMalRecommendations({
         results.add(Media(
           id: malId,
           title: title,
-          poster: imageUrl,
+          poster: imageUrl ?? '',
           serviceType: ServicesType.mal,
           genres: [],
         ));
