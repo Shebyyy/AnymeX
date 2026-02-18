@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_html/flutter_html.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AnilistAboutMe extends StatefulWidget {
   final String about;
@@ -14,6 +12,261 @@ class AnilistAboutMe extends StatefulWidget {
 }
 
 class _AnilistAboutMeState extends State<AnilistAboutMe> {
+  late final WebViewController _controller;
+  bool isLoading = true;
+
+  String _generateHtml() {
+    final about = widget.about;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Background color based on theme
+    final bgColor = isDark ? '#1e1e2e' : '#f5f5f5';
+    final textColor = isDark ? '#ffffff' : '#000000';
+    final linkColor = isDark ? '#89b4fa' : '#1e88e5';
+    
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Poppins', sans-serif;
+            background-color: $bgColor;
+            color: $textColor;
+            margin: 0;
+            padding: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        a {
+            color: $linkColor;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+            margin: 8px 0;
+        }
+        
+        /* Spoiler styling */
+        .spoiler {
+            margin: 12px 0;
+            border: 1px solid ${isDark ? '#313244' : '#e0e0e0'};
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: ${isDark ? '#313244' : '#fafafa'};
+        }
+        
+        .spoiler-button {
+            background: none;
+            border: none;
+            width: 100%;
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: ${isDark ? '#cdd6f4' : '#666666'};
+            font-style: italic;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .spoiler-button:hover {
+            background-color: ${isDark ? '#45475a' : '#f0f0f0'};
+        }
+        
+        .spoiler-button svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        .spoiler-content {
+            padding: 16px;
+            border-top: 1px solid ${isDark ? '#45475a' : '#e0e0e0'};
+            background-color: ${isDark ? '#1e1e2e' : '#ffffff'};
+        }
+        
+        .spoiler-close {
+            float: right;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: ${isDark ? '#cdd6f4' : '#666666'};
+        }
+        
+        .spoiler-close:hover {
+            opacity: 0.7;
+        }
+        
+        /* Clear fix */
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+        
+        /* YouTube embed */
+        .youtube-embed {
+            margin: 12px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .youtube-embed img {
+            width: 100%;
+            display: block;
+            margin: 0;
+        }
+        
+        .youtube-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .youtube-play svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+            margin-left: 4px;
+        }
+        
+        /* Headers */
+        h1, h2, h3, h4, h5, h6 {
+            color: ${isDark ? '#ffffff' : '#000000'};
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        /* Blockquotes */
+        blockquote {
+            margin: 12px 0;
+            padding: 8px 16px;
+            background-color: ${isDark ? '#313244' : '#f5f5f5'};
+            border-left: 4px solid ${isDark ? '#89b4fa' : '#1e88e5'};
+            border-radius: 0 8px 8px 0;
+        }
+        
+        /* Code blocks */
+        pre {
+            background-color: ${isDark ? '#313244' : '#f5f5f5'};
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        /* Tables */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+        }
+        
+        th, td {
+            border: 1px solid ${isDark ? '#45475a' : '#e0e0e0'};
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: ${isDark ? '#313244' : '#f5f5f5'};
+        }
+        
+        /* Lists */
+        ul, ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+        
+        li {
+            margin: 4px 0;
+        }
+        
+        /* Horizontal rule */
+        hr {
+            border: none;
+            border-top: 1px solid ${isDark ? '#45475a' : '#e0e0e0'};
+            margin: 16px 0;
+        }
+    </style>
+    <script>
+        // Spoiler handling
+        function toggleSpoiler(id) {
+            const content = document.getElementById('spoiler-' + id);
+            const button = document.getElementById('spoiler-btn-' + id);
+            
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                    <span>Spoiler \u2014 tap to hide</span>
+                `;
+            } else {
+                content.style.display = 'none';
+                button.innerHTML = `
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                    <span>Spoiler \u2014 tap to reveal</span>
+                `;
+            }
+        }
+        
+        // YouTube click handler
+        function openYouTube(id) {
+            window.location.href = 'https://www.youtube.com/watch?v=' + id;
+        }
+        
+        // Link click handler
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                e.preventDefault();
+                window.location.href = link.href;
+            }
+        });
+    </script>
+</head>
+<body>
+    $about
+</body>
+</html>
+    ''';
+  }
+
   String _preprocessAbout(String raw) {
     var c = raw;
 
@@ -35,84 +288,69 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
         .replaceAll('&emsp;', '')
         .replaceAll('&ensp;', '');
 
-    // Handle spoilers that are inside <a> tags
-    c = c.replaceAllMapped(
-      RegExp(r'<a([^>]*)>([\s\S]*?)~!([\s\S]*?)!~([\s\S]*?)</a>'),
-      (m) {
-        final attrs = m[1] ?? '';
-        final beforeSpoiler = m[2] ?? '';
-        final spoilerContent = m[3] ?? '';
-        final afterSpoiler = m[4] ?? '';
-        
-        String result = '';
-        if (beforeSpoiler.isNotEmpty) {
-          result += '<a$attrs>$beforeSpoiler</a>';
-        }
-        result += '<spoiler>$spoilerContent</spoiler>';
-        if (afterSpoiler.isNotEmpty) {
-          result += '<a$attrs>$afterSpoiler</a>';
-        }
-        return result;
-      },
-    );
-
-    // Handle spoilers at start of <a> tag
-    c = c.replaceAllMapped(
-      RegExp(r'<a([^>]*)>(~![\s\S]*?!~)([\s\S]*?)</a>'),
-      (m) {
-        final attrs = m[1] ?? '';
-        final spoilerContent = m[2] ?? '';
-        final afterSpoiler = m[3] ?? '';
-        
-        return '<spoiler>${spoilerContent.replaceAll('~!', '').replaceAll('!~', '')}</spoiler><a$attrs>$afterSpoiler</a>';
-      },
-    );
-
-    // Handle spoilers at end of <a> tag
-    c = c.replaceAllMapped(
-      RegExp(r'<a([^>]*)>([\s\S]*?)(~![\s\S]*?!~)</a>'),
-      (m) {
-        final attrs = m[1] ?? '';
-        final beforeSpoiler = m[2] ?? '';
-        final spoilerContent = m[3] ?? '';
-        
-        return '<a$attrs>$beforeSpoiler</a><spoiler>${spoilerContent.replaceAll('~!', '').replaceAll('!~', '')}</spoiler>';
-      },
-    );
-
-    // Convert Anilist custom tags
+    // Convert imgN(url) to img tags
     c = c.replaceAllMapped(
       RegExp(r'img(\d+)\(([^)]+)\)'),
-      (m) => '<img src="${m[2] ?? ''}" width="${m[1] ?? ''}">',
+      (m) => '<img src="${m[2] ?? ''}" width="${m[1] ?? ''}px" style="max-width: ${m[1] ?? '100'}px;">',
     );
 
+    // Convert youtube(url) to YouTube embed
     c = c.replaceAllMapped(
       RegExp(r'youtube\(([^)]+)\)'),
       (m) {
         final raw = (m[1] ?? '').trim();
         final uri = Uri.tryParse(raw);
         final id = uri?.queryParameters['v'] ?? raw;
-        return '<youtube id="$id">';
+        return '''
+        <div class="youtube-embed" onclick="openYouTube('$id')">
+            <img src="https://img.youtube.com/vi/$id/hqdefault.jpg" alt="YouTube video">
+            <div class="youtube-play">
+                <svg viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+        </div>
+        ''';
       },
     );
 
+    // Convert webm(url) to video links
     c = c.replaceAllMapped(
       RegExp(r'webm\(([^)]+)\)'),
-      (m) => '<a href="${(m[1] ?? '').trim()}">&#9654; View video</a>',
+      (m) => '<a href="${(m[1] ?? '').trim()}">▶ View video</a>',
     );
 
+    // Convert markdown links [text](url)
     c = c.replaceAllMapped(
       RegExp(r'\[([^\]]+)\]\(([^)]+)\)'),
       (m) => '<a href="${m[2] ?? ''}">${m[1] ?? ''}</a>',
     );
 
-    // Convert remaining standalone spoilers
+    // Handle spoilers with unique IDs
+    int spoilerCounter = 0;
     c = c.replaceAllMapped(
       RegExp(r'~!([\s\S]*?)!~'),
-      (m) => '<spoiler>${m[1] ?? ''}</spoiler>',
+      (m) {
+        spoilerCounter++;
+        final content = m[1] ?? '';
+        final id = spoilerCounter;
+        return '''
+        <div class="spoiler">
+            <button id="spoiler-btn-$id" class="spoiler-button" onclick="toggleSpoiler($id)">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                <span>Spoiler — tap to reveal</span>
+            </button>
+            <div id="spoiler-$id" class="spoiler-content" style="display: none;">
+                $content
+            </div>
+        </div>
+        ''';
+      },
     );
 
-    // Handle centering
+    // Handle ~~~ center tags
     c = c.replaceAllMapped(
       RegExp(r'~~~([\s\S]*?)~~~'),
       (m) => '<div style="text-align:center;">${m[1] ?? ''}</div>',
@@ -145,9 +383,27 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
     c = c.replaceAllMapped(
       RegExp(r'<div\s+rel=["\x27]spoiler["\x27][^>]*>([\s\S]*?)</div>',
           caseSensitive: false),
-      (m) => '<spoiler>${m[1] ?? ''}</spoiler>',
+      (m) {
+        spoilerCounter++;
+        final content = m[1] ?? '';
+        final id = spoilerCounter;
+        return '''
+        <div class="spoiler">
+            <button id="spoiler-btn-$id" class="spoiler-button" onclick="toggleSpoiler($id)">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                <span>Spoiler — tap to reveal</span>
+            </button>
+            <div id="spoiler-$id" class="spoiler-content" style="display: none;">
+                $content
+            </div>
+        </div>
+        ''';
+      },
     );
     
+    // If no HTML tags, convert markdown to HTML
     final hasHtml = RegExp(r'<[a-zA-Z][^>]*>').hasMatch(c);
     if (!hasHtml) {
       c = _mdToHtml(c);
@@ -162,13 +418,16 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
     for (final rawLine in lines) {
       var line = rawLine.trim();
       if (line.isEmpty) continue;
-      if (RegExp(
-              r'^<(div|p|h[1-6]|ul|ol|li|blockquote|br|hr|pre|spoiler|youtube)',
+      
+      // Skip if already HTML
+      if (RegExp(r'^<(div|p|h[1-6]|ul|ol|li|blockquote|br|hr|pre|spoiler|youtube)',
               caseSensitive: false)
           .hasMatch(line)) {
         buffer.writeln(line);
         continue;
       }
+      
+      // Convert markdown to HTML
       line = line
           .replaceAllMapped(RegExp(r'\*\*\*(.*?)\*\*\*'),
               (m) => '<strong><em>${m[1]}</em></strong>')
@@ -196,18 +455,21 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
         buffer.writeln('<hr>');
         continue;
       }
+      
       // Bullet lists
       if (RegExp(r'^[-*+]\s+').hasMatch(line)) {
         final text = line.replaceFirst(RegExp(r'^[-*+]\s+'), '');
         buffer.writeln('<ul><li>$text</li></ul>');
         continue;
       }
+      
       // Numbered lists
       if (RegExp(r'^\d+\.\s+').hasMatch(line)) {
         final text = line.replaceFirst(RegExp(r'^\d+\.\s+'), '');
         buffer.writeln('<ol><li>$text</li></ol>');
         continue;
       }
+      
       // Blockquote
       if (line.startsWith('&gt;') || line.startsWith('>')) {
         final text = line
@@ -216,6 +478,7 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
         buffer.writeln('<blockquote>$text</blockquote>');
         continue;
       }
+      
       if (RegExp(r'^<h[1-6]>').hasMatch(line)) {
         buffer.writeln(line);
       } else {
@@ -226,291 +489,47 @@ class _AnilistAboutMeState extends State<AnilistAboutMe> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final String content;
-    try {
-      content = _preprocessAbout(widget.about);
-    } catch (e) {
-      return Text(
-        widget.about,
-        style: TextStyle(
-          fontSize: 13.5,
-          color: context.theme.colorScheme.onSurfaceVariant,
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (url) {
+            setState(() => isLoading = false);
+          },
+          onNavigationRequest: (request) {
+            if (request.url.startsWith('https://www.youtube.com/watch')) {
+              launchUrl(Uri.parse(request.url));
+              return NavigationDecision.prevent;
+            }
+            if (request.url.startsWith('http')) {
+              launchUrl(Uri.parse(request.url));
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
         ),
       );
-    }
-
-    return Html(
-      data: content,
-      style: {
-        'body': Style(
-          margin: Margins.zero,
-          padding: HtmlPaddings.zero,
-          fontSize: FontSize(13.5),
-          lineHeight: LineHeight(1.6),
-          color: context.theme.colorScheme.onSurfaceVariant,
-          fontFamily: 'Poppins',
-        ),
-        'div': Style(margin: Margins.only(bottom: 8)),
-        'p': Style(margin: Margins.only(bottom: 8)),
-        'a': Style(
-          display: Display.inline,
-          textDecoration: TextDecoration.none,
-          color: context.theme.colorScheme.primary,
-        ),
-        'img': Style(
-          display: Display.inline,
-          margin: Margins.only(right: 4, bottom: 4),
-        ),
-        'h1': Style(
-            fontSize: FontSize(20),
-            fontWeight: FontWeight.bold,
-            color: context.theme.colorScheme.onSurface),
-        'h2': Style(
-            fontSize: FontSize(18),
-            fontWeight: FontWeight.bold,
-            color: context.theme.colorScheme.onSurface),
-        'h3': Style(
-            fontSize: FontSize(16),
-            fontWeight: FontWeight.bold,
-            color: context.theme.colorScheme.onSurface),
-        'h4': Style(
-            fontSize: FontSize(14),
-            fontWeight: FontWeight.bold,
-            color: context.theme.colorScheme.onSurface),
-        'h5': Style(
-            fontSize: FontSize(13),
-            fontWeight: FontWeight.bold,
-            color: context.theme.colorScheme.onSurface),
-        'strong': Style(
-            fontWeight: FontWeight.w700,
-            color: context.theme.colorScheme.onSurface),
-        'b': Style(
-            fontWeight: FontWeight.w700,
-            color: context.theme.colorScheme.onSurface),
-        'em': Style(
-            fontStyle: FontStyle.italic,
-            color: context.theme.colorScheme.onSurface),
-        'i': Style(
-            fontStyle: FontStyle.italic,
-            color: context.theme.colorScheme.onSurface),
-        'del': Style(
-            textDecoration: TextDecoration.lineThrough,
-            color: context.theme.colorScheme.onSurfaceVariant),
-        'strike': Style(
-            textDecoration: TextDecoration.lineThrough,
-            color: context.theme.colorScheme.onSurfaceVariant),
-        'code': Style(
-          fontFamily: 'monospace',
-          fontSize: FontSize(12),
-          backgroundColor: context.theme.colorScheme.surfaceContainer,
-          color: context.theme.colorScheme.primary,
-        ),
-        'pre': Style(
-          fontFamily: 'monospace',
-          fontSize: FontSize(12),
-          backgroundColor: context.theme.colorScheme.surfaceContainer,
-          padding: HtmlPaddings.all(10),
-          margin: Margins.only(bottom: 8),
-        ),
-        'blockquote': Style(
-          backgroundColor:
-              context.theme.colorScheme.primary.withOpacity(0.07),
-          padding: HtmlPaddings.symmetric(horizontal: 12, vertical: 8),
-          margin: Margins.only(left: 0, right: 0, top: 4, bottom: 4),
-          border: Border(
-              left: BorderSide(
-                  color: context.theme.colorScheme.primary, width: 3)),
-        ),
-        'ul': Style(margin: Margins.only(bottom: 8, left: 16)),
-        'ol': Style(margin: Margins.only(bottom: 8, left: 16)),
-        'li': Style(
-          margin: Margins.only(bottom: 4),
-          color: context.theme.colorScheme.onSurfaceVariant,
-        ),
-        'hr': Style(
-          border: Border(
-              bottom: BorderSide(
-                  color: context.theme.colorScheme.outlineVariant
-                      .withOpacity(0.5),
-                  width: 1)),
-          margin: Margins.symmetric(vertical: 12),
-        ),
-      },
-      extensions: [
-        TagExtension(
-          tagsToExtend: {'img'},
-          builder: (ext) {
-            final src = ext.attributes['src'] ?? '';
-            if (src.isEmpty) return const SizedBox.shrink();
-            double? parsePx(String? v) =>
-                v == null ? null : double.tryParse(v.replaceAll('px', ''));
-            final w = parsePx(ext.attributes['width']);
-            final h = parsePx(ext.attributes['height']);
-            final isIcon = w != null && w <= 80;
-            return CachedNetworkImage(
-              imageUrl: src,
-              width: isIcon ? w : (w ?? double.infinity),
-              height: h,
-              fit: BoxFit.contain,
-              errorWidget: (_, __, ___) =>
-                  SizedBox(width: w ?? 40, height: h ?? 40),
-              placeholder: (_, __) =>
-                  SizedBox(width: w ?? 40, height: h ?? 40),
-            );
-          },
-        ),
-        TagExtension(
-          tagsToExtend: {'spoiler'},
-          builder: (ext) {
-            return _SpoilerWidget(
-              child: Html(
-                data: ext.innerHtml,
-                style: {
-                  'body': Style(
-                    margin: Margins.zero,
-                    padding: HtmlPaddings.zero,
-                    color: context.theme.colorScheme.onSurfaceVariant,
-                    fontFamily: 'Poppins',
-                    fontSize: FontSize(13.5),
-                  ),
-                },
-              ),
-            );
-          },
-        ),
-        TagExtension(
-          tagsToExtend: {'youtube'},
-          builder: (ext) {
-            final id = ext.attributes['id'] ?? '';
-            if (id.isEmpty) return const SizedBox.shrink();
-            return GestureDetector(
-              onTap: () => launchUrl(
-                Uri.parse('https://www.youtube.com/watch?v=$id'),
-                mode: LaunchMode.externalApplication,
-              ),
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.black,
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl:
-                          'https://img.youtube.com/vi/$id/hqdefault.jpg',
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Container(
-                        height: 200,
-                        color: Colors.black54,
-                        child: const Icon(Icons.play_circle_outline,
-                            color: Colors.white, size: 48),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.play_arrow,
-                          color: Colors.white, size: 32),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final processed = _preprocessAbout(widget.about);
+      _controller.loadHtmlString(_generateHtml().replaceFirst('$about', processed));
+    });
   }
-}
-
-class _SpoilerWidget extends StatefulWidget {
-  final Widget child;
-  const _SpoilerWidget({required this.child});
-
-  @override
-  State<_SpoilerWidget> createState() => _SpoilerWidgetState();
-}
-
-class _SpoilerWidgetState extends State<_SpoilerWidget> {
-  bool open = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: context.theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              context.theme.colorScheme.outlineVariant.withOpacity(0.4),
-        ),
-      ),
-      child: open ? _buildRevealed(context) : _buildHidden(context),
-    );
-  }
-
-  Widget _buildHidden(BuildContext context) {
-    return InkWell(
-      onTap: () => setState(() => open = true),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.visibility_off_rounded,
-                size: 16,
-                color: context.theme.colorScheme.onSurfaceVariant
-                    .withOpacity(0.7)),
-            const SizedBox(width: 8),
-            Text(
-              'Spoiler \u2014 tap to reveal',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: context.theme.colorScheme.onSurfaceVariant
-                    .withOpacity(0.7),
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRevealed(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Stack(
       children: [
-        Align(
-          alignment: Alignment.topRight,
-          child: InkWell(
-            onTap: () => setState(() => open = false),
-            borderRadius:
-                const BorderRadius.only(topRight: Radius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Icon(Icons.close_rounded,
-                  size: 18,
-                  color: context.theme.colorScheme.onSurfaceVariant),
+        WebViewWidget(controller: _controller),
+        if (isLoading)
+          Center(
+            child: CircularProgressIndicator(
+              color: context.theme.colorScheme.primary,
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: widget.child,
-        ),
       ],
     );
   }
