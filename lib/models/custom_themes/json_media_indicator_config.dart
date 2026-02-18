@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'json_theme_config.dart';
 
 /// Container configuration for media indicator
 class JsonMediaContainerConfig {
@@ -81,8 +82,8 @@ class JsonMediaProgressConfig {
     };
   }
 
-  Color? parsedColor => color != null ? _parseColor(color!) : null;
-  Color? parsedTrackColor => trackColor != null ? _parseColor(trackColor!) : null;
+  Color? get parsedColor => color != null ? _parseColor(color!) : null;
+  Color? get parsedTrackColor => trackColor != null ? _parseColor(trackColor!) : null;
   List<BoxShadow>? get glowShadows => glow?.buildShadows();
 
   Color _parseColor(String colorString) {
@@ -136,8 +137,16 @@ class JsonMediaContentConfig {
     };
   }
 
-  Color? parsedIconColor => iconColor != null ? _parseColor(iconColor!) : null;
-  Color? parsedPercentageColor => percentageColor != null ? _parseColor(percentageColor!) : null;
+  Color? get parsedIconColor => iconColor != null ? _parseColor(iconColor!) : null;
+  Color? get parsedPercentageColor => percentageColor != null ? _parseColor(percentageColor!) : null;
+
+  Color _parseColor(String colorString) {
+    String hex = colorString;
+    if (hex.startsWith('#')) {
+      hex = hex.substring(1);
+    }
+    return Color(int.parse('FF$hex'));
+  }
 }
 
 /// Animations configuration
@@ -174,9 +183,9 @@ class JsonAnimationsConfig {
     };
   }
 
-  Curve get fadeCurve => _parseCurve(curve);
-  Curve get scaleCurve => _parseCurve(curve);
-  Curve get slideCurve => _parseCurve(curve);
+  Curve get fadeCurve => _parseCurve(curve ?? 'ease_out_cubic');
+  Curve get scaleCurve => _parseCurve(curve ?? 'ease_out_cubic');
+  Curve get slideCurve => _parseCurve(curve ?? 'ease_out_cubic');
 
   Curve _parseCurve(String curveName) {
     switch (curveName.toLowerCase()) {

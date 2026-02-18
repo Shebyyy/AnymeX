@@ -85,6 +85,6 @@ class JsonReaderTheme extends JsonThemeBase implements ReaderControlTheme {
   }
 
   String toJsonString() {
-    return const JsonEncoder.withIndent('  ').convert(toJson());
+    return JsonEncoder.withIndent('  ').convert(toJson());
   }
 }

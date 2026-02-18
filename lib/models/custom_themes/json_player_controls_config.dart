@@ -179,10 +179,10 @@ class JsonProgressBarConfig {
     };
   }
 
-  Color? parsedColor => color != null ? _parseColor(color!) : null;
-  Color? parsedTrackColor => trackColor != null ? _parseColor(trackColor!) : null;
-  Color? parsedThumbColor => thumbColor != null ? _parseColor(thumbColor!) : null;
-  Color? parsedTimeColor => timeColor != null ? _parseColor(timeColor!) : null;
+  Color? get parsedColor => color != null ? _parseColor(color!) : null;
+  Color? get parsedTrackColor => trackColor != null ? _parseColor(trackColor!) : null;
+  Color? get parsedThumbColor => thumbColor != null ? _parseColor(thumbColor!) : null;
+  Color? get parsedTimeColor => timeColor != null ? _parseColor(timeColor!) : null;
 
   Color _parseColor(String colorString) {
     String hex = colorString;
@@ -231,8 +231,8 @@ class JsonButtonsConfig {
     };
   }
 
-  Color? parsedButtonColor => buttonColor != null ? _parseColor(buttonColor!) : null;
-  Color? parsedButtonActiveColor => buttonActiveColor != null ? _parseColor(buttonActiveColor!) : null;
+  Color? get parsedButtonColor => buttonColor != null ? _parseColor(buttonColor!) : null;
+  Color? get parsedButtonActiveColor => buttonActiveColor != null ? _parseColor(buttonActiveColor!) : null;
 
   Color _parseColor(String colorString) {
     String hex = colorString;

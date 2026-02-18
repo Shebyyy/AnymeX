@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'json_player_theme.dart';
 import 'json_reader_theme.dart';
 import 'json_media_indicator_theme.dart';
-import '../utils/logger.dart';
+import 'package:anymex/utils/logger.dart';
 
 /// Theme parser for JSON theme files
 class ThemeParser {

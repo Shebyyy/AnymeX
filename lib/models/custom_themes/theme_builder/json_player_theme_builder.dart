@@ -10,9 +10,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 
-import '../../json_player_controls_config.dart';
-import '../../json_theme_config.dart';
-import '../../json_theme_elements.dart';
+import '../json_player_controls_config.dart';
+import '../json_theme_config.dart';
+import '../json_theme_elements.dart';
 
 /// Builder for JSON player themes
 class JsonPlayerThemeBuilder {

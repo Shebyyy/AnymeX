@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'json_theme_config.dart';
 import 'json_theme_elements.dart';
 
@@ -122,7 +123,7 @@ class JsonNavigationConfig {
     };
   }
 
-  Color? parsedIconColor => iconColor != null ? _parseColor(iconColor!) : null;
+  Color? get parsedIconColor => iconColor != null ? _parseColor(iconColor!) : null;
 
   Color _parseColor(String colorString) {
     String hex = colorString;

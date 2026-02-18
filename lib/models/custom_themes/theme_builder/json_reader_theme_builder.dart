@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 
-import '../../json_reader_controls_config.dart';
-import '../../json_theme_config.dart';
-import '../../json_theme_elements.dart';
+import '../json_reader_controls_config.dart';
+import '../json_theme_config.dart';
+import '../json_theme_elements.dart';
 
 /// Builder for JSON reader themes
 class JsonReaderThemeBuilder {

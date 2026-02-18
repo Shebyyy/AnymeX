@@ -169,6 +169,6 @@ class JsonPlayerTheme extends JsonThemeBase implements PlayerControlTheme {
   }
 
   String toJsonString() {
-    return const JsonEncoder.withIndent('  ').convert(toJson());
+    return JsonEncoder.withIndent('  ').convert(toJson());
   }
 }

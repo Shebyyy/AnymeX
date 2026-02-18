@@ -65,6 +65,6 @@ class JsonMediaIndicatorTheme extends JsonThemeBase implements MediaIndicatorThe
   }
 
   String toJsonString() {
-    return const JsonEncoder.withIndent('  ').convert(toJson());
+    return JsonEncoder.withIndent('  ').convert(toJson());
   }
 }
