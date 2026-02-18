@@ -158,21 +158,27 @@ class JsonShadowConfig {
   }
 
   List<BoxShadow> buildShadows() {
-    if (color == null) return [];
-    
-    return [
-      BoxShadow(
-        color: Color(int.parse(color!.replaceFirst('#', '0xFF'), radix: 16)).withOpacity(0.3),
-        blurRadius: blur ?? 0,
-        spreadRadius: spread ?? 0,
-        offset: Offset(
-          offset?.elementAt(0) ?? 0,
-          offset?.elementAt(1) ?? 0,
-        ),
-      ),
-    ];
+  if (color == null) return [];
+
+  String hex = color!.trim().toUpperCase();
+  hex = hex.replaceAll('#', '').replaceAll('0X', '');
+
+  if (hex.length == 6) {
+    hex = 'FF$hex';
   }
-}
+
+  return [
+    BoxShadow(
+      color: Color(int.parse(hex, radix: 16)).withOpacity(0.3),
+      blurRadius: blur ?? 0,
+      spreadRadius: spread ?? 0,
+      offset: Offset(
+        offset?.elementAt(0) ?? 0,
+        offset?.elementAt(1) ?? 0,
+      ),
+    ),
+  ];
+  }
 
 /// Gradient configuration
 class JsonGradientConfig {
