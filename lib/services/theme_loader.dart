@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:anymex/models/custom_themes/json_player_theme.dart';
-import 'anymex/models/custom_themes/json_reader_theme.dart';
-import 'anymex/models/custom_themes/json_media_indicator_theme.dart';
-import 'anymex/models/custom_themes/theme_parser.dart';
-import '../constants/theme_paths.dart';
-import '../utils/logger.dart';
+import 'package:anymex/models/custom_themes/json_reader_theme.dart';
+import 'package:anymex/models/custom_themes/json_media_indicator_theme.dart';
+import 'package:anymex/models/custom_themes/theme_parser.dart';
+import 'package:anymex/constants/theme_paths.dart';
+import 'package:anymex/utils/logger.dart';
 
 /// Theme loader service - loads custom themes from device storage
 class ThemeLoader {

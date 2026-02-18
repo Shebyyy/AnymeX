@@ -22,7 +22,7 @@ abstract class JsonThemeElement {
         ? JsonShadowConfig.fromJson(json['glow'] as Map<String, dynamic>)
         : null;
 
-    return JsonThemeElement(
+    return _UnknownElement(
       type: json['type'] as String,
       size: (json['size'] as num?)?.toDouble(),
       color: json['color'] as String?,
@@ -52,8 +52,8 @@ abstract class JsonThemeElement {
   }
 
   List<BoxShadow>? get glowShadows {
-    if (glow == null || glow.color == null) return null;
-    return glow.buildShadows();
+    if (glow?.color == null) return null;
+    return glow?.buildShadows();
   }
 }
 
@@ -128,9 +128,9 @@ class JsonTitleElement extends JsonThemeElement {
   Map<String, dynamic> toJson() {
     final json = super.toJson();
     if (text != null) json['text'] = text;
-    if (fontSize != null) json['size': fontSize;
-    if (maxLines != null) json['max_lines': maxLines;
-    if (alignment != null) json['alignment': alignment;
+    if (fontSize != null) json['size'] = fontSize;
+    if (maxLines != null) json['max_lines'] = maxLines;
+    if (alignment != null) json['alignment'] = alignment;
     return json;
   }
 }
@@ -170,8 +170,8 @@ class JsonSubtitleElement extends JsonThemeElement {
   Map<String, dynamic> toJson() {
     final json = super.toJson();
     if (text != null) json['text'] = text;
-    if (fontSize != null) json['size': fontSize;
-    if (maxLines != null) json['max_lines': maxLines;
+    if (fontSize != null) json['size'] = fontSize;
+    if (maxLines != null) json['max_lines'] = maxLines;
     return json;
   }
 }
@@ -195,7 +195,7 @@ class JsonSettingsButtonElement extends JsonThemeElement {
       size: (json['size'] as num?)?.toDouble(),
       color: json['color'] as String?,
       glow: json['glow'] != null
-          ? JsonShadowConfig.fromJson(json 'glow'] as Map<String, dynamic>)
+          ? JsonShadowConfig.fromJson(json['glow'] as Map<String, dynamic>)
           : null,
       position: json['position'] as String?,
     );
@@ -367,7 +367,7 @@ JsonThemeElement parseThemeElement(Map<String, dynamic> json) {
     case 'seek_forward':
       return JsonSeekForwardElement.fromJson(json);
     default:
-      return JsonThemeElement(
+      return _UnknownElement(
         type: type,
         size: (json['size'] as num?)?.toDouble(),
         color: json['color'] as String?,
@@ -377,4 +377,15 @@ JsonThemeElement parseThemeElement(Map<String, dynamic> json) {
         position: json['position'] as String?,
       );
   }
+}
+
+/// Unknown element type fallback
+class _UnknownElement extends JsonThemeElement {
+  _UnknownElement({
+    required super.type,
+    super.size,
+    super.color,
+    super.glow,
+    super.position,
+  });
 }

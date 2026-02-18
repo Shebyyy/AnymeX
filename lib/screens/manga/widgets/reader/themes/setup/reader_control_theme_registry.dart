@@ -1,9 +1,9 @@
 import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/default_reader_control_theme.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/reader_control_themes/ios_reader_control_theme.dart';
 import 'package:anymex/screens/manga/widgets/reader/themes/setup/reader_control_theme.dart';
-import 'anymex/models/custom_themes/json_reader_theme.dart';
+import 'package:anymex/models/custom_themes/json_reader_theme.dart';
 import 'package:anymex/services/theme_loader.dart';
-import '../utils/logger.dart';
+import 'package:anymex/utils/logger.dart';
 
 class ReaderControlThemeRegistry {
   static const String defaultThemeId = 'default';

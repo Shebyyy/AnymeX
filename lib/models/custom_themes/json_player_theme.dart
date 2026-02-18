@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
@@ -6,7 +7,7 @@ import 'package:get/get.dart';
 
 import 'json_theme_base.dart';
 import 'json_player_controls_config.dart';
-import '../theme_builder/json_player_theme_builder.dart';
+import 'theme_builder/json_player_theme_builder.dart';
 
 /// JSON-based player control theme
 class JsonPlayerTheme extends JsonThemeBase implements PlayerControlTheme {

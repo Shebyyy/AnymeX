@@ -1,11 +1,11 @@
 import 'package:anymex/screens/anime/watch/controls/themes/player_control_themes/default_player_control_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/player_control_themes/ios26_player_control_theme.dart';
-import 'package:anymex/screens/anime/watch/controls/themes/player_control_themes/netflix_desktop_player_theme.dart.dart.dart';
+import 'package:anymex/screens/anime/watch/controls/themes/player_control_themes/netflix_desktop_player_theme.dart.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/player_control_themes/netflix_mobile_player_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
-import 'anymex/models/custom_themes/json_player_theme.dart';
+import 'package:anymex/models/custom_themes/json_player_theme.dart';
 import 'package:anymex/services/theme_loader.dart';
-import '../utils/logger.dart';
+import 'package:anymex/utils/logger.dart';
 
 class PlayerControlThemeRegistry {
   static const String defaultThemeId = 'default';

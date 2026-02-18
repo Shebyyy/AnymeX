@@ -2,9 +2,9 @@ import 'package:anymex/screens/anime/watch/controls/themes/media_indicator_theme
 import 'package:anymex/screens/anime/watch/controls/themes/media_indicator_themes/ios_media_indicator_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/media_indicator_themes/minimal_media_indicator_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/media_indicator_theme.dart';
-import 'anymex/models/custom_themes/json_media_indicator_theme.dart';
+import 'package:anymex/models/custom_themes/json_media_indicator_theme.dart';
 import 'package:anymex/services/theme_loader.dart';
-import '../utils/logger.dart';
+import 'package:anymex/utils/logger.dart';
 
 class MediaIndicatorThemeRegistry {
   static const String defaultThemeId = 'default';
