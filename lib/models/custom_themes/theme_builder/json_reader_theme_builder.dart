@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:anymex/screens/manga/controller/reader_controller.dart';
 import 'package:anymex/screens/manga/widgets/reader/settings_view.dart';
 import 'package:anymex/widgets/custom_widgets/custom_button.dart';
@@ -5,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 
+import '../json_player_controls_config.dart';
 import '../json_reader_controls_config.dart';
 import '../json_theme_config.dart';
 import '../json_theme_elements.dart';
@@ -112,7 +115,7 @@ class JsonReaderThemeBuilder {
     ReaderController controller,
   ) {
     return IconButton(
-      icon: Icons.arrow_back_rounded,
+      icon: Icon(Icons.arrow_back_rounded),
       color: element.parsedColor ?? Colors.white,
       iconSize: element.size ?? 24,
       onPressed: () => Get.back(),
@@ -124,12 +127,13 @@ class JsonReaderThemeBuilder {
     ReaderController controller,
     JsonThemeElement element,
   ) {
+    final fontSize = element is JsonTitleElement ? element.fontSize : null;
     return Expanded(
       child: Text(
         controller.media.title ?? 'Unknown',
         style: TextStyle(
           color: element.parsedColor ?? Colors.white,
-          fontSize: element.fontSize ?? 14,
+          fontSize: fontSize ?? 14,
           fontWeight: FontWeight.w600,
         ),
         overflow: TextOverflow.ellipsis,
@@ -152,7 +156,7 @@ class JsonReaderThemeBuilder {
         data: SliderThemeData(
           trackHeight: progressBar.height ?? 4,
           thumbShape: SliderComponentShape.noThumb,
-          trackShape: const IOSSliderTrackShape(),
+          trackShape: const RoundedRectSliderTrackShape(),
           activeTrackColor: progressBar.parsedColor ?? Colors.white,
           inactiveTrackColor: progressBar.parsedTrackColor ?? Colors.white.withOpacity(0.2),
           overlayColor: Colors.transparent,
@@ -222,7 +226,7 @@ class JsonReaderThemeBuilder {
         duration: const Duration(milliseconds: 180),
         child: _buildIconButton(
           icon,
-          onTap: canNav.value ? onTap : null,
+          canNav.value ? onTap : null,
           size,
           color,
         ),
@@ -237,7 +241,7 @@ class JsonReaderThemeBuilder {
     Color color,
   ) {
     return IconButton(
-      icon: icon,
+      icon: Icon(icon),
       onPressed: onTap,
       color: color,
       iconSize: size,

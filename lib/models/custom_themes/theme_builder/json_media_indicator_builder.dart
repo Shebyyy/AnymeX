@@ -86,9 +86,9 @@ class JsonMediaIndicatorBuilder {
     double height,
   ) {
     final bg = container.background!;
-    final decoration = BoxDecoration(
+    BoxDecoration decoration = BoxDecoration(
       color: _parseColor(bg.color, Colors.black.withOpacity(0.6)),
-      borderRadius: _parseBorderRadius(container),
+      borderRadius: BorderRadius.circular(_parseBorderRadius(container)),
       border: bg.border?.buildBorder(),
       boxShadow: bg.shadow?.buildShadows(),
     );
@@ -96,13 +96,13 @@ class JsonMediaIndicatorBuilder {
     if (bg.gradient != null) {
       decoration = BoxDecoration(
         gradient: bg.gradient!.buildGradient(),
-        borderRadius: _parseBorderRadius(container),
+        borderRadius: BorderRadius.circular(_parseBorderRadius(container)),
       );
     }
 
     if (bg.blur != null && bg.blur! > 0) {
       return ClipRRect(
-        borderRadius: _parseBorderRadius(container),
+        borderRadius: BorderRadius.circular(_parseBorderRadius(container)),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: bg.blur!, sigmaY: bg.blur!),
           child: Container(
@@ -160,8 +160,7 @@ class JsonMediaIndicatorBuilder {
               value: 1.0,
               strokeWidth: progress?.strokeWidth ?? 8,
               backgroundColor: progress?.parsedTrackColor ??
-                  (progress!.parsedTrackColor!.withOpacity(0.2))
-                  : Colors.white.withOpacity(0.2),
+                  Colors.white.withOpacity(0.2),
               color: (progress?.parsedColor ?? accentColor).withOpacity(0.3),
               strokeCap: StrokeCap.round,
             ),
@@ -206,8 +205,7 @@ class JsonMediaIndicatorBuilder {
             child: Container(
               decoration: BoxDecoration(
                 color: progress?.parsedTrackColor ??
-                    (progress!.parsedTrackColor!.withOpacity(0.3))
-                    : Colors.white.withOpacity(0.2),
+                    Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(progress?.rounded ?? true ? 2.0 : 0),
               ),
             ),
@@ -254,8 +252,7 @@ class JsonMediaIndicatorBuilder {
             child: Container(
               decoration: BoxDecoration(
                 color: progress?.parsedTrackColor ??
-                    (progress!.parsedTrackColor!.withOpacity(0.3))
-                    : Colors.white.withOpacity(0.2),
+                    Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(progress?.rounded ?? true ? 2.0 : 0),
               ),
             ),

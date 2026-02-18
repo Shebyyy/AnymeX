@@ -46,6 +46,8 @@ class JsonMediaProgressConfig {
   final String? trackColor;
   final bool? showTrack;
   final JsonShadowConfig? glow;
+  final double? height;
+  final bool? rounded;
 
   JsonMediaProgressConfig({
     this.type = 'circular',
@@ -54,6 +56,8 @@ class JsonMediaProgressConfig {
     this.trackColor,
     this.showTrack = true,
     this.glow,
+    this.height,
+    this.rounded = true,
   });
 
   factory JsonMediaProgressConfig.fromJson(Map<String, dynamic>? json) {
@@ -68,6 +72,8 @@ class JsonMediaProgressConfig {
       glow: json['glow'] != null
           ? JsonShadowConfig.fromJson(json['glow'] as Map<String, dynamic>)
           : null,
+      height: (json['height'] as num?)?.toDouble(),
+      rounded: json['rounded'] as bool? ?? true,
     );
   }
 
@@ -79,6 +85,8 @@ class JsonMediaProgressConfig {
       if (trackColor != null) 'track_color': trackColor,
       'show_track': showTrack,
       if (glow != null) 'glow': glow?.toJson(),
+      if (height != null) 'height': height,
+      'rounded': rounded,
     };
   }
 
