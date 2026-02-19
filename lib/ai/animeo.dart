@@ -83,65 +83,76 @@ Future<List<Media>> getAiRecommendations(
     }
   }
 
-  final Set<String> trackedIds = _buildTrackedIdSet(service, isAL);
+  final trackedIds = _buildTrackedIdSet(service, isAL);
 
   List<Media> results = [];
 
-  if (isManga) {
-    results = await _fetchNativeRecommendations(
-      isManga: true,
+  final futures = await Future.wait([
+    _fetchAnimeSproutRecommendations(
+      userName: userName,
+      isAL: isAL,
+      options: options,
+      trackedIds: trackedIds,
+      isAdult: isAdult,
+    ),
+    _fetchNativeRecommendations(
+      isManga: isManga,
       isAL: isAL,
       page: page,
       isAdult: isAdult,
-    );
-  } else {
-    final futures = await Future.wait([
-      _fetchAnimeSproutRecommendations(
-        userName: userName,
-        isAL: isAL,
-        options: options,
-        trackedIds: trackedIds,
-        isAdult: isAdult,
-      ),
-      _fetchNativeRecommendations(
-        isManga: false,
-        isAL: isAL,
-        page: page,
-        isAdult: isAdult,
-      ),
-    ], eagerError: false);
+    ),
+  ], eagerError: false);
 
-    final sproutRecs = futures[0];
-    final nativeRecs = futures[1];
+  final sproutRecs = futures[0] as List<Media>;
+  final nativeRecs = futures[1] as List<Media>;
 
-    final seenIds = <String>{};
-    
-    for (final m in sproutRecs) {
-      if (m.id != null && seenIds.add(m.id!)) {
-        results.add(m);
-      }
+  final Map<String, Media> uniqueMap = {};
+
+  for (final media in sproutRecs) {
+    if (media.id != null && !trackedIds.contains(media.id)) {
+      uniqueMap[media.id!] = media;
     }
-    
-    for (final m in nativeRecs) {
-      if (m.id != null && seenIds.add(m.id!)) {
-        results.add(m);
+  }
+
+  for (final media in nativeRecs) {
+    if (media.id != null && !trackedIds.contains(media.id)) {
+      bool isDuplicate = false;
+      for (final existingId in uniqueMap.keys) {
+        if (existingId == media.id) {
+          isDuplicate = true;
+          break;
+        }
+        if (isAL && media.malId != null) {
+          final existingMedia = uniqueMap[existingId];
+          if (existingMedia?.malId == media.malId) {
+            isDuplicate = true;
+            break;
+          }
+        }
+      }
+      
+      if (!isDuplicate) {
+        uniqueMap[media.id!] = media;
       }
     }
   }
 
-  results = results
-      .where((m) => m.id != null && !trackedIds.contains(m.id!))
-      .toList();
+  results = uniqueMap.values.toList();
 
-  final seen = <String>{};
-  results = results.where((m) => m.id != null && seen.add(m.id!)).toList();
+  const int pageSize = 30;
+  final startIndex = (page - 1) * pageSize;
+  if (startIndex < results.length) {
+    final endIndex = (startIndex + pageSize).clamp(0, results.length);
+    results = results.sublist(startIndex, endIndex);
+  } else {
+    results = [];
+  }
 
   if (results.isEmpty && page == 1) {
     snackBar('No recommendations found');
   }
 
   RecommendationCache.set(cacheKey, page, results);
-
   return results;
 }
 
@@ -214,7 +225,6 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
     final animeData = initialRecs['animeData'] as Map<String, dynamic>;
 
     final List<Media> results = [];
-    final batchSize = 20;
     int processed = 0;
 
     for (final rec in recommendations) {
@@ -244,17 +254,20 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
           .toList();
 
       String? resolvedId;
+      int? parsedMalId;
       if (isAL) {
         resolvedId = await _getAnilistIdFromMal(malId);
-        resolvedId ??= malId;
+        parsedMalId = int.tryParse(malId);
       } else {
         resolvedId = malId;
+        parsedMalId = int.tryParse(malId);
       }
 
       if (trackedIds.contains(resolvedId)) continue;
 
       results.add(Media(
         id: resolvedId,
+        malId: parsedMalId,
         title: (title?.isNotEmpty == true ? title : titleFallback) ?? 'Unknown',
         poster: picture ?? '',
         description: synopsis ?? '',
@@ -346,77 +359,118 @@ Future<List<Media>> _fetchAnilistRecommendations({
     if (token == null) return [];
 
     final query = '''
-    query(\$page: Int, \$type: MediaType, \$isAdult: Boolean) {
-      Page(page: \$page, perPage: 30) {
-        recommendations(sort: RATING_DESC, onList: true) {
+    query(\$page: Int, \$type: MediaType) {
+      Page(page: \$page, perPage: 50) {
+        recommendations(sort: RATING_DESC) {
           mediaRecommendation {
             id
-            title { romaji english }
-            coverImage { large }
+            idMal
+            title {
+              romaji
+              english
+              native
+            }
+            coverImage {
+              large
+              color
+            }
             description
             genres
             type
             isAdult
-            mediaListEntry { status }
+            averageScore
+            format
+            status
+            episodes
+            chapters
+            volumes
           }
         }
       }
     }
     ''';
 
+    Logger.i('Fetching AniList recommendations for page $page, type: ${isManga ? "MANGA" : "ANIME"}');
+
     final response = await http.post(
       Uri.parse('https://graphql.anilist.co'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: jsonEncode({
         'query': query,
         'variables': {
           'page': page,
           'type': isManga ? 'MANGA' : 'ANIME',
-          'isAdult': isAdult,
         },
       }),
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
-      Logger.i('AniList recommendations failed: ${response.statusCode}');
+      Logger.i('AniList recommendations failed: ${response.statusCode} - ${response.body}');
+      if (response.statusCode == 429) {
+        await Future.delayed(const Duration(seconds: 2));
+        return _fetchAnilistRecommendations(
+          isManga: isManga, 
+          page: page, 
+          isAdult: isAdult
+        );
+      }
       return [];
     }
 
     final data = jsonDecode(response.body);
     final recs = data['data']?['Page']?['recommendations'] as List<dynamic>?;
-    if (recs == null) return [];
+    if (recs == null || recs.isEmpty) {
+      Logger.i('No recommendations found in response');
+      return [];
+    }
 
     final results = <Media>[];
+    final seenIds = <String>{};
+
     for (final rec in recs) {
       final media = rec['mediaRecommendation'] as Map<String, dynamic>?;
       if (media == null) continue;
 
-      if (media['mediaListEntry'] != null) continue;
       if (!isAdult && media['isAdult'] == true) continue;
 
       final id = media['id']?.toString();
-      if (id == null) continue;
+      if (id == null || !seenIds.add(id)) continue;
 
       final titleMap = media['title'] as Map?;
-      final title = (titleMap?['english'] as String?)?.isNotEmpty == true
-          ? titleMap!['english'] as String
-          : titleMap?['romaji'] as String? ?? 'Unknown';
+      String title = 'Unknown';
+      if (titleMap != null) {
+        title = titleMap['english'] ?? titleMap['romaji'] ?? titleMap['native'] ?? 'Unknown';
+      }
+
+      final genres = (media['genres'] as List?)
+          ?.map((g) => g.toString().toUpperCase())
+          .where((g) => g.isNotEmpty)
+          .toList() ?? [];
+
+      final coverImage = media['coverImage'] as Map?;
+      final poster = coverImage?['large'] as String? ?? '';
 
       results.add(Media(
         id: id,
+        malId: media['idMal'] as int?,
         title: title,
-        poster: (media['coverImage'] as Map?)?['large'] as String? ?? '',
+        poster: poster,
         description: media['description'] as String? ?? '',
         serviceType: ServicesType.anilist,
-        genres: ((media['genres'] as List?) ?? [])
-            .map((g) => g.toString().toUpperCase())
-            .toList(),
+        genres: genres,
+        averageScore: media['averageScore']?.toString(),
+        format: media['format']?.toString(),
+        totalEpisodes: media['episodes']?.toString(),
+        totalChapters: media['chapters']?.toString(),
+        status: media['status']?.toString(),
       ));
     }
 
+    Logger.i('Fetched ${results.length} AniList recommendations');
     return results;
   } catch (e) {
     Logger.i('AniList recommendations error: $e');
@@ -440,7 +494,6 @@ Future<List<Media>> _fetchMalRecommendations({
     }
 
     final data = jsonDecode(response.body);
-    final pagination = data['pagination'] as Map<String, dynamic>?;
     final recs = data['data'] as List<dynamic>?;
     if (recs == null) return [];
 
@@ -468,6 +521,7 @@ Future<List<Media>> _fetchMalRecommendations({
 
         results.add(Media(
           id: malId,
+          malId: int.tryParse(malId),
           title: title,
           poster: imageUrl ?? '',
           description: synopsis ?? '',
