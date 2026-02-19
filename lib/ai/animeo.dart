@@ -138,12 +138,28 @@ Future<List<Media>> getAiRecommendations(
 
   results = uniqueMap.values.toList();
 
+  // Enhanced adult content filter
   if (!isAdult) {
     results = results.where((media) {
-      final hasAdultGenres = media.genres.any((g) =>
-          ['HENTAI', 'EROTICA', 'ADULT', '18+'].contains(g.toUpperCase()));
+      // Check genres for adult content
+      final hasAdultGenres = media.genres.any((g) {
+        final genre = g.toUpperCase();
+        return genre.contains('HENTAI') || 
+               genre.contains('EROTICA') || 
+               genre.contains('ADULT') || 
+               genre.contains('18+') ||
+               genre.contains('ECCHI') ||
+               genre.contains('MATURE');
+      });
+      
       final isMediaAdult = media.isAdult == true;
-      return !hasAdultGenres && !isMediaAdult;
+      
+      // Check title for adult indicators
+      final titleHasAdult = media.title.toLowerCase().contains('hentai') ||
+                           media.title.toLowerCase().contains('erotica') ||
+                           media.title.toLowerCase().contains('nsfw');
+      
+      return !hasAdultGenres && !isMediaAdult && !titleHasAdult;
     }).toList();
   }
 
@@ -402,6 +418,7 @@ Future<List<Media>> _fetchAnilistRecommendations({
     final token = AuthKeys.authToken.get<String?>();
     if (token == null) return [];
 
+    // Fixed query - removed unused $type variable
     final query = '''
     query(\$page: Int) {
       Page(page: \$page, perPage: 50) {
@@ -434,8 +451,7 @@ Future<List<Media>> _fetchAnilistRecommendations({
     }
     ''';
 
-    Logger.i(
-        'Fetching AniList recommendations for page $page, type: ${isManga ? "MANGA" : "ANIME"}');
+    Logger.i('Fetching AniList recommendations for page $page');
 
     final response = await http.post(
       Uri.parse('https://graphql.anilist.co'),
@@ -452,21 +468,25 @@ Future<List<Media>> _fetchAnilistRecommendations({
       }),
     ).timeout(const Duration(seconds: 15));
 
+    if (response.statusCode == 429) {
+      Logger.i('Rate limited, waiting 3 seconds...');
+      await Future.delayed(const Duration(seconds: 3));
+      return _fetchAnilistRecommendations(
+        isManga: isManga, 
+        page: page, 
+        isAdult: isAdult
+      );
+    }
+
     if (response.statusCode != 200) {
-      Logger.i(
-          'AniList recommendations failed: ${response.statusCode} - ${response.body}');
-      if (response.statusCode == 429) {
-        await Future.delayed(const Duration(seconds: 2));
-        return _fetchAnilistRecommendations(
-            isManga: isManga, page: page, isAdult: isAdult);
-      }
+      Logger.i('AniList recommendations failed: ${response.statusCode}');
       return [];
     }
 
     final data = jsonDecode(response.body);
     final recs = data['data']?['Page']?['recommendations'] as List<dynamic>?;
     if (recs == null || recs.isEmpty) {
-      Logger.i('No recommendations found in response');
+      Logger.i('No recommendations found');
       return [];
     }
 
@@ -477,12 +497,14 @@ Future<List<Media>> _fetchAnilistRecommendations({
       final media = rec['mediaRecommendation'] as Map<String, dynamic>?;
       if (media == null) continue;
 
+      // Filter by type client-side
       final mediaType = media['type'] as String?;
       if (mediaType == null) continue;
-
+      
       if (isManga && mediaType != 'MANGA') continue;
       if (!isManga && mediaType != 'ANIME') continue;
 
+      // Adult content filter
       if (!isAdult && media['isAdult'] == true) continue;
 
       final id = media['id']?.toString();
@@ -499,11 +521,17 @@ Future<List<Media>> _fetchAnilistRecommendations({
         romajiTitle = titleMap['romaji'] ?? title;
       }
 
+      // Check for adult content in genres
       final genres = (media['genres'] as List?)
-              ?.map((g) => g.toString().toUpperCase())
-              .where((g) => g.isNotEmpty)
-              .toList() ??
-          [];
+          ?.map((g) => g.toString().toUpperCase())
+          .where((g) => g.isNotEmpty)
+          .toList() ?? [];
+
+      if (!isAdult) {
+        final hasAdultGenres = genres.any((g) =>
+            ['HENTAI', 'EROTICA', 'ADULT', '18+', 'ECCHI'].contains(g));
+        if (hasAdultGenres) continue;
+      }
 
       final coverImage = media['coverImage'] as Map?;
       final poster = coverImage?['large'] as String? ?? '';
@@ -522,6 +550,7 @@ Future<List<Media>> _fetchAnilistRecommendations({
         totalEpisodes: media['episodes']?.toString() ?? '0',
         totalChapters: media['chapters']?.toString() ?? '0',
         status: media['status']?.toString() ?? '',
+        isAdult: media['isAdult'] as bool?,
       ));
     }
 
@@ -544,6 +573,17 @@ Future<List<Media>> _fetchMalRecommendations({
 
     final response =
         await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+    
+    if (response.statusCode == 429) {
+      Logger.i('Jikan rate limited, waiting...');
+      await Future.delayed(const Duration(seconds: 2));
+      return _fetchMalRecommendations(
+        isManga: isManga, 
+        page: page, 
+        isAdult: isAdult
+      );
+    }
+
     if (response.statusCode != 200) {
       Logger.i('Jikan recommendations failed: ${response.statusCode}');
       return [];
@@ -556,6 +596,12 @@ Future<List<Media>> _fetchMalRecommendations({
     final results = <Media>[];
     final seen = <String>{};
 
+    // Adult content keywords to filter
+    final adultKeywords = [
+      'Hentai', 'Erotica', 'Ecchi', 'Adult', '18+', 
+      'Sex', 'Porn', 'NSFW', 'Mature'
+    ];
+
     for (final rec in recs) {
       final entries = rec['entry'] as List<dynamic>?;
       if (entries == null) continue;
@@ -564,11 +610,44 @@ Future<List<Media>> _fetchMalRecommendations({
         final malId = entry['mal_id']?.toString();
         if (malId == null || !seen.add(malId)) continue;
 
-        if (!isAdult) {
-          final genres = entry['genres'] as List? ?? [];
-          final isNsfw =
-              genres.any((g) => ['Hentai', 'Erotica'].contains(g['name']));
-          if (isNsfw) continue;
+        // Check multiple sources for adult content
+        bool isAdultContent = false;
+
+        // Check genres
+        final genres = entry['genres'] as List? ?? [];
+        isAdultContent = genres.any((g) {
+          final genreName = g['name']?.toString() ?? '';
+          return adultKeywords.any((keyword) => 
+            genreName.toLowerCase().contains(keyword.toLowerCase()));
+        });
+
+        // Check demographics
+        if (!isAdultContent) {
+          final demographics = entry['demographics'] as List? ?? [];
+          isAdultContent = demographics.any((d) {
+            final demoName = d['name']?.toString() ?? '';
+            return adultKeywords.any((keyword) => 
+              demoName.toLowerCase().contains(keyword.toLowerCase()));
+          });
+        }
+
+        // Check explicit/genre tags
+        if (!isAdultContent) {
+          final explicitGenres = entry['explicit_genres'] as List? ?? [];
+          isAdultContent = explicitGenres.isNotEmpty;
+        }
+
+        // Check rating
+        if (!isAdultContent) {
+          final rating = entry['rating']?.toString() ?? '';
+          isAdultContent = rating.toLowerCase().contains('rx') || 
+                          rating.toLowerCase().contains('hentai');
+        }
+
+        // Filter if not adult mode and content is adult
+        if (!isAdult && isAdultContent) {
+          Logger.i('Filtered adult content: ${entry['title']}');
+          continue;
         }
 
         final title = entry['title'] as String? ?? 'Unknown';
@@ -584,11 +663,13 @@ Future<List<Media>> _fetchMalRecommendations({
           poster: imageUrl ?? '',
           description: synopsis ?? '',
           serviceType: ServicesType.mal,
-          genres: [],
+          genres: genres.map((g) => g['name']?.toString() ?? '').toList(),
+          isAdult: isAdultContent,
         ));
       }
     }
 
+    Logger.i('Fetched ${results.length} MAL recommendations');
     return results;
   } catch (e) {
     Logger.i('Jikan recommendations error: $e');
