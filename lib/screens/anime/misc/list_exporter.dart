@@ -244,6 +244,7 @@ class _ListExporterPageState extends State<ListExporterPage> {
     final isLoggedIn = serviceHandler.isLoggedIn.value;
     final serviceType = serviceHandler.serviceType.value;
     final serviceName = serviceType == ServicesType.mal ? 'MyAnimeList' : 'AniList';
+    const mediaType = 'Anime';
 
     return Glow(
       child: Scaffold(
