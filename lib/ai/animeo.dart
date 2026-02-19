@@ -122,9 +122,10 @@ Future<List<Media>> getAiRecommendations(
           isDuplicate = true;
           break;
         }
-        if (isAL && media.malId != null) {
+        // Check using idMal field instead of malId
+        if (isAL && media.idMal.isNotEmpty) {
           final existingMedia = uniqueMap[existingId];
-          if (existingMedia?.malId == media.malId) {
+          if (existingMedia?.idMal == media.idMal) {
             isDuplicate = true;
             break;
           }
@@ -254,21 +255,19 @@ Future<List<Media>> _fetchAnimeSproutRecommendations({
           .toList();
 
       String? resolvedId;
-      int? parsedMalId;
       if (isAL) {
         resolvedId = await _getAnilistIdFromMal(malId);
-        parsedMalId = int.tryParse(malId);
       } else {
         resolvedId = malId;
-        parsedMalId = int.tryParse(malId);
       }
 
       if (trackedIds.contains(resolvedId)) continue;
 
       results.add(Media(
-        id: resolvedId,
-        malId: parsedMalId,
+        id: resolvedId ?? '',
+        idMal: malId,
         title: (title?.isNotEmpty == true ? title : titleFallback) ?? 'Unknown',
+        romajiTitle: titleFallback ?? 'Unknown',
         poster: picture ?? '',
         description: synopsis ?? '',
         serviceType: isAL ? ServicesType.anilist : ServicesType.mal,
@@ -442,8 +441,10 @@ Future<List<Media>> _fetchAnilistRecommendations({
 
       final titleMap = media['title'] as Map?;
       String title = 'Unknown';
+      String romajiTitle = 'Unknown';
       if (titleMap != null) {
         title = titleMap['english'] ?? titleMap['romaji'] ?? titleMap['native'] ?? 'Unknown';
+        romajiTitle = titleMap['romaji'] ?? title;
       }
 
       final genres = (media['genres'] as List?)
@@ -456,17 +457,18 @@ Future<List<Media>> _fetchAnilistRecommendations({
 
       results.add(Media(
         id: id,
-        malId: media['idMal'] as int?,
+        idMal: media['idMal']?.toString() ?? '',
         title: title,
+        romajiTitle: romajiTitle,
         poster: poster,
         description: media['description'] as String? ?? '',
         serviceType: ServicesType.anilist,
         genres: genres,
-        averageScore: media['averageScore']?.toString(),
-        format: media['format']?.toString(),
-        totalEpisodes: media['episodes']?.toString(),
-        totalChapters: media['chapters']?.toString(),
-        status: media['status']?.toString(),
+        rating: media['averageScore']?.toString() ?? '0',
+        format: media['format']?.toString() ?? '',
+        totalEpisodes: media['episodes']?.toString() ?? '0',
+        totalChapters: media['chapters']?.toString() ?? '0',
+        status: media['status']?.toString() ?? '',
       ));
     }
 
@@ -521,8 +523,9 @@ Future<List<Media>> _fetchMalRecommendations({
 
         results.add(Media(
           id: malId,
-          malId: int.tryParse(malId),
+          idMal: malId,
           title: title,
+          romajiTitle: title,
           poster: imageUrl ?? '',
           description: synopsis ?? '',
           serviceType: ServicesType.mal,
