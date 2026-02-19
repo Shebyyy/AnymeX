@@ -425,6 +425,8 @@ class MalService extends GetxController implements BaseService, OnlineService {
       if (code != null) {
         Logger.i("Authorization code: $code");
         await _exchangeCodeForTokenMAL(code, clientId, codeChallenge, secret);
+
+        // After successful login, fetch and store the session ID
         await _fetchAndStoreMalSessionId();
       }
     } catch (e) {
@@ -437,6 +439,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
       final token = AuthKeys.malAuthToken.get<String?>();
       if (token == null) return;
 
+      // First, verify the token works
       final userResponse = await http.get(
         Uri.parse('https://api.myanimelist.net/v2/users/@me'),
         headers: {'Authorization': 'Bearer $token'},
@@ -444,6 +447,8 @@ class MalService extends GetxController implements BaseService, OnlineService {
 
       if (userResponse.statusCode != 200) return;
 
+      // Use the token to access the authenticated session
+      // MAL uses the same token for both API and web session
       final response = await http.get(
         Uri.parse('https://myanimelist.net/'),
         headers: {
@@ -453,20 +458,23 @@ class MalService extends GetxController implements BaseService, OnlineService {
         },
       );
 
+      // Check all cookie headers
       final allCookies =
           response.headers['set-cookie'] ?? response.headers['cookie'];
       if (allCookies != null) {
+        // Look for MALHLOGSESSID in any cookie string
         final RegExp sessionRegex = RegExp(r'MALHLOGSESSID=([^;]+)');
         final match = sessionRegex.firstMatch(allCookies);
 
         if (match != null) {
           final sessionId = match.group(1);
-          await AuthKeys.malSessionId.set(sessionId);
+          AuthKeys.malSessionId.set(sessionId);
           Logger.i("MAL session ID stored successfully: $sessionId");
           return;
         }
       }
 
+      // If no session cookie, try to get it from the export page
       final csrfResponse = await http.get(
         Uri.parse('https://myanimelist.net/panel.php?go=export'),
         headers: {
@@ -483,7 +491,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
         final match = sessionRegex.firstMatch(csrfCookies);
         if (match != null) {
           final sessionId = match.group(1);
-          await AuthKeys.malSessionId.set(sessionId);
+          AuthKeys.malSessionId.set(sessionId);
           Logger.i("MAL session ID stored from export page");
         }
       }
@@ -683,7 +691,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
   Future<void> logout() async {
     AuthKeys.malAuthToken.delete();
     AuthKeys.malRefreshToken.delete();
-    AuthKeys.malSessionId.delete();
+    AuthKeys.malSessionId.delete(); // Also delete the session ID on logout
     isLoggedIn.value = false;
     profileData.value = Profile();
     continueWatching.value = [];
