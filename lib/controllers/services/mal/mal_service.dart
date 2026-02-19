@@ -437,62 +437,106 @@ class MalService extends GetxController implements BaseService, OnlineService {
   Future<void> _fetchAndStoreMalSessionId() async {
     try {
       final token = AuthKeys.malAuthToken.get<String?>();
-      if (token == null) return;
+      if (token == null) {
+        Logger.i('No MAL token found for session fetch');
+        return;
+      }
 
-      // First, verify the token works
-      final userResponse = await http.get(
-        Uri.parse('https://api.myanimelist.net/v2/users/@me'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      Logger.i('Attempting to fetch MAL session ID with token');
 
-      if (userResponse.statusCode != 200) return;
-
-      // Use the token to access the authenticated session
-      // MAL uses the same token for both API and web session
+      // First, try to get session from the main page with authorization
       final response = await http.get(
         Uri.parse('https://myanimelist.net/'),
         headers: {
           'Authorization': 'Bearer $token',
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive',
         },
       );
 
-      // Check all cookie headers
-      final allCookies =
-          response.headers['set-cookie'] ?? response.headers['cookie'];
-      if (allCookies != null) {
-        // Look for MALHLOGSESSID in any cookie string
-        final RegExp sessionRegex = RegExp(r'MALHLOGSESSID=([^;]+)');
-        final match = sessionRegex.firstMatch(allCookies);
+      // Check all response headers for cookies
+      if (response.headers.containsKey('set-cookie')) {
+        final cookies = response.headers['set-cookie']!;
+        Logger.i('Raw cookie header: $cookies');
+        
+        // Try multiple regex patterns to catch the session ID
+        final patterns = [
+          RegExp(r'MALHLOGSESSID=([^;]+)'),
+          RegExp(r'mal_session_id=([^;]+)'),
+          RegExp(r'session_id=([^;]+)'),
+        ];
 
-        if (match != null) {
-          final sessionId = match.group(1);
-          AuthKeys.malSessionId.set(sessionId);
-          Logger.i("MAL session ID stored successfully: $sessionId");
-          return;
+        for (final pattern in patterns) {
+          final match = pattern.firstMatch(cookies);
+          if (match != null) {
+            final sessionId = match.group(1);
+            if (sessionId != null && sessionId.isNotEmpty) {
+              await AuthKeys.malSessionId.set(sessionId);
+              Logger.i('MAL session ID stored successfully: $sessionId');
+              
+              // Verify it was stored
+              final verify = AuthKeys.malSessionId.get<String?>();
+              Logger.i('Verification - stored session: $verify');
+              return;
+            }
+          }
         }
       }
 
-      // If no session cookie, try to get it from the export page
-      final csrfResponse = await http.get(
+      // If no session cookie, try the export page
+      Logger.i('No session cookie in main page, trying export page');
+      final exportResponse = await http.get(
         Uri.parse('https://myanimelist.net/panel.php?go=export'),
         headers: {
           'Authorization': 'Bearer $token',
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       );
 
-      final csrfCookies =
-          csrfResponse.headers['set-cookie'] ?? csrfResponse.headers['cookie'];
-      if (csrfCookies != null) {
-        final RegExp sessionRegex = RegExp(r'MALHLOGSESSID=([^;]+)');
-        final match = sessionRegex.firstMatch(csrfCookies);
+      if (exportResponse.headers.containsKey('set-cookie')) {
+        final cookies = exportResponse.headers['set-cookie']!;
+        final match = RegExp(r'MALHLOGSESSID=([^;]+)').firstMatch(cookies);
         if (match != null) {
           final sessionId = match.group(1);
-          AuthKeys.malSessionId.set(sessionId);
-          Logger.i("MAL session ID stored from export page");
+          if (sessionId != null && sessionId.isNotEmpty) {
+            await AuthKeys.malSessionId.set(sessionId);
+            Logger.i('MAL session ID stored from export page: $sessionId');
+            
+            // Verify storage
+            final verify = AuthKeys.malSessionId.get<String?>();
+            Logger.i('Verification - stored session: $verify');
+          }
+        }
+      }
+
+      // If still no session, try to create one by accessing the export form
+      if (AuthKeys.malSessionId.get<String?>() == null) {
+        Logger.i('Attempting to create session via export form');
+        final formResponse = await http.post(
+          Uri.parse('https://myanimelist.net/panel.php?go=export'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+          body: {
+            'type': '1', // Anime type
+            'subexport': 'Export My List',
+          },
+        );
+
+        if (formResponse.headers.containsKey('set-cookie')) {
+          final cookies = formResponse.headers['set-cookie']!;
+          final match = RegExp(r'MALHLOGSESSID=([^;]+)').firstMatch(cookies);
+          if (match != null) {
+            final sessionId = match.group(1);
+            if (sessionId != null && sessionId.isNotEmpty) {
+              await AuthKeys.malSessionId.set(sessionId);
+              Logger.i('MAL session ID created via export: $sessionId');
+            }
+          }
         }
       }
     } catch (e) {
