@@ -425,8 +425,6 @@ class MalService extends GetxController implements BaseService, OnlineService {
       if (code != null) {
         Logger.i("Authorization code: $code");
         await _exchangeCodeForTokenMAL(code, clientId, codeChallenge, secret);
-        
-        // After successful login, fetch and store the session ID
         await _fetchAndStoreMalSessionId();
       }
     } catch (e) {
@@ -436,23 +434,57 @@ class MalService extends GetxController implements BaseService, OnlineService {
 
   Future<void> _fetchAndStoreMalSessionId() async {
     try {
-      // Make a request to MAL homepage to get the session cookie
+      final token = AuthKeys.malAuthToken.get<String?>();
+      if (token == null) return;
+
+      final userResponse = await http.get(
+        Uri.parse('https://api.myanimelist.net/v2/users/@me'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (userResponse.statusCode != 200) return;
+
       final response = await http.get(
         Uri.parse('https://myanimelist.net/'),
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Authorization': 'Bearer $token',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
       );
 
-      // Extract the MALHLOGSESSID cookie from the response headers
-      final cookieHeader = response.headers['set-cookie'];
-      if (cookieHeader != null) {
+      final allCookies =
+          response.headers['set-cookie'] ?? response.headers['cookie'];
+      if (allCookies != null) {
         final RegExp sessionRegex = RegExp(r'MALHLOGSESSID=([^;]+)');
-        final match = sessionRegex.firstMatch(cookieHeader);
+        final match = sessionRegex.firstMatch(allCookies);
+
         if (match != null) {
           final sessionId = match.group(1);
-          AuthKeys.malSessionId.set(sessionId);
-          Logger.i("MAL session ID stored successfully");
+          await AuthKeys.malSessionId.set(sessionId);
+          Logger.i("MAL session ID stored successfully: $sessionId");
+          return;
+        }
+      }
+
+      final csrfResponse = await http.get(
+        Uri.parse('https://myanimelist.net/panel.php?go=export'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      );
+
+      final csrfCookies =
+          csrfResponse.headers['set-cookie'] ?? csrfResponse.headers['cookie'];
+      if (csrfCookies != null) {
+        final RegExp sessionRegex = RegExp(r'MALHLOGSESSID=([^;]+)');
+        final match = sessionRegex.firstMatch(csrfCookies);
+        if (match != null) {
+          final sessionId = match.group(1);
+          await AuthKeys.malSessionId.set(sessionId);
+          Logger.i("MAL session ID stored from export page");
         }
       }
     } catch (e) {
@@ -570,9 +602,6 @@ class MalService extends GetxController implements BaseService, OnlineService {
     }
 
     if (req.statusCode == 200) {
-      // snackBar(
-      //     "${isAnime ? 'Anime' : 'Manga'} Tracked to ${isAnime ? 'Episode' : 'Chapter'} $progress Successfully!");
-
       final newMedia = currentMedia.value
         ..episodeCount = progress.toString()
         ..watchingStatus = status
@@ -654,11 +683,9 @@ class MalService extends GetxController implements BaseService, OnlineService {
   Future<void> logout() async {
     AuthKeys.malAuthToken.delete();
     AuthKeys.malRefreshToken.delete();
-    AuthKeys.malSessionId.delete(); // Also delete the session ID on logout
+    AuthKeys.malSessionId.delete();
     isLoggedIn.value = false;
     profileData.value = Profile();
-    // animeList.value = [];
-    // mangaList.value = [];
     continueWatching.value = [];
     continueReading.value = [];
   }
