@@ -473,7 +473,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
           if (match != null) {
             final sessionId = match.group(1);
             if (sessionId != null && sessionId.isNotEmpty) {
-              await AuthKeys.malSessionId.set(sessionId);
+              AuthKeys.malSessionId.set(sessionId);
               Logger.i('MAL session ID stored successfully: $sessionId');
               
               // Verify it was stored
@@ -501,7 +501,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
         if (match != null) {
           final sessionId = match.group(1);
           if (sessionId != null && sessionId.isNotEmpty) {
-            await AuthKeys.malSessionId.set(sessionId);
+            AuthKeys.malSessionId.set(sessionId);
             Logger.i('MAL session ID stored from export page: $sessionId');
             
             // Verify storage
@@ -533,7 +533,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
           if (match != null) {
             final sessionId = match.group(1);
             if (sessionId != null && sessionId.isNotEmpty) {
-              await AuthKeys.malSessionId.set(sessionId);
+              AuthKeys.malSessionId.set(sessionId);
               Logger.i('MAL session ID created via export: $sessionId');
             }
           }
