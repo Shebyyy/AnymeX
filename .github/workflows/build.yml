@@ -573,33 +573,7 @@ jobs:
           CALLBACK_SCHEME=$CALLBACK_SCHEME
           GOOGLE_BOOKS_API_KEY=$GOOGLE_BOOKS_API_KEY
           EOF
-      
-      # =================================================================
-      # NEW STEP: Prepare Assets for Build
-      # =================================================================
-      - name: Prepare Assets for Build
-        shell: bash
-        run: |
-          if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
-            echo "🔵 Beta build detected. Applying beta assets..."
-            if [ -f "assets/images/logo_beta.png" ]; then
-              cp assets/images/logo_beta.png assets/images/logo.png
-              echo "✅ Copied logo_beta.png to logo.png"
-            else
-              echo "❌ Error: assets/images/logo_beta.png not found!"
-              exit 1
-            fi
-            if [ -f "assets/images/logo_transparent_beta.png" ]; then
-              cp assets/images/logo_transparent_beta.png assets/images/logo_transparent.png
-              echo "✅ Copied logo_transparent_beta.png to logo_transparent.png"
-            else
-              echo "❌ Error: assets/images/logo_transparent_beta.png not found!"
-              exit 1
-            fi
-            echo "✅ Beta assets applied."
-          else
-            echo "🟢 Stable build detected. Using default assets."
-          fi
+  
           
       - name: Clean Flutter for Beta Build
         if: env.IS_BETA_BUILD == 'true'
