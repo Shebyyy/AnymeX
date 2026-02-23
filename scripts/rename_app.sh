@@ -313,6 +313,10 @@ if [ -f "$DART_UPDATER_FILE" ]; then
 
   log_success "Updated version parsing to handle iteration numbers"
 
+  # Fix tag comparison to continue to iteration when tags are same
+  sed "${SED_INPLACE[@]}" 's/        return latestIndex > currentIndex;/        if (currentIndex != latestIndex) {\n          return latestIndex > currentIndex;\n        }/g' "$DART_UPDATER_FILE"
+  log_success "Fixed tag comparison to check iterations when tags are same"
+
   # Add iteration comparison logic before the final log statement
   sed "${SED_INPLACE[@]}" '/Logger.i('"'"'Current version/i\
     // Compare iterations if semver and tag are same\
