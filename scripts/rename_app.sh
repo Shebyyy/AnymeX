@@ -283,8 +283,8 @@ if [ -f "$DART_UPDATER_FILE" ]; then
   log_info "Full version with build number: $FULL_VERSION"
 
   # Update _getCurrentVersion() to return hardcoded version
-  # This replaces the entire function body
-  sed "${SED_INPLACE[@]}" '/Future<String> _getCurrentVersion() async {/,/^}$/c\
+  # This is safer - matches the exact pattern of the function
+  sed "${SED_INPLACE[@]}" '/Future<String> _getCurrentVersion() async {/,/return packageInfo\.version;/c\
   Future<String> _getCurrentVersion() async {\
     return "'"$FULL_VERSION"'";\
   }' "$DART_UPDATER_FILE"
@@ -293,7 +293,7 @@ if [ -f "$DART_UPDATER_FILE" ]; then
 
   # Update _shouldUpdate() to strip build number before comparison
   # Add build number stripping logic after the function signature
-  sed "${SED_INPLACE[@]}" '/^  bool _shouldUpdate(String currentVersion, String latestVersion) {/a\
+  sed "${SED_INPLACE[@]}" '/  bool _shouldUpdate(String currentVersion, String latestVersion) {/a\
     // Strip build number (last + segment) from current version\
     // "3.0.7+1-beta+26" -> "3.0.7+1-beta"\
     final plusCount = currentVersion.split('"'"'+'"'"').length - 1;\
