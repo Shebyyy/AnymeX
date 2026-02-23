@@ -283,8 +283,8 @@ if [ -f "$DART_UPDATER_FILE" ]; then
   log_info "Full version with build number: $FULL_VERSION"
 
   # Update _getCurrentVersion() to return hardcoded version
-  # This is safer - matches the exact pattern of the function
-  sed "${SED_INPLACE[@]}" '/Future<String> _getCurrentVersion() async {/,/return packageInfo\.version;/c\
+  # Match the entire function including the closing brace
+  sed "${SED_INPLACE[@]}" '/Future<String> _getCurrentVersion() async {/,/^  }$/c\
   Future<String> _getCurrentVersion() async {\
     return "'"$FULL_VERSION"'";\
   }' "$DART_UPDATER_FILE"
