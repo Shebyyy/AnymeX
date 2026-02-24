@@ -313,7 +313,6 @@ if [ -f "$DART_UPDATER_FILE" ]; then
 
   log_success "Updated version parsing to handle iteration numbers"
 
-  # Fix tag comparison to continue to iteration when tags are same
   sed "${SED_INPLACE[@]}" 's/        return latestIndex > currentIndex;/        if (currentIndex != latestIndex) {\n          return latestIndex > currentIndex;\n        }/g' "$DART_UPDATER_FILE"
   log_success "Fixed tag comparison to check iterations when tags are same"
 
@@ -326,6 +325,17 @@ if [ -f "$DART_UPDATER_FILE" ]; then
 ' "$DART_UPDATER_FILE"
 
   log_success "Added iteration comparison logic to _shouldUpdate()"
+
+  # Strip build number from currentVersion before showing in popup
+  sed "${SED_INPLACE[@]}" '/if (_shouldUpdate(currentVersion, latestRelease/i\
+        // Strip build number from currentVersion for display in popup\
+        final displayVersion = currentVersion.split('"'"'+'"'"').length > 2 ? currentVersion.substring(0, currentVersion.lastIndexOf('"'"'+'"'"')) : currentVersion;\
+' "$DART_UPDATER_FILE"
+
+  # Update popup call to use displayVersion instead of currentVersion
+  # Match the pattern with context to be more specific
+  sed "${SED_INPLACE[@]}" '/context,$/ { N; s/\n            currentVersion,/\n            displayVersion,/; }' "$DART_UPDATER_FILE"
+  log_success "Fixed popup to show version without build number"
 else
   log_warn "Updater file not found at $DART_UPDATER_FILE. Skipping update checker updates."
 fi
