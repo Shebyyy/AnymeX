@@ -180,7 +180,27 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     final media = Media.fromCarouselData(itemData, mediaType);
 
     _setActiveSource(controller, itemData);
-    _onItemTap(media);
+    onTapHandler(media, tag, isMediaManga);
+  }
+
+  void onTapHandler(Media media, String tag, bool isMediaManga) {
+    if (widget.type == ItemType.novel) {
+      navigate(() => NovelDetailsPage(
+        media: media,
+        tag: media.title,
+        source: widget.source,
+      ));
+    } else if (widget.type == ItemType.manga) {
+      navigate(() => MangaDetailsPage(
+        media: media,
+        tag: media.title,
+      ));
+    } else {
+      navigate(() => AnimeDetailsPage(
+        media: media,
+        tag: media.title,
+      ));
+    }
   }
 
   void _setActiveSource(SourceController controller, CarouselData itemData) {
