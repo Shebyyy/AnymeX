@@ -14,6 +14,7 @@ import 'package:anymex/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:get/get.dart';
+import 'package:dartotsu_extension_bridge/Models/Source.dart';
 
 enum ServicesType {
   anilist,
@@ -129,16 +130,6 @@ class ServiceHandler extends GetxController {
       return extensionService.novelSections;
     }
   }
-  
-  Source? getSourceForMedia(Media media) {
-    if (media.serviceType == ServicesType.extensions) {
-      return extensionService.installedNovelExtensions.firstWhere(
-        (source) => source.id == media.sourceId,
-        orElse: () => extensionService.installedNovelExtensions.first,
-      );
-    }
-    return null;
-  }
 
   @override
   void onInit() {
@@ -175,15 +166,5 @@ class ServiceHandler extends GetxController {
     ServiceKeys.serviceType.set(type.index);
     serviceType.value = type;
     fetchHomePage();
-  }
-
-  Source? getSourceForMedia(Media media) {
-    if (media.serviceType == ServicesType.extensions) {
-      return extensionService.installedNovelExtensions.firstWhere(
-        (source) => source.id == media.sourceId,
-        orElse: () => extensionService.installedNovelExtensions.first,
-      );
-    }
-    return null;
   }
 }
