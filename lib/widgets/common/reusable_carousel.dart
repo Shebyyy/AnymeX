@@ -179,8 +179,33 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     final ItemType mediaType = isMediaManga ? ItemType.manga : ItemType.anime;
     final media = Media.fromCarouselData(itemData, mediaType);
 
-    _setActiveSource(controller, itemData);
-    onTapHandler(media, tag, isMediaManga);
+    void _defaultNavigateToDetails(Media media) {
+    final controller = Get.find<SourceController>();
+    
+    if (widget.type == ItemType.novel) {
+      navigate(() => NovelDetailsPage(
+        media: media,
+        tag: media.title,
+        source: widget.source,
+      ));
+    } else if (widget.type == ItemType.manga) {
+      navigate(() => MangaDetailsPage(
+        media: media,
+        tag: media.title,
+      ));
+    } else {
+      navigate(() => AnimeDetailsPage(
+        media: media,
+        tag: media.title,
+      ));
+    }
+  }
+
+  bool _determineIfManga(CarouselData itemData) {
+    return (widget.variant == DataVariant.relation &&
+            itemData.source == "MANGA") ||
+        (widget.source?.itemType == ItemType.manga) ||
+        widget.type == ItemType.manga;
   }
 
   void onTapHandler(Media media, String tag, bool isMediaManga) {
@@ -213,34 +238,5 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
         controller.getExtensionByName(itemData.source!);
       }
     }
-  }
-
-  void _defaultNavigateToDetails(Media media) {
-    final controller = Get.find<SourceController>();
-    
-    if (widget.type == ItemType.novel) {
-      navigate(() => NovelDetailsPage(
-        media: media,
-        tag: media.title,
-        source: widget.source,
-      ));
-    } else if (widget.type == ItemType.manga) {
-      navigate(() => MangaDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
-    } else {
-      navigate(() => AnimeDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
-    }
-  }
-
-  bool _determineIfManga(CarouselData itemData) {
-    return (widget.variant == DataVariant.relation &&
-            itemData.source == "MANGA") ||
-        (widget.source?.itemType == ItemType.manga) ||
-        widget.type == ItemType.manga;
   }
 }
