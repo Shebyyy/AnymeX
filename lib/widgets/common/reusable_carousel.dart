@@ -214,4 +214,16 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
         (widget.source?.itemType == ItemType.manga) ||
         widget.type == ItemType.manga;
   }
+
+  void _setActiveSource(SourceController controller, CarouselData itemData) {
+    if (widget.source != null) {
+      controller.setActiveSource(widget.source!);
+    } else if (itemData.source != null) {
+      if (widget.type == ItemType.manga) {
+        controller.getMangaExtensionByName(itemData.source!);
+      } else {
+        controller.getExtensionByName(itemData.source!);
+      }
+    }
+  }
 }
