@@ -56,6 +56,26 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     }
   }
 
+  void _defaultNavigateToDetails(Media media) {
+    if (widget.type == ItemType.novel) {
+      navigate(() => NovelDetailsPage(
+            media: media,
+            tag: media.title,
+            source: widget.source,
+          ));
+    } else if (widget.type == ItemType.manga) {
+      navigate(() => MangaDetailsPage(
+            media: media,
+            tag: media.title,
+          ));
+    } else {
+      navigate(() => AnimeDetailsPage(
+            media: media,
+            tag: media.title,
+          ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isEmptyOrOffline) {
@@ -163,11 +183,12 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
 
   MediaCardGate _buildCard(CarouselData itemData, String tag) {
     return MediaCardGate(
-        itemData: itemData,
-        tag: tag,
-        variant: widget.variant,
-        type: widget.type,
-        cardStyle: CardStyle.values[settingsController.cardStyle]);
+      itemData: itemData,
+      tag: tag,
+      variant: widget.variant,
+      type: widget.type,
+      cardStyle: CardStyle.values[settingsController.cardStyle],
+    );
   }
 
   void _navigateToDetailsPage(CarouselData itemData, String tag) {
@@ -179,45 +200,27 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     final ItemType mediaType = isMediaManga ? ItemType.manga : ItemType.anime;
     final media = Media.fromCarouselData(itemData, mediaType);
 
-    void _defaultNavigateToDetails(Media media) {
-    final controller = Get.find<SourceController>();
-    
-    if (widget.type == ItemType.novel) {
-      navigate(() => NovelDetailsPage(
-        media: media,
-        tag: media.title,
-        source: widget.source,
-      ));
-    } else if (widget.type == ItemType.manga) {
-      navigate(() => MangaDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
-    } else {
-      navigate(() => AnimeDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
-    }
+    _setActiveSource(controller, itemData);
+    onTapHandler(media, tag, isMediaManga);
   }
 
   void onTapHandler(Media media, String tag, bool isMediaManga) {
     if (widget.type == ItemType.novel) {
       navigate(() => NovelDetailsPage(
-        media: media,
-        tag: media.title,
-        source: widget.source,
-      ));
-    } else if (widget.type == ItemType.manga) {
+            media: media,
+            tag: media.title,
+            source: widget.source,
+          ));
+    } else if (widget.type == ItemType.manga || isMediaManga) {
       navigate(() => MangaDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
+            media: media,
+            tag: media.title,
+          ));
     } else {
       navigate(() => AnimeDetailsPage(
-        media: media,
-        tag: media.title,
-      ));
+            media: media,
+            tag: media.title,
+          ));
     }
   }
 
