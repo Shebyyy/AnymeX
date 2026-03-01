@@ -549,6 +549,7 @@ jobs:
           GOOGLE_BOOKS_API_KEY: ${{ secrets.GOOGLE_BOOKS_API_KEY }}
           GIT_CLIENT_ID: ${{ secrets.GIT_CLIENT_ID }}
           GIT_CLIENT_SECRET: ${{ secrets.GIT_CLIENT_SECRET }}
+          GIT_CALLBACK_SCHEME: ${{ secrets.GIT_CALLBACK_SCHEME }}
         run: |
           cat > .env << EOF
           AL_CLIENT_ID=$AL_CLIENT_ID
@@ -561,6 +562,7 @@ jobs:
           GOOGLE_BOOKS_API_KEY=$GOOGLE_BOOKS_API_KEY
           GIT_CLIENT_ID=$GIT_CLIENT_ID
           GIT_CLIENT_SECRET=$GIT_CLIENT_SECRET
+          GIT_CALLBACK_SCHEME=$GIT_CALLBACK_SCHEME
           EOF
           
       - name: Clean Flutter for Beta Build
