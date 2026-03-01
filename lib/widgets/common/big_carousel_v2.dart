@@ -10,12 +10,12 @@ import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/carousel/carousel_types.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_image.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
-import 'package:anymex/widgets/header.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:dartotsu_extension_bridge/Models/Source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -46,12 +46,11 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
       return;
     }
 
-    _scrollDelta += delta.dy;
     if (delta.dx != 0) {
       _scrollDelta -= delta.dx;
     }
 
-    if (_scrollDelta.abs() > 15) {
+    if (_scrollDelta.abs() > 50) {
       if (_scrollDelta > 0) {
         controller.nextPage();
       } else {
@@ -75,43 +74,76 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             children: [
-
               Stack(
                 children: [
-                  CarouselSlider.builder(
-                    itemCount: newData.length,
-                    itemBuilder: (context, index, realIndex) {
-                      final item = newData[index];
-                      final isActive = index == activeIndex;
-                      return _CarouselCard(
-                        media: item,
-                        isActive: isActive,
-                        carouselType: widget.carouselType,
-                        onTap: () => navigateToDetailsPage(item),
-                        onShowDescription: () =>
-                            _showDescriptionSheet(context, item),
-                      );
-                    },
-                    options: CarouselOptions(
-                      height: 400,
-                      viewportFraction: 0.65,
-                      enlargeCenterPage: true,
-                      enlargeFactor: 0.2,
-                      initialPage: 0,
-                      enableInfiniteScroll: true,
-                      autoPlay: !kDebugMode,
-                      autoPlayInterval: const Duration(seconds: 6),
-                      autoPlayAnimationDuration:
-                          const Duration(milliseconds: 800),
-                      autoPlayCurve: Curves.fastOutSlowIn,
-                      scrollDirection: Axis.horizontal,
-                      onPageChanged: (index, reason) {
-                        setState(() {
-                          activeIndex = index;
-                        });
+                  ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
                       },
                     ),
-                    carouselController: controller,
+                    child: AnymexOnTapAdv(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                            setState(() {
+                              controller.animateToPage(
+                                  (activeIndex - 1).clamp(0, newData.length - 1));
+                            });
+                          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                            setState(() {
+                              controller.animateToPage((activeIndex + 1) % newData.length);
+                            });
+                          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+                              event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                            return KeyEventResult.ignored;
+                          } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.space ||
+                              event.logicalKey == LogicalKeyboardKey.select) {
+                            navigateToDetailsPage(newData[activeIndex]);
+                          }
+                        }
+                        return KeyEventResult.handled;
+                      },
+                      scale: 1,
+                      child: CarouselSlider.builder(
+                        itemCount: newData.length,
+                        itemBuilder: (context, index, realIndex) {
+                          final item = newData[index];
+                          final isActive = index == activeIndex;
+                          return _CarouselCard(
+                            media: item,
+                            isActive: isActive,
+                            carouselType: widget.carouselType,
+                            onTap: () => navigateToDetailsPage(item),
+                            onShowDescription: () =>
+                                _showDescriptionSheet(context, item),
+                          );
+                        },
+                        options: CarouselOptions(
+                          height: 400,
+                          viewportFraction: 0.65,
+                          enlargeCenterPage: true,
+                          enlargeFactor: 0.2,
+                          initialPage: 0,
+                          enableInfiniteScroll: true,
+                          autoPlay: !kDebugMode,
+                          autoPlayInterval: const Duration(seconds: 6),
+                          autoPlayAnimationDuration:
+                              const Duration(milliseconds: 800),
+                          autoPlayCurve: Curves.fastOutSlowIn,
+                          scrollDirection: Axis.horizontal,
+                          onPageChanged: (index, reason) {
+                            setState(() {
+                              activeIndex = index;
+                            });
+                          },
+                        ),
+                        carouselController: controller,
+                      ),
+                    ),
                   ),
                   Positioned.fill(
                     child: Listener(
@@ -122,7 +154,6 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
                         }
                       },
                       onPointerPanZoomUpdate: (event) {
-                       
                         _handleScroll(event.panDelta);
                       },
                       child: Container(color: Colors.transparent),
@@ -405,14 +436,16 @@ class _CarouselCard extends StatelessWidget {
                                         size: 12,
                                         color: colorScheme.primary),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      media.totalEpisodes,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            colorScheme.onSurface.opaque(0.5),
+                                    Flexible(
+                                      child: Text(
+                                        media.totalEpisodes,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color:
+                                              colorScheme.onSurface.opaque(0.5),
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
