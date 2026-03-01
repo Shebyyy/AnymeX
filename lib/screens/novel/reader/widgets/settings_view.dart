@@ -553,7 +553,7 @@ class NovelSettingsPanel extends StatelessWidget {
 
   Widget _buildTtsVoiceSelector(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
-      future: FlutterTts().getVoices,
+      future: FlutterTts().getVoices as Future<List<dynamic>>?,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const SizedBox.shrink();
