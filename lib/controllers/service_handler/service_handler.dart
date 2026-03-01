@@ -167,4 +167,14 @@ class ServiceHandler extends GetxController {
     serviceType.value = type;
     fetchHomePage();
   }
+
+  Source? getSourceForMedia(Media media) {
+    if (media.serviceType == ServicesType.extensions) {
+      return extensionService.installedNovelExtensions.firstWhere(
+        (source) => source.id == media.sourceId,
+        orElse: () => extensionService.installedNovelExtensions.first,
+      );
+    }
+    return null;
+  }
 }
