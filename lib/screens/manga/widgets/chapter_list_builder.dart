@@ -178,7 +178,7 @@ class ChapterService {
 
     if (anilistData.type == ItemType.novel) {
       final sourceController = Get.find<SourceController>();
-      final source = sourceController.activeMangaSource.value;
+      final source = sourceController.activeNovelSource.value;
       
       if (source == null) {
         Logger.i("No source available for novel reading");
@@ -600,7 +600,7 @@ class ChapterListItem extends StatelessWidget {
               mobileSize: Get.width * 0.4, desktopSize: 200),
           child: AnymexText(
             text:
-                '${chapter.releaseDate} • ${Get.find<SourceController>().activeMangaSource.value!.name}',
+                '${chapter.releaseDate} • ${Get.find<SourceController>().activeMangaSource.value?.name ?? "Unknown"}',
             color: context.colors.inverseSurface.opaque(0.9),
             fontStyle: FontStyle.italic,
             maxLines: 2,
