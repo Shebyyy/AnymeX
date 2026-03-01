@@ -201,13 +201,6 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     }
   }
 
-  bool _determineIfManga(CarouselData itemData) {
-    return (widget.variant == DataVariant.relation &&
-            itemData.source == "MANGA") ||
-        (widget.source?.itemType == ItemType.manga) ||
-        widget.type == ItemType.manga;
-  }
-
   void onTapHandler(Media media, String tag, bool isMediaManga) {
     if (widget.type == ItemType.novel) {
       navigate(() => NovelDetailsPage(
@@ -226,6 +219,13 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
         tag: media.title,
       ));
     }
+  }
+
+  bool _determineIfManga(CarouselData itemData) {
+    return (widget.variant == DataVariant.relation &&
+            itemData.source == "MANGA") ||
+        (widget.source?.itemType == ItemType.manga) ||
+        widget.type == ItemType.manga;
   }
 
   void _setActiveSource(SourceController controller, CarouselData itemData) {
