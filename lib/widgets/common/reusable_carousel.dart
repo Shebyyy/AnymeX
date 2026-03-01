@@ -179,7 +179,20 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     final ItemType mediaType = isMediaManga ? ItemType.manga : ItemType.anime;
     final media = Media.fromCarouselData(itemData, mediaType);
 
+    _setActiveSource(controller, itemData);
     _onItemTap(media);
+  }
+
+  void _setActiveSource(SourceController controller, CarouselData itemData) {
+    if (widget.source != null) {
+      controller.setActiveSource(widget.source!);
+    } else if (itemData.source != null) {
+      if (widget.type == ItemType.manga) {
+        controller.getMangaExtensionByName(itemData.source!);
+      } else {
+        controller.getExtensionByName(itemData.source!);
+      }
+    }
   }
 
   void _defaultNavigateToDetails(Media media) {
@@ -202,10 +215,6 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
         tag: media.title,
       ));
     }
-
-    if (widget.source != null) {
-      controller.setActiveSource(widget.source!);
-    }
   }
 
   bool _determineIfManga(CarouselData itemData) {
@@ -213,17 +222,5 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
             itemData.source == "MANGA") ||
         (widget.source?.itemType == ItemType.manga) ||
         widget.type == ItemType.manga;
-  }
-
-  void _setActiveSource(SourceController controller, CarouselData itemData) {
-    if (widget.source != null) {
-      controller.setActiveSource(widget.source!);
-    } else if (itemData.source != null) {
-      if (widget.type == ItemType.manga) {
-        controller.getMangaExtensionByName(itemData.source!);
-      } else {
-        controller.getExtensionByName(itemData.source!);
-      }
-    }
   }
 }
