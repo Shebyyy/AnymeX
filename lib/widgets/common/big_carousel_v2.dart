@@ -10,12 +10,12 @@ import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/carousel/carousel_types.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_image.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
+import 'package:anymex/widgets/header.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:dartotsu_extension_bridge/Models/Source.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -74,6 +74,7 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             children: [
+
               Stack(
                 children: [
                   ScrollConfiguration(
@@ -84,65 +85,40 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
                         PointerDeviceKind.trackpad,
                       },
                     ),
-                    child: AnymexOnTapAdv(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent) {
-                          if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-                            setState(() {
-                              controller.animateToPage(
-                                  (activeIndex - 1).clamp(0, newData.length - 1));
-                            });
-                          } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-                            setState(() {
-                              controller.animateToPage((activeIndex + 1) % newData.length);
-                            });
-                          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
-                              event.logicalKey == LogicalKeyboardKey.arrowDown) {
-                            return KeyEventResult.ignored;
-                          } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-                              event.logicalKey == LogicalKeyboardKey.space ||
-                              event.logicalKey == LogicalKeyboardKey.select) {
-                            navigateToDetailsPage(newData[activeIndex]);
-                          }
-                        }
-                        return KeyEventResult.handled;
+                    child: CarouselSlider.builder(
+                      itemCount: newData.length,
+                      itemBuilder: (context, index, realIndex) {
+                        final item = newData[index];
+                        final isActive = index == activeIndex;
+                        return _CarouselCard(
+                          media: item,
+                          isActive: isActive,
+                          carouselType: widget.carouselType,
+                          onTap: () => navigateToDetailsPage(item),
+                          onShowDescription: () =>
+                              _showDescriptionSheet(context, item),
+                        );
                       },
-                      scale: 1,
-                      child: CarouselSlider.builder(
-                        itemCount: newData.length,
-                        itemBuilder: (context, index, realIndex) {
-                          final item = newData[index];
-                          final isActive = index == activeIndex;
-                          return _CarouselCard(
-                            media: item,
-                            isActive: isActive,
-                            carouselType: widget.carouselType,
-                            onTap: () => navigateToDetailsPage(item),
-                            onShowDescription: () =>
-                                _showDescriptionSheet(context, item),
-                          );
+                      options: CarouselOptions(
+                        height: 400,
+                        viewportFraction: 0.65,
+                        enlargeCenterPage: true,
+                        enlargeFactor: 0.2,
+                        initialPage: 0,
+                        enableInfiniteScroll: true,
+                        autoPlay: !kDebugMode,
+                        autoPlayInterval: const Duration(seconds: 6),
+                        autoPlayAnimationDuration:
+                            const Duration(milliseconds: 800),
+                        autoPlayCurve: Curves.fastOutSlowIn,
+                        scrollDirection: Axis.horizontal,
+                        onPageChanged: (index, reason) {
+                          setState(() {
+                            activeIndex = index;
+                          });
                         },
-                        options: CarouselOptions(
-                          height: 400,
-                          viewportFraction: 0.65,
-                          enlargeCenterPage: true,
-                          enlargeFactor: 0.2,
-                          initialPage: 0,
-                          enableInfiniteScroll: true,
-                          autoPlay: !kDebugMode,
-                          autoPlayInterval: const Duration(seconds: 6),
-                          autoPlayAnimationDuration:
-                              const Duration(milliseconds: 800),
-                          autoPlayCurve: Curves.fastOutSlowIn,
-                          scrollDirection: Axis.horizontal,
-                          onPageChanged: (index, reason) {
-                            setState(() {
-                              activeIndex = index;
-                            });
-                          },
-                        ),
-                        carouselController: controller,
                       ),
+                      carouselController: controller,
                     ),
                   ),
                   Positioned.fill(
