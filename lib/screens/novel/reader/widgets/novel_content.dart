@@ -131,6 +131,7 @@ class NovelContentWidget extends StatelessWidget {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         if (notification is ScrollUpdateNotification) {
+          // Handle scroll updates if needed
         }
         return false;
       },
