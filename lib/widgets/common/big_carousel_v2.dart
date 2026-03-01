@@ -388,11 +388,13 @@ class _CarouselCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Row(
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Icon(Iconsax.star5,
                                         size: 12, color: colorScheme.primary),
-                                    const SizedBox(width: 4),
                                     Text(
                                       media.rating.toString(),
                                       style: TextStyle(
@@ -402,34 +404,26 @@ class _CarouselCard extends StatelessWidget {
                                             colorScheme.onSurface.opaque(0.7),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
                                     _buildDot(colorScheme),
-                                    const SizedBox(width: 8),
                                     Icon(
                                         media.mediaType == ItemType.manga
                                             ? Iconsax.book
                                             : Icons.play_circle_rounded,
                                         size: 12,
                                         color: colorScheme.primary),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        media.totalEpisodes,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color:
-                                              colorScheme.onSurface.opaque(0.5),
-                                        ),
+                                    Text(
+                                      media.totalEpisodes,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color:
+                                            colorScheme.onSurface.opaque(0.5),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
                                     _buildDot(colorScheme),
-                                    const SizedBox(width: 8),
                                     Icon(Icons.info_rounded,
                                         size: 12, color: colorScheme.primary),
-                                    const SizedBox(width: 4),
                                     GestureDetector(
                                       onTap: onShowDescription,
                                       child: Container(
