@@ -376,7 +376,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     return DeviceOrientation.landscapeLeft;
   }
-
+  
   void toggleOrientation() {
     if (isLeftLandscaped) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight]);
