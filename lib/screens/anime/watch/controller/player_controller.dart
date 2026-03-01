@@ -1307,7 +1307,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       _trackOnline(_shouldMarkAsCompleted);
     }
     isEpisodePaneOpened.value = false;
-    fetchEpisode(episode, savedPosition: currentPosition.value);
+    resetListeners();
+    fetchEpisode(episode);
     onUserInteraction();
   }
 
