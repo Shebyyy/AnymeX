@@ -29,7 +29,7 @@ class ReusableCarousel extends StatefulWidget {
   final bool isLoading;
   final Source? source;
   final CardStyle? cardStyle;
-  final Function(Media)? onItemTap; // Add this
+  final Function(Media)? onItemTap;
 
   const ReusableCarousel({
     super.key,
@@ -40,7 +40,7 @@ class ReusableCarousel extends StatefulWidget {
     this.isLoading = false,
     this.source,
     this.cardStyle,
-    this.onItemTap, // Add this
+    this.onItemTap,
   });
 
   @override
@@ -179,7 +179,6 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
     final ItemType mediaType = isMediaManga ? ItemType.manga : ItemType.anime;
     final media = Media.fromCarouselData(itemData, mediaType);
 
-    // Use the new onItemTap method
     _onItemTap(media);
   }
 
@@ -204,7 +203,6 @@ class _ReusableCarouselState extends State<ReusableCarousel> {
       ));
     }
 
-    // Set active source if available
     if (widget.source != null) {
       controller.setActiveSource(widget.source!);
     }
