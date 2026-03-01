@@ -17,7 +17,7 @@ class NovelContentWidget extends StatelessWidget {
     required this.controller,
   });
 
-  void _handleSelection(BuildContext context, SelectionChangedEvent? selection) {
+  void _handleSelection(SelectionChangedEvent? selection) {
     if (selection != null) {
       final selectedText = selection.plainText;
       if (selectedText.isNotEmpty && selectedText.length < 50) {
@@ -136,7 +136,7 @@ class NovelContentWidget extends StatelessWidget {
         return false;
       },
       child: SelectionArea(
-        onSelectionChanged: (selection) => _handleSelection(context, selection),
+        onSelectionChanged: _handleSelection,
         child: CustomScrollView(
           controller: controller.scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
