@@ -66,6 +66,8 @@ Media createMediaFromExtension(DMedia data, {ItemType? overrideType}) {
            (data.isManga == true ? ItemType.manga : 
             data.isNovel == true ? ItemType.novel : 
             ItemType.anime),
+    serviceType: ServicesType.extensions,
+    sourceId: data.sourceId ?? '',
   );
 }
 
