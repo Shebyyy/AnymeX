@@ -46,11 +46,12 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
       return;
     }
 
+    _scrollDelta += delta.dy;
     if (delta.dx != 0) {
       _scrollDelta -= delta.dx;
     }
 
-    if (_scrollDelta.abs() > 50) {
+    if (_scrollDelta.abs() > 15) {
       if (_scrollDelta > 0) {
         controller.nextPage();
       } else {
@@ -77,49 +78,40 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
 
               Stack(
                 children: [
-                  ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(
-                      dragDevices: {
-                        PointerDeviceKind.touch,
-                        PointerDeviceKind.mouse,
-                        PointerDeviceKind.trackpad,
+                  CarouselSlider.builder(
+                    itemCount: newData.length,
+                    itemBuilder: (context, index, realIndex) {
+                      final item = newData[index];
+                      final isActive = index == activeIndex;
+                      return _CarouselCard(
+                        media: item,
+                        isActive: isActive,
+                        carouselType: widget.carouselType,
+                        onTap: () => navigateToDetailsPage(item),
+                        onShowDescription: () =>
+                            _showDescriptionSheet(context, item),
+                      );
+                    },
+                    options: CarouselOptions(
+                      height: 400,
+                      viewportFraction: 0.65,
+                      enlargeCenterPage: true,
+                      enlargeFactor: 0.2,
+                      initialPage: 0,
+                      enableInfiniteScroll: true,
+                      autoPlay: !kDebugMode,
+                      autoPlayInterval: const Duration(seconds: 6),
+                      autoPlayAnimationDuration:
+                          const Duration(milliseconds: 800),
+                      autoPlayCurve: Curves.fastOutSlowIn,
+                      scrollDirection: Axis.horizontal,
+                      onPageChanged: (index, reason) {
+                        setState(() {
+                          activeIndex = index;
+                        });
                       },
                     ),
-                    child: CarouselSlider.builder(
-                      itemCount: newData.length,
-                      itemBuilder: (context, index, realIndex) {
-                        final item = newData[index];
-                        final isActive = index == activeIndex;
-                        return _CarouselCard(
-                          media: item,
-                          isActive: isActive,
-                          carouselType: widget.carouselType,
-                          onTap: () => navigateToDetailsPage(item),
-                          onShowDescription: () =>
-                              _showDescriptionSheet(context, item),
-                        );
-                      },
-                      options: CarouselOptions(
-                        height: 400,
-                        viewportFraction: 0.65,
-                        enlargeCenterPage: true,
-                        enlargeFactor: 0.2,
-                        initialPage: 0,
-                        enableInfiniteScroll: true,
-                        autoPlay: !kDebugMode,
-                        autoPlayInterval: const Duration(seconds: 6),
-                        autoPlayAnimationDuration:
-                            const Duration(milliseconds: 800),
-                        autoPlayCurve: Curves.fastOutSlowIn,
-                        scrollDirection: Axis.horizontal,
-                        onPageChanged: (index, reason) {
-                          setState(() {
-                            activeIndex = index;
-                          });
-                        },
-                      ),
-                      carouselController: controller,
-                    ),
+                    carouselController: controller,
                   ),
                   Positioned.fill(
                     child: Listener(
@@ -130,6 +122,7 @@ class _BigCarouselV2State extends State<BigCarouselV2> {
                         }
                       },
                       onPointerPanZoomUpdate: (event) {
+                       
                         _handleScroll(event.panDelta);
                       },
                       child: Container(color: Colors.transparent),
@@ -388,13 +381,11 @@ class _CarouselCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                Row(
                                   children: [
                                     Icon(Iconsax.star5,
                                         size: 12, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
                                     Text(
                                       media.rating.toString(),
                                       style: TextStyle(
@@ -404,13 +395,16 @@ class _CarouselCard extends StatelessWidget {
                                             colorScheme.onSurface.opaque(0.7),
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
                                     _buildDot(colorScheme),
+                                    const SizedBox(width: 8),
                                     Icon(
                                         media.mediaType == ItemType.manga
                                             ? Iconsax.book
                                             : Icons.play_circle_rounded,
                                         size: 12,
                                         color: colorScheme.primary),
+                                    const SizedBox(width: 4),
                                     Text(
                                       media.totalEpisodes,
                                       maxLines: 1,
@@ -421,9 +415,12 @@ class _CarouselCard extends StatelessWidget {
                                             colorScheme.onSurface.opaque(0.5),
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
                                     _buildDot(colorScheme),
+                                    const SizedBox(width: 8),
                                     Icon(Icons.info_rounded,
                                         size: 12, color: colorScheme.primary),
+                                    const SizedBox(width: 4),
                                     GestureDetector(
                                       onTap: onShowDescription,
                                       child: Container(

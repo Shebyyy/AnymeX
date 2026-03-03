@@ -344,17 +344,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> _initOrientations() async {
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  if (!Platform.isMacOS) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     ever(isFullScreen,
         (isFullScreen) => AnymexTitleBar.setFullScreen(isFullScreen));
-  }
 
-  if (Platform.isAndroid || Platform.isIOS) {
     final orientation = await _getClosestLandscapeOrientation();
+
     SystemChrome.setPreferredOrientations([orientation]);
   }
-}
 
   Future<DeviceOrientation> _getClosestLandscapeOrientation() async {
     try {
@@ -364,9 +361,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       const double threshold = 0.3;
 
       if (event.x > threshold) {
-        return DeviceOrientation.landscapeRight;
-      } else if (event.x < -threshold) {
         return DeviceOrientation.landscapeLeft;
+      } else if (event.x < -threshold) {
+        return DeviceOrientation.landscapeRight;
       }
 
       if (event.y.abs() < 0.5) {
@@ -379,7 +376,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     return DeviceOrientation.landscapeLeft;
   }
-  
+
   void toggleOrientation() {
     if (isLeftLandscaped) {
       SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeRight]);
@@ -1307,8 +1304,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       _trackOnline(_shouldMarkAsCompleted);
     }
     isEpisodePaneOpened.value = false;
-    resetListeners();
-    fetchEpisode(episode);
+    fetchEpisode(episode, savedPosition: currentPosition.value);
     onUserInteraction();
   }
 
