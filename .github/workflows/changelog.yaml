@@ -334,70 +334,78 @@ jobs:
 
           echo "all_jobs_success=$ALL_SUCCESS" >> $GITHUB_OUTPUT
 
-      - name: Checkout Code
+      - name: Checkout Beta Repo
         uses: actions/checkout@v4
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         with:
           fetch-depth: 0
 
-      - name: Fetch Tags
-        id: fetch_tags
+      - name: Clone Main Repository
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: |
-          git fetch --tags
-          TAGS=$(git tag --sort=-creatordate | grep -E '\-beta$' | tr '\n' ' ')
-          echo "All beta tags: $TAGS"
-          echo "tags=$TAGS" >> $GITHUB_ENV
+          echo "════════════════════════════════════════════"
+          echo "  Cloning Main Repository for Commits"
+          echo "════════════════════════════════════════════"
+          git clone https://github.com/RyanYuuki/AnymeX.git main-repo
+          echo "✅ Cloned RyanYuuki/AnymeX to main-repo/"
 
-      - name: Determine Tags for Comparison
-        id: determine_tags
+      - name: Get Last Beta Commit SHA
+        id: get_last_commit
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -n "${{ inputs.current_tag }}" ]; then
-            CURRENT_TAG="${{ inputs.current_tag }}"
+          echo "Fetching LAST_BETA_COMMIT variable..."
+          
+          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/variables/LAST_BETA_COMMIT")
+          
+          LAST_COMMIT=$(echo "$RESPONSE" | jq -r '.value // empty')
+          
+          if [ -z "$LAST_COMMIT" ] || [ "$LAST_COMMIT" = "null" ]; then
+            echo "⚠️ LAST_BETA_COMMIT not found, will use last 10 commits"
+            echo "last_commit=" >> $GITHUB_OUTPUT
+            echo "is_first_run=true" >> $GITHUB_OUTPUT
           else
-            CURRENT_TAG=$(git tag --sort=-creatordate | grep -E '\-beta$' | head -n 1)
-          fi
-          echo "Current beta tag: $CURRENT_TAG"
-          echo "current_tag=$CURRENT_TAG" >> $GITHUB_ENV
-
-          ALL_TAGS=(${{ env.tags }})
-          PREV_TAG=""
-          SECOND_PREV_TAG=""
-
-          for TAG in "${ALL_TAGS[@]}"; do
-            if [ "$TAG" != "$CURRENT_TAG" ]; then
-              if [ -z "$PREV_TAG" ]; then
-                PREV_TAG="$TAG"
-              elif [ -z "$SECOND_PREV_TAG" ]; then
-                SECOND_PREV_TAG="$TAG"
-                break
-              fi
-            fi
-          done
-
-          if [ -n "${{ inputs.previous_tag }}" ]; then
-            PREV_TAG="${{ inputs.previous_tag }}"
-          elif [ "$PREV_TAG" == "$CURRENT_TAG" ] || [ -z "$PREV_TAG" ]; then
-            PREV_TAG="$SECOND_PREV_TAG"
+            echo "✅ Found LAST_BETA_COMMIT: $LAST_COMMIT"
+            echo "last_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
+            echo "is_first_run=false" >> $GITHUB_OUTPUT
           fi
 
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
-          fi
-
-          echo "Previous beta tag: $PREV_TAG"
-          echo "prev_tag=$PREV_TAG" >> $GITHUB_ENV
-
-      - name: Debug Commit Log
+      - name: Get Current Latest Commit SHA
+        id: get_current_commit
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
-        run: git log ${{ env.prev_tag }}..${{ env.current_tag }} --pretty=format:'%h %s'
+        run: |
+          cd main-repo
+          CURRENT_SHA=$(git rev-parse HEAD)
+          echo "Current latest commit: $CURRENT_SHA"
+          echo "current_commit=$CURRENT_SHA" >> $GITHUB_OUTPUT
 
-      - name: Get Commit Messages Between Tags
+      - name: Get Commits Since Last Build
         id: get_commits
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: |
-          git log ${{ env.prev_tag }}..${{ env.current_tag }} --pretty=format:'%h|||%s' > commits.tmp
+          cd main-repo
+          
+          if [ "${{ steps.get_last_commit.outputs.is_first_run }}" = "true" ]; then
+            echo "First run - getting last 10 commits"
+            git log -10 --pretty=format:'%h|||%s' > commits.tmp
+          else
+            LAST_COMMIT="${{ steps.get_last_commit.outputs.last_commit }}"
+            echo "Getting commits after $LAST_COMMIT"
+            
+            # Check if the commit exists in the repo
+            if git cat-file -e "$LAST_COMMIT" 2>/dev/null; then
+              git log $LAST_COMMIT..HEAD --pretty=format:'%h|||%s' > commits.tmp
+            else
+              echo "⚠️ Last commit $LAST_COMMIT not found, using last 10 commits"
+              git log -10 --pretty=format:'%h|||%s' > commits.tmp
+            fi
+          fi
+          
+          echo "Commits found:"
+          cat commits.tmp
           echo "commits_file=commits.tmp" >> $GITHUB_OUTPUT
 
       - name: Categorize Commits
@@ -405,20 +413,20 @@ jobs:
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
         run: |
           echo "Categorizing commits..."
           FEATURES=""; BUG_FIXES=""; REFACTORS=""; STYLE_CHANGES=""; PERFORMANCE=""; CHORES=""
-          REPO_URL="https://github.com/${{ github.repository }}"
+          REPO_URL="https://github.com/RyanYuuki/AnymeX"
+          MAIN_REPO="RyanYuuki/AnymeX"
 
           get_author_username() {
             local commit_sha="$1"
-            local api_url="https://api.github.com/repos/${REPO}/commits/${commit_sha}"
+            local api_url="https://api.github.com/repos/${MAIN_REPO}/commits/${commit_sha}"
             local response=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" "${api_url}")
             echo "$response" | jq -r '.author.login // "ghost"'
           }
 
-          while read -r HASH MESSAGE; do
+          while IFS='|||' read -r HASH MESSAGE; do
             [ -z "$HASH" ] && continue
 
             AUTHOR_USERNAME=$(get_author_username "$HASH")
@@ -443,7 +451,7 @@ jobs:
               DESCR=$(echo "$MESSAGE" | sed -E 's/^(chore|docs|build|ci): //')
               CHORES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
             fi
-          done < <(git log ${{ env.prev_tag }}..${{ env.current_tag }} --pretty=format:'%h %s')
+          done < main-repo/commits.tmp
 
           {
             echo "### 🆕 Beta Changelog"
@@ -458,13 +466,46 @@ jobs:
             [ -n "$CHORES" ] && echo -e "### 🧹 Chores & Documentation\n$CHORES\n"
           } > CHANGELOG-BETA.md
 
-          CURRENT_TAG_SAFE=$(echo "${{ env.current_tag }}" | sed 's/[^a-zA-Z0-9.-]//g')
-          echo "![Total Downloads](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Beta Release](https://img.shields.io/github/downloads/RyanYuuki/AnymeX/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=BETA%20RELEASE&labelColor=black&color=white)" >> CHANGELOG-BETA.md
+          CURRENT_TAG_SAFE=$(echo "${{ needs.check-tag.outputs.current_tag }}" | sed 's/[^a-zA-Z0-9.-]//g')
+          echo "![Total Downloads](https://img.shields.io/github/downloads/Shebyyy/AnymeX/total?style=for-the-badge&label=TOTAL%20DOWNLOADS&labelColor=black&color=white) ![Beta Release](https://img.shields.io/github/downloads/Shebyyy/AnymeX/${CURRENT_TAG_SAFE}/total?style=for-the-badge&label=BETA%20RELEASE&labelColor=black&color=white)" >> CHANGELOG-BETA.md
         shell: /usr/bin/bash -e {0}
 
       - name: Debug CHANGELOG-BETA.md
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: cat CHANGELOG-BETA.md
+
+      - name: Save Current Commit SHA to Variable
+        if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT_SHA="${{ steps.get_current_commit.outputs.current_commit }}"
+          echo "Saving LAST_BETA_COMMIT=$CURRENT_SHA"
+          
+          # Try to update existing variable
+          UPDATE_RESPONSE=$(curl -s -X PATCH \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/variables/LAST_BETA_COMMIT" \
+            -d "{\"value\": \"$CURRENT_SHA\"}")
+          
+          # Check if variable doesn't exist (404)
+          if echo "$UPDATE_RESPONSE" | grep -q "Not Found"; then
+            echo "Variable doesn't exist, creating new one..."
+            CREATE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+              -d "{\"name\": \"LAST_BETA_COMMIT\", \"value\": \"$CURRENT_SHA\"}")
+            
+            if echo "$CREATE_RESPONSE" | grep -q "created"; then
+              echo "✅ Created LAST_BETA_COMMIT variable"
+            else
+              echo "⚠️ Failed to create variable: $CREATE_RESPONSE"
+            fi
+          else
+            echo "✅ Updated LAST_BETA_COMMIT variable"
+          fi
 
       - name: Create or Update Beta Release
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
@@ -472,5 +513,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           bodyFile: CHANGELOG-BETA.md
-          tag: ${{ env.current_tag }}
+          tag: ${{ needs.check-tag.outputs.current_tag }}
           allowUpdates: true
