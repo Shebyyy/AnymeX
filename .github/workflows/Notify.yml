@@ -281,17 +281,41 @@ jobs:
           fi
 
           # Combine categories into final output
+          # Note: Telegram HTML parser fails on multiline blockquotes, so we use <br> for line breaks
           {
               cat header.txt
               echo ""
               # Add beta warning right after header if it exists
-              [ -f beta_warning_clean.txt ] && echo "<blockquote>$(cat beta_warning_clean.txt)</blockquote>" && echo ""
-              [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ] && echo -n "$(cat TFeaturesT.txt) <blockquote>$(cat feat_clean.txt)</blockquote> "
-              [ -f TFixesT.txt ] && [ -f fixes_clean.txt ] && echo -n "$(cat TFixesT.txt) <blockquote>$(cat fixes_clean.txt)</blockquote> "
-              [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ] && echo -n "$(cat TRefactorsT.txt) <blockquote>$(cat refactors_clean.txt)</blockquote> "
-              [ -f TStyleT.txt ] && [ -f style_clean.txt ] && echo -n "$(cat TStyleT.txt) <blockquote>$(cat style_clean.txt)</blockquote> "
-              [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ] && echo -n "$(cat TPerformanceT.txt) <blockquote>$(cat perf_clean.txt)</blockquote> "
-              [ -f TChoresT.txt ] && [ -f chores_clean.txt ] && echo -n "$(cat TChoresT.txt) <blockquote>$(cat chores_clean.txt)</blockquote> "
+              if [ -f beta_warning_clean.txt ]; then
+                BETA_WARN=$(cat beta_warning_clean.txt | tr '\n' ' ')
+                echo "<blockquote>$BETA_WARN</blockquote>"
+                echo ""
+              fi
+              # Each section: convert newlines to <br> inside blockquote for valid HTML
+              if [ -f TFeaturesT.txt ] && [ -f feat_clean.txt ]; then
+                CONTENT=$(cat feat_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TFeaturesT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
+              if [ -f TFixesT.txt ] && [ -f fixes_clean.txt ]; then
+                CONTENT=$(cat fixes_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TFixesT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
+              if [ -f TRefactorsT.txt ] && [ -f refactors_clean.txt ]; then
+                CONTENT=$(cat refactors_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TRefactorsT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
+              if [ -f TStyleT.txt ] && [ -f style_clean.txt ]; then
+                CONTENT=$(cat style_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TStyleT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
+              if [ -f TPerformanceT.txt ] && [ -f perf_clean.txt ]; then
+                CONTENT=$(cat perf_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TPerformanceT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
+              if [ -f TChoresT.txt ] && [ -f chores_clean.txt ]; then
+                CONTENT=$(cat chores_clean.txt | tr '\n' ' ' | sed 's/● /<br>● /g' | sed 's/^<br>//')
+                echo "$(cat TChoresT.txt) <blockquote>$CONTENT</blockquote>"
+              fi
               echo ""
               echo "❓<a href='https://github.com/${{ github.repository }}/blob/main/INSTALLATION.md'>Don't know which version to download? Click here!</a>"
               echo ""
