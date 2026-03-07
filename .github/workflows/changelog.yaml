@@ -15,6 +15,12 @@ on:
       current_tag:
         description: "Current tag to generate changelog for (optional, defaults to latest tag)"
         required: false
+      from_commit:
+        description: "Commit SHA to get changes AFTER (start point)"
+        required: false
+      to_commit:
+        description: "Commit SHA to get changes BEFORE (end point, defaults to HEAD)"
+        required: false
 
 permissions:
   contents: write
@@ -353,7 +359,12 @@ jobs:
         id: get_last_commit
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: |
-          if [ -f ".last-beta-commit" ]; then
+          # Check if manual input provided
+          if [ -n "${{ inputs.from_commit }}" ]; then
+            echo "✅ Using manual input from_commit: ${{ inputs.from_commit }}"
+            echo "last_commit=${{ inputs.from_commit }}" >> $GITHUB_OUTPUT
+            echo "is_first_run=false" >> $GITHUB_OUTPUT
+          elif [ -f ".last-beta-commit" ]; then
             LAST_COMMIT=$(cat .last-beta-commit)
             echo "✅ Found .last-beta-commit: $LAST_COMMIT"
             echo "last_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
@@ -369,8 +380,16 @@ jobs:
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: |
           cd main-repo
-          CURRENT_SHA=$(git rev-parse HEAD)
-          echo "Current latest commit: $CURRENT_SHA"
+          
+          # Use to_commit if provided, otherwise HEAD
+          if [ -n "${{ inputs.to_commit }}" ]; then
+            CURRENT_SHA="${{ inputs.to_commit }}"
+            echo "Using to_commit as current: $CURRENT_SHA"
+          else
+            CURRENT_SHA=$(git rev-parse HEAD)
+            echo "Using HEAD as current: $CURRENT_SHA"
+          fi
+          
           echo "current_commit=$CURRENT_SHA" >> $GITHUB_OUTPUT
 
       - name: Get Commits Since Last Build
@@ -379,19 +398,28 @@ jobs:
         run: |
           cd main-repo
           
+          # Determine end commit (to_commit or HEAD)
+          if [ -n "${{ inputs.to_commit }}" ]; then
+            END_COMMIT="${{ inputs.to_commit }}"
+            echo "Using to_commit: $END_COMMIT"
+          else
+            END_COMMIT="HEAD"
+            echo "Using HEAD as end commit"
+          fi
+          
           if [ "${{ steps.get_last_commit.outputs.is_first_run }}" = "true" ]; then
-            echo "First run - getting last 10 commits"
-            git log -10 --pretty=format:'%h|%s' > commits.tmp
+            echo "First run - getting last 20 commits up to $END_COMMIT"
+            git log -20 --pretty=format:'%h|%s' $END_COMMIT > commits.tmp
           else
             LAST_COMMIT="${{ steps.get_last_commit.outputs.last_commit }}"
-            echo "Getting commits after $LAST_COMMIT"
+            echo "Getting commits from $LAST_COMMIT to $END_COMMIT"
             
             # Check if the commit exists in the repo
             if git cat-file -e "$LAST_COMMIT" 2>/dev/null; then
-              git log $LAST_COMMIT..HEAD --pretty=format:'%h|%s' > commits.tmp
+              git log $LAST_COMMIT..$END_COMMIT --pretty=format:'%h|%s' > commits.tmp
             else
-              echo "⚠️ Last commit $LAST_COMMIT not found, using last 10 commits"
-              git log -10 --pretty=format:'%h|%s' > commits.tmp
+              echo "⚠️ Last commit $LAST_COMMIT not found, using last 20 commits up to $END_COMMIT"
+              git log -20 --pretty=format:'%h|%s' $END_COMMIT > commits.tmp
             fi
           fi
           
