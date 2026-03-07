@@ -524,7 +524,7 @@ jobs:
           
           git add .next-beta-commit .last-beta-commit
           git commit -m "Update beta commit tracking files for ${{ needs.check-tag.outputs.current_tag }}" || echo "No changes to commit"
-          git push origin HEAD:main
+          git push origin HEAD:beta
           
           echo ""
           echo "After update (for next run):"
