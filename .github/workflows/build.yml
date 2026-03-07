@@ -30,10 +30,69 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: beta-repo
+      
+      - name: Clone Main Repository
+        shell: bash
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  Cloning Main Repository"
+          echo "════════════════════════════════════════════"
+          git clone --depth 1 https://github.com/RyanYuuki/AnymeX.git main-repo
+          echo "✅ Cloned RyanYuuki/AnymeX to main-repo/"
+          ls -la main-repo/
+      
+      - name: Copy Beta Assets to Main Repo
+        shell: bash
+        run: |
+          echo "════════════════════════════════════════════"
+          echo "  Copying Beta Assets"
+          echo "════════════════════════════════════════════"
+          
+          # Android icons
+          echo "📱 Copying Android icons..."
+          cp -r beta-repo/logo/android/app/src/main/res/* main-repo/android/app/src/main/res/
+          echo "✅ Android icons copied"
+          
+          # iOS icons
+          echo "🍎 Copying iOS icons..."
+          cp -r beta-repo/logo/ios/Runner/Assets.xcassets/AppIcon.appiconset/* main-repo/ios/Runner/Assets.xcassets/AppIcon.appiconset/
+          echo "✅ iOS icons copied"
+          
+          # macOS icons
+          echo "🖥️ Copying macOS icons..."
+          cp -r beta-repo/logo/macos/Runner/Assets.xcassets/AppIcon.appiconset/* main-repo/macos/Runner/Assets.xcassets/AppIcon.appiconset/
+          echo "✅ macOS icons copied"
+          
+          # Windows icons
+          echo "🪟 Copying Windows icons..."
+          cp beta-repo/logo/windows/runner/resources/app_icon.ico main-repo/windows/runner/resources/
+          cp beta-repo/logo/anymex.ico main-repo/
+          echo "✅ Windows icons copied"
+          
+          # Linux icons (assets/images/logo.png)
+          echo "🐧 Copying Linux icons..."
+          mkdir -p main-repo/assets/images
+          cp beta-repo/assets/images/logo.png main-repo/assets/images/
+          cp beta-repo/assets/images/logo_transparent.png main-repo/assets/images/
+          echo "✅ Linux icons copied"
+          
+          # Copy rename script
+          echo "📜 Copying rename script..."
+          cp beta-repo/scripts/rename_app.sh main-repo/scripts/
+          chmod +x main-repo/scripts/rename_app.sh
+          echo "✅ Rename script copied"
+          
+          echo ""
+          echo "════════════════════════════════════════════"
+          echo "✅ All beta assets copied successfully"
+          echo "════════════════════════════════════════════"
       
       - name: Set Build Type Environment Variable
         shell: bash
         run: |
+          cd main-repo
           if [[ "${{ github.ref_name }}" == *"-beta" ]]; then
             echo "IS_BETA_BUILD=true" >> $GITHUB_ENV
             echo "This is a BETA build. Caching will be disabled."
@@ -56,8 +115,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            main-repo/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('main-repo/**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
       
@@ -76,11 +135,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
+          cd main-repo
           sed -i 's/\r$//' scripts/rename_app.sh
 
       - name: Auto rename for beta build
         shell: bash
         run: |
+          cd main-repo
           TAG="${GITHUB_REF_NAME}"
 
           echo "════════════════════════════════════════════"
@@ -166,6 +227,7 @@ jobs:
         if: matrix.platform == 'android' && contains(github.ref_name, '-beta')
         shell: bash
         run: |
+          cd main-repo
           echo "🔵 Beta build detected - Disabling Google Services"
           
           # Remove google-services plugin from app/build.gradle
@@ -193,6 +255,7 @@ jobs:
         if: contains(github.ref_name, '-beta')
         shell: bash
         run: |
+          cd main-repo
           echo "════════════════════════════════════════════"
           echo "  Verifying Beta Configuration"
           echo "════════════════════════════════════════════"
@@ -450,7 +513,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('main-repo/**/*.gradle*', 'main-repo/**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
       
@@ -468,12 +531,13 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
+          cd main-repo
           if [ ! -d "$HOME/cmake/cmake-3.18.1-Linux-x86_64" ]; then
             mkdir -p $HOME/cmake && cd $HOME/cmake
             wget -q https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.tar.gz
             tar -xzf cmake-3.18.1-Linux-x86_64.tar.gz
           fi
-          cd $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE/main-repo
           CMAKE_DIR="$HOME/cmake/cmake-3.18.1-Linux-x86_64"
           echo "cmake.dir=$CMAKE_DIR" >> android/local.properties
           mkdir -p android/app
@@ -551,6 +615,7 @@ jobs:
           GIT_CLIENT_SECRET: ${{ secrets.GIT_CLIENT_SECRET }}
           GIT_CALLBACK_SCHEME: ${{ secrets.GIT_CALLBACK_SCHEME }}
         run: |
+          cd main-repo
           cat > .env << EOF
           AL_CLIENT_ID=$AL_CLIENT_ID
           AL_CLIENT_SECRET=$AL_CLIENT_SECRET
@@ -567,11 +632,14 @@ jobs:
           
       - name: Clean Flutter for Beta Build
         if: env.IS_BETA_BUILD == 'true'
-        run: flutter clean
+        run: |
+          cd main-repo
+          flutter clean
       
       - name: Build Android
         if: matrix.platform == 'android'
         run: |
+          cd main-repo
           flutter pub get
           flutter build apk --split-per-abi
           flutter build apk --release
@@ -588,6 +656,7 @@ jobs:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
+          cd main-repo
           flutter pub get
           flutter build ios --release --no-codesign
           mkdir -p build/ios/iphoneos/Payload
@@ -613,6 +682,7 @@ jobs:
       - name: Build Linux
         if: matrix.platform == 'linux'
         run: |
+          cd main-repo
           flutter pub get
           flutter build linux --release
           rm -rf AppDir && mkdir -p AppDir/usr/{bin,share/icons/hicolor/256x256/apps}
@@ -691,6 +761,7 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
+          cd main-repo
           # Verify Inno Setup is accessible
           $isccCommand = Get-Command iscc -ErrorAction SilentlyContinue
           if ($isccCommand) {
@@ -737,6 +808,7 @@ jobs:
       - name: Build macOS
         if: matrix.platform == 'macos'
         run: |
+          cd main-repo
           flutter pub get
           flutter build macos --release
 
@@ -783,36 +855,36 @@ jobs:
         if: matrix.platform == 'android'
         with:
           name: android-all
-          path: build/app/outputs/flutter-apk/AnymeX-Android-*.apk
+          path: main-repo/build/app/outputs/flutter-apk/AnymeX-Android-*.apk
       
       - uses: actions/upload-artifact@v4
         if: matrix.platform == 'ios'
         with:
           name: ios
-          path: build/ios/iphoneos/*.ipa
+          path: main-repo/build/ios/iphoneos/*.ipa
       
       - uses: actions/upload-artifact@v4
         if: matrix.platform == 'linux'
         with:
           name: linux
           path: |
-            build/linux/x64/release/AnymeX-Linux.zip
-            build/linux/x64/release/AnymeX-Linux.AppImage
-            build/linux/x64/release/AnymeX-Linux.rpm
+            main-repo/build/linux/x64/release/AnymeX-Linux.zip
+            main-repo/build/linux/x64/release/AnymeX-Linux.AppImage
+            main-repo/build/linux/x64/release/AnymeX-Linux.rpm
       
       - uses: actions/upload-artifact@v4
         if: matrix.platform == 'windows'
         with:
           name: windows
           path: |
-            build/windows/x64/runner/Release/AnymeX-Windows.zip
-            build/windows/x64/installer/Release/AnymeX-x86_64-*-Installer.exe
+            main-repo/build/windows/x64/runner/Release/AnymeX-Windows.zip
+            main-repo/build/windows/x64/installer/Release/AnymeX-x86_64-*-Installer.exe
       
       - uses: actions/upload-artifact@v4
         if: matrix.platform == 'macos'
         with:
           name: macos
-          path: build/macos/Release/${{ env.APP_NAME }}.dmg
+          path: main-repo/build/macos/Release/${{ env.APP_NAME }}.dmg
 
   release:
     needs: build-all-platforms
