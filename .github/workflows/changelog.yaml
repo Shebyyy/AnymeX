@@ -349,28 +349,19 @@ jobs:
           git clone https://github.com/RyanYuuki/AnymeX.git main-repo
           echo "✅ Cloned RyanYuuki/AnymeX to main-repo/"
 
-      - name: Get Last Beta Commit SHA
+      - name: Read Last Beta Commit
         id: get_last_commit
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Fetching LAST_BETA_COMMIT variable..."
-          
-          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/variables/LAST_BETA_COMMIT")
-          
-          LAST_COMMIT=$(echo "$RESPONSE" | jq -r '.value // empty')
-          
-          if [ -z "$LAST_COMMIT" ] || [ "$LAST_COMMIT" = "null" ]; then
-            echo "⚠️ LAST_BETA_COMMIT not found, will use last 10 commits"
-            echo "last_commit=" >> $GITHUB_OUTPUT
-            echo "is_first_run=true" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Found LAST_BETA_COMMIT: $LAST_COMMIT"
+          if [ -f ".last-beta-commit" ]; then
+            LAST_COMMIT=$(cat .last-beta-commit)
+            echo "✅ Found .last-beta-commit: $LAST_COMMIT"
             echo "last_commit=$LAST_COMMIT" >> $GITHUB_OUTPUT
             echo "is_first_run=false" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ .last-beta-commit not found, will use last 10 commits"
+            echo "last_commit=" >> $GITHUB_OUTPUT
+            echo "is_first_run=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Get Current Latest Commit SHA
@@ -390,23 +381,23 @@ jobs:
           
           if [ "${{ steps.get_last_commit.outputs.is_first_run }}" = "true" ]; then
             echo "First run - getting last 10 commits"
-            git log -10 --pretty=format:'%h|||%s' > commits.tmp
+            git log -10 --pretty=format:'%h|%s' > commits.tmp
           else
             LAST_COMMIT="${{ steps.get_last_commit.outputs.last_commit }}"
             echo "Getting commits after $LAST_COMMIT"
             
             # Check if the commit exists in the repo
             if git cat-file -e "$LAST_COMMIT" 2>/dev/null; then
-              git log $LAST_COMMIT..HEAD --pretty=format:'%h|||%s' > commits.tmp
+              git log $LAST_COMMIT..HEAD --pretty=format:'%h|%s' > commits.tmp
             else
               echo "⚠️ Last commit $LAST_COMMIT not found, using last 10 commits"
-              git log -10 --pretty=format:'%h|||%s' > commits.tmp
+              git log -10 --pretty=format:'%h|%s' > commits.tmp
             fi
           fi
           
           echo "Commits found:"
           cat commits.tmp
-          echo "commits_file=commits.tmp" >> $GITHUB_OUTPUT
+          echo ""
 
       - name: Categorize Commits
         id: categorize
@@ -426,29 +417,55 @@ jobs:
             echo "$response" | jq -r '.author.login // "ghost"'
           }
 
-          while IFS='|||' read -r HASH MESSAGE; do
+          while IFS='|' read -r HASH MESSAGE; do
+            [ -z "$HASH" ] && continue
+            # Remove leading/trailing whitespace
+            HASH=$(echo "$HASH" | xargs)
+            MESSAGE=$(echo "$MESSAGE" | xargs)
             [ -z "$HASH" ] && continue
 
             AUTHOR_USERNAME=$(get_author_username "$HASH")
             echo "Processing commit: $HASH - $MESSAGE by $AUTHOR_USERNAME"
 
-            if [[ "$MESSAGE" =~ ^feat: ]]; then
-              DESCR=$(echo "$MESSAGE" | sed 's/^feat: //')
+            # Case-insensitive matching using lowercase
+            MESSAGE_LOWER=$(echo "$MESSAGE" | tr '[:upper:]' '[:lower:]')
+
+            # Extract description by removing prefix (case-insensitive)
+            if [[ "$MESSAGE_LOWER" =~ ^feat: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Ff]eat:[[:space:]]*//')
               FEATURES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
-            elif [[ "$MESSAGE" =~ ^(fix|bug|improvement|patch): ]]; then
-              DESCR=$(echo "$MESSAGE" | sed -E 's/^(fix|bug|improvement|patch): //')
+            elif [[ "$MESSAGE_LOWER" =~ ^fix: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Ff]ix:[[:space:]]*//')
               BUG_FIXES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
-            elif [[ "$MESSAGE" =~ ^refactor: ]]; then
-              DESCR=$(echo "$MESSAGE" | sed 's/^refactor: //')
+            elif [[ "$MESSAGE_LOWER" =~ ^bug: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Bb]ug:[[:space:]]*//')
+              BUG_FIXES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^improvement: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Ii]mprovement:[[:space:]]*//')
+              BUG_FIXES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^patch: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Pp]atch:[[:space:]]*//')
+              BUG_FIXES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^refactor: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Rr]efactor:[[:space:]]*//')
               REFACTORS+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
-            elif [[ "$MESSAGE" =~ ^style: ]]; then
-              DESCR=$(echo "$MESSAGE" | sed 's/^style: //')
+            elif [[ "$MESSAGE_LOWER" =~ ^style: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Ss]tyle:[[:space:]]*//')
               STYLE_CHANGES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
-            elif [[ "$MESSAGE" =~ ^perf: ]]; then
-              DESCR=$(echo "$MESSAGE" | sed 's/^perf: //')
+            elif [[ "$MESSAGE_LOWER" =~ ^perf: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Pp]erf:[[:space:]]*//')
               PERFORMANCE+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
-            elif [[ "$MESSAGE" =~ ^(chore|docs|build|ci): ]]; then
-              DESCR=$(echo "$MESSAGE" | sed -E 's/^(chore|docs|build|ci): //')
+            elif [[ "$MESSAGE_LOWER" =~ ^chore: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Cc]hore:[[:space:]]*//')
+              CHORES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^docs: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Dd]ocs:[[:space:]]*//')
+              CHORES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^build: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Bb]uild:[[:space:]]*//')
+              CHORES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
+            elif [[ "$MESSAGE_LOWER" =~ ^ci: ]]; then
+              DESCR=$(echo "$MESSAGE" | sed -E 's/^[Cc]i:[[:space:]]*//')
               CHORES+="- [֍]($REPO_URL/commit/$HASH) $DESCR by @${AUTHOR_USERNAME}"$'\n'
             fi
           done < main-repo/commits.tmp
@@ -474,38 +491,44 @@ jobs:
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
         run: cat CHANGELOG-BETA.md
 
-      - name: Save Current Commit SHA to Variable
+      - name: Save Commit SHA Files
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CURRENT_SHA="${{ steps.get_current_commit.outputs.current_commit }}"
-          echo "Saving LAST_BETA_COMMIT=$CURRENT_SHA"
           
-          # Try to update existing variable
-          UPDATE_RESPONSE=$(curl -s -X PATCH \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/variables/LAST_BETA_COMMIT" \
-            -d "{\"value\": \"$CURRENT_SHA\"}")
+          # Save current HEAD to .next-beta-commit
+          echo "Saving current commit to .next-beta-commit"
+          echo "$CURRENT_SHA" > .next-beta-commit
           
-          # Check if variable doesn't exist (404)
-          if echo "$UPDATE_RESPONSE" | grep -q "Not Found"; then
-            echo "Variable doesn't exist, creating new one..."
-            CREATE_RESPONSE=$(curl -s -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
-              -d "{\"name\": \"LAST_BETA_COMMIT\", \"value\": \"$CURRENT_SHA\"}")
-            
-            if echo "$CREATE_RESPONSE" | grep -q "created"; then
-              echo "✅ Created LAST_BETA_COMMIT variable"
-            else
-              echo "⚠️ Failed to create variable: $CREATE_RESPONSE"
-            fi
-          else
-            echo "✅ Updated LAST_BETA_COMMIT variable"
+          # If .last-beta-commit doesn't exist, create it with current SHA for first run
+          if [ ! -f ".last-beta-commit" ]; then
+            echo "First run - setting .last-beta-commit to current SHA"
+            echo "$CURRENT_SHA" > .last-beta-commit
           fi
+          
+          echo ""
+          echo "Before update:"
+          echo "  .next-beta-commit: $(cat .next-beta-commit)"
+          echo "  .last-beta-commit: $(cat .last-beta-commit)"
+
+      - name: Commit and Push SHA Files
+        if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
+        run: |
+          CURRENT_SHA="${{ steps.get_current_commit.outputs.current_commit }}"
+          
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Update .last-beta-commit to current HEAD for next run
+          echo "$CURRENT_SHA" > .last-beta-commit
+          
+          git add .next-beta-commit .last-beta-commit
+          git commit -m "Update beta commit tracking files for ${{ needs.check-tag.outputs.current_tag }}" || echo "No changes to commit"
+          git push origin HEAD:main
+          
+          echo ""
+          echo "After update (for next run):"
+          echo "  .last-beta-commit: $(cat .last-beta-commit)"
 
       - name: Create or Update Beta Release
         if: ${{ steps.check_jobs.outputs.all_jobs_success == 'true' }}
