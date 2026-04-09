@@ -1,7 +1,10 @@
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/underrated_service.dart';
 import 'package:anymex/controllers/settings/settings.dart';
+import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Media/media.dart';
+import 'package:anymex/widgets/common/custom_tiles.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
 import 'package:anymex/models/models_convertor/carousel_mapper.dart';
 import 'package:anymex/screens/anime/details_page.dart';
 import 'package:anymex/screens/manga/details_page.dart';
@@ -44,6 +47,7 @@ class _CommunityRecommendationsPageState
   final Map<String, VoteResult?> _votes = {};
   final Map<String, String?> _userVotes = {};
   final Map<String, bool> _loading = {};
+  final RxBool _isGrid = true.obs;
 
   @override
   void initState() {
@@ -151,6 +155,84 @@ class _CommunityRecommendationsPageState
     }
   }
 
+  void _showSettingsSheet() {
+    final service = Get.find<UnderratedService>();
+    AnymexSheet.custom(
+      Obx(() {
+        final hideNsfw = service.hideNsfw.value;
+        final hideFiltered = service.hideFilteredStatuses.value;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomSwitchTile(
+                icon: Icons.no_adult_content_rounded,
+                title: 'Hide NSFW Recommendations',
+                description: 'Filter out adult/NSFW entries from community recommendations.',
+                switchValue: hideNsfw,
+                onChanged: (e) {
+                  General.hideNsfwRecommendations.set(e);
+                  service.hideNsfw.value = e;
+                },
+              ),
+              CustomSwitchTile(
+                icon: Icons.visibility_off_rounded,
+                title: 'Hide Items From My List',
+                description: 'Filter out recommendations already in your list based on selected statuses below.',
+                switchValue: hideFiltered,
+                onChanged: (e) {
+                  General.hideFilteredStatusRecommendations.set(e);
+                  service.hideFilteredStatuses.value = e;
+                },
+              ),
+              if (hideFiltered) ...[
+                const SizedBox(height: 4),
+                ..._buildStatusToggles(service),
+              ],
+            ],
+          ),
+        );
+      }),
+      context,
+      showDragHandle: true,
+    );
+  }
+
+  static const Map<String, ({String label, IconData icon})> _statusMeta = {
+    'COMPLETED': (label: 'Completed', icon: Icons.check_circle_rounded),
+    'CURRENT': (label: 'Watching / Reading', icon: Icons.play_circle_rounded),
+    'DROPPED': (label: 'Dropped', icon: Icons.cancel_rounded),
+    'PAUSED': (label: 'Paused / On Hold', icon: Icons.pause_circle_rounded),
+    'PLANNING': (label: 'Planning', icon: Icons.bookmark_rounded),
+  };
+
+  List<Widget> _buildStatusToggles(UnderratedService service) {
+    return _statusMeta.entries.map((entry) {
+      final status = entry.key;
+      final meta = entry.value;
+      return Obx(() {
+        final isActive = service.filteredStatuses.contains(status);
+        return CustomSwitchTile(
+          icon: meta.icon,
+          title: meta.label,
+          description: 'Hide "$status" titles from recommendations.',
+          switchValue: isActive,
+          onChanged: (e) {
+            final updated = service.filteredStatuses.toList();
+            if (e) {
+              if (!updated.contains(status)) updated.add(status);
+            } else {
+              updated.remove(status);
+            }
+            service.filteredStatuses.value = updated;
+            General.filteredStatusSet.set(updated);
+          },
+        );
+      });
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = getPlatform(context);
@@ -172,6 +254,16 @@ class _CommunityRecommendationsPageState
             color: context.colors.primary,
           ),
           actions: [
+            Obx(() => IconButton(
+                  onPressed: () => _isGrid.value = !_isGrid.value,
+                  icon: Icon(_isGrid.value
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded),
+                )),
+            IconButton(
+              onPressed: _showSettingsSheet,
+              icon: const Icon(Icons.tune_rounded),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: AnymexText(
@@ -184,32 +276,50 @@ class _CommunityRecommendationsPageState
         ),
         body: widget.data.isEmpty
             ? const Center(child: AnymexProgressIndicator())
-            : GridView.builder(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  mainAxisExtent: cardHeight +
-                      (UnderratedService.votingEnabled ? 38 : 0),
-                ),
-                itemCount: widget.data.length,
-                itemBuilder: (context, index) {
-                  final item = widget.data[index];
-                  final id = _mediaId(item);
-                  return _SeeAllCard(
-                    item: item,
-                    type: widget.type,
-                    cardStyle: cardStyle,
-                    isDesktop: isDesktop,
-                    votes: _votes[id],
-                    userVote: _userVotes[id],
-                    isLoading: _loading[id] == true,
-                    onVote: (dir) => _castVote(item, dir),
-                  );
-                },
-              ),
+            : Obx(() => _isGrid.value
+                ? GridView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      mainAxisExtent: cardHeight +
+                          (UnderratedService.votingEnabled ? 38 : 0),
+                    ),
+                    itemCount: widget.data.length,
+                    itemBuilder: (context, index) {
+                      final item = widget.data[index];
+                      final id = _mediaId(item);
+                      return _SeeAllCard(
+                        item: item,
+                        type: widget.type,
+                        cardStyle: cardStyle,
+                        isDesktop: isDesktop,
+                        votes: _votes[id],
+                        userVote: _userVotes[id],
+                        isLoading: _loading[id] == true,
+                        onVote: (dir) => _castVote(item, dir),
+                      );
+                    },
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 16),
+                    itemCount: widget.data.length,
+                    itemBuilder: (context, index) {
+                      final item = widget.data[index];
+                      final id = _mediaId(item);
+                      return _SeeAllListItem(
+                        item: item,
+                        type: widget.type,
+                        votes: _votes[id],
+                        userVote: _userVotes[id],
+                        isLoading: _loading[id] == true,
+                        onVote: (dir) => _castVote(item, dir),
+                      );
+                    },
+                  )),
       ),
     );
   }
@@ -328,6 +438,207 @@ class _SeeAllCard extends StatelessWidget {
             isLoading: isLoading,
             onVote: onVote,
           ),
+      ],
+    );
+  }
+}
+
+class _SeeAllListItem extends StatelessWidget {
+  final UnderratedMedia item;
+  final ItemType type;
+  final VoteResult? votes;
+  final String? userVote;
+  final bool isLoading;
+  final void Function(String direction) onVote;
+
+  const _SeeAllListItem({
+    required this.item,
+    required this.type,
+    required this.votes,
+    required this.userVote,
+    required this.isLoading,
+    required this.onVote,
+  });
+
+  String get _mediaType {
+    final id = item.media.id;
+    if (id.endsWith('*MOVIE')) return 'movie';
+    if (id.endsWith('*SERIES')) return 'show';
+    return type == ItemType.manga ? 'manga' : 'anime';
+  }
+
+  String get _mediaId {
+    final id = item.media.id;
+    if (id.contains('*')) return id.split('*').first;
+    return id;
+  }
+
+  void _navigateToDetails() {
+    final media = item.media;
+    final tag = 'community-list-${media.id}';
+    if (type == ItemType.manga) {
+      navigate(() => MangaDetailsPage(media: media, tag: tag));
+    } else {
+      navigate(() => AnimeDetailsPage(media: media, tag: tag));
+    }
+  }
+
+  void _showPeekPopup(BuildContext context) {
+    final serviceType = Get.find<ServiceHandler>().serviceType.value;
+    MediaPeekPopup.show(
+      context,
+      item.media,
+      type,
+      'community-list-${item.media.id}',
+      author: item.usernameFor(serviceType),
+      avatarUrl: item.avatarFor(serviceType),
+      reason: item.reason,
+      anilistUserId: item.anilistUserId,
+      malUserId: item.malUserId,
+      anilistUsername: item.anilistUsername,
+      malUsername: item.malUsername,
+      voteMediaType: _mediaType,
+      voteMediaId: _mediaId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final serviceType = Get.find<ServiceHandler>().serviceType.value;
+    final author = item.usernameFor(serviceType);
+    final avatarUrl = item.avatarFor(serviceType);
+
+    return GestureDetector(
+      onTap: _navigateToDetails,
+      onLongPress: () => _showPeekPopup(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
+              child: AnymeXImage(
+                imageUrl: item.media.poster,
+                width: 90,
+                height: 130,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AnymexText(
+                      text: item.displayTitle,
+                      variant: TextVariant.semiBold,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (item.reason != null && item.reason!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      AnymexText(
+                        text: item.reason!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        color: colors.onSurface.withOpacity(0.6),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (author != null && author.isNotEmpty) ...[
+                          _AuthorAvatar(
+                              avatarUrl: avatarUrl,
+                              fallbackLabel: author,
+                              size: 18),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: AnymexText(
+                              text: author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              color: colors.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                        ] else
+                          const Spacer(),
+                        if (UnderratedService.votingEnabled)
+                          _InlineVoteBar(
+                            votes: votes,
+                            userVote: userVote,
+                            isLoading: isLoading,
+                            onVote: onVote,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineVoteBar extends StatelessWidget {
+  final VoteResult? votes;
+  final String? userVote;
+  final bool isLoading;
+  final void Function(String direction) onVote;
+
+  const _InlineVoteBar({
+    required this.votes,
+    required this.userVote,
+    required this.isLoading,
+    required this.onVote,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    if (isLoading) {
+      return SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 1.5,
+          color: colors.primary,
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _VoteBtn(
+          icon: Icons.thumb_up_rounded,
+          count: votes?.upvotes ?? 0,
+          active: userVote == 'up',
+          isUpvote: true,
+          onTap: () => onVote('up'),
+        ),
+        const SizedBox(width: 6),
+        _VoteBtn(
+          icon: Icons.thumb_down_rounded,
+          count: votes?.downvotes ?? 0,
+          active: userVote == 'down',
+          isUpvote: false,
+          onTap: () => onVote('down'),
+        ),
       ],
     );
   }
