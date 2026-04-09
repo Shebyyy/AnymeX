@@ -140,12 +140,6 @@ class UnderratedService extends GetxController {
   RxString showsError = ''.obs;
   RxString moviesError = ''.obs;
 
-  static const Set<String> defaultFilteredStatuses = {
-    'COMPLETED',
-    'CURRENT',
-    'DROPPED',
-  };
-
   RxBool communityEnabled =
       RxBool(General.showCommunityRecommendations.get<bool>(true));
   RxBool hideNsfw =
@@ -153,9 +147,7 @@ class UnderratedService extends GetxController {
   RxBool hideFilteredStatuses =
       RxBool(General.hideFilteredStatusRecommendations.get<bool>(true));
   RxList<String> filteredStatuses = RxList<String>(
-    (General.filteredStatusSet.get<List<String>>() ??
-            defaultFilteredStatuses.toList())
-        .cast<String>(),
+    General.filteredStatusSet.get<List<String>>()?.cast<String>() ?? [],
   );
 
   bool get _communityEnabled => communityEnabled.value;
