@@ -126,6 +126,7 @@ void main(List<String> args) async {
     HttpOverrides.global = MyHttpoverrides();
 
     _initializeGetxController();
+    StorageManagerService().enforceImageCacheLimit();
     initDeepLinkListener();
     initializeDateFormatting();
     MediaKit.ensureInitialized();
@@ -167,7 +168,7 @@ void main(List<String> args) async {
   ));
 }
 
-void _initializeGetxController() async {
+void _initializeGetxController() {
   Get.put(Settings()); 
   Get.put(OfflineStorageController());
   Get.put(AnilistAuth());
@@ -185,7 +186,6 @@ void _initializeGetxController() async {
   Get.put(CommentPreloader());
   Get.put(GistSyncController(), permanent: true);
   Get.lazyPut(() => CacheController());
-  await StorageManagerService().enforceImageCacheLimit();
 }
 
 class MainApp extends StatefulWidget {
