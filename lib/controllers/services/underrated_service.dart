@@ -140,15 +140,14 @@ class UnderratedService extends GetxController {
   RxString showsError = ''.obs;
   RxString moviesError = ''.obs;
 
-  RxBool communityEnabled =
-      RxBool(General.showCommunityRecommendations.get<bool>(true));
-  RxBool hideNsfw =
-      RxBool(General.hideNsfwRecommendations.get<bool>(true));
-  RxBool hideFilteredStatuses =
-      RxBool(General.hideFilteredStatusRecommendations.get<bool>(true));
-  RxList<String> filteredStatuses = RxList<String>(
-    General.filteredStatusSet.get<List<String>>()?.cast<String>() ?? [],
-  );
+  // Initialized with safe defaults; actual persisted values loaded in onInit()
+  // after Isar is guaranteed ready. Calling General.xxx.get() here (as a field
+  // initializer) would hit Isar before Database.init() completes and causes a
+  // gray-screen crash on startup.
+  RxBool communityEnabled = RxBool(true);
+  RxBool hideNsfw = RxBool(true);
+  RxBool hideFilteredStatuses = RxBool(true);
+  RxList<String> filteredStatuses = RxList<String>([]);
 
   bool get _communityEnabled => communityEnabled.value;
   bool get _hideNsfw => hideNsfw.value;
@@ -156,6 +155,19 @@ class UnderratedService extends GetxController {
   Set<String> get _filteredStatusSet => filteredStatuses.toSet();
 
   ServicesType? _cachedServiceType;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Load persisted settings now that Isar is ready.
+    communityEnabled.value =
+        General.showCommunityRecommendations.get<bool>(true);
+    hideNsfw.value = General.hideNsfwRecommendations.get<bool>(true);
+    hideFilteredStatuses.value =
+        General.hideFilteredStatusRecommendations.get<bool>(true);
+    filteredStatuses.value =
+        General.filteredStatusSet.get<List<String>>()?.cast<String>() ?? [];
+  }
 
   UnderratedMedia? _processSimklEntry(
     SimklUnderratedEntry entry,
