@@ -366,9 +366,8 @@ class _FilterScreenState extends State<FilterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Get.put(ServiceHandler());
-    final isSimkl =
-        Get.find<ServiceHandler>().serviceType.value == ServicesType.simkl;
+    final authService = Get.find<ServiceHandler>();
+    final isSimkl = authService.serviceType.value == ServicesType.simkl;
     return Glow(
       child: PlatformBuilder(
         strictMode: false,
