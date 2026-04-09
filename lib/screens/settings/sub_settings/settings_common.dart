@@ -30,6 +30,8 @@ class _SettingsCommonState extends State<SettingsCommon> {
   late bool showCommunityRecs =
       General.showCommunityRecommendations.get<bool>(true);
   late bool hideNsfwRecs = General.hideNsfwRecommendations.get<bool>(true);
+  late bool hideFilteredStatusRecs =
+      General.hideFilteredStatusRecommendations.get<bool>(true);
   bool get isMal => serviceHandler.serviceType.value.isMal;
   late Map<String, bool> homePageCards;
 
@@ -153,6 +155,24 @@ class _SettingsCommonState extends State<SettingsCommon> {
                                 });
                               },
                             ),
+                            CustomSwitchTile(
+                              icon: Icons.visibility_off_rounded,
+                              title: 'Hide Items From My List',
+                              description:
+                                  'Filter out recommendations already in your list based on selected statuses below (works for AniList, MAL and Simkl).',
+                              switchValue: hideFilteredStatusRecs,
+                              onChanged: (e) {
+                                setState(() {
+                                  hideFilteredStatusRecs = e;
+                                  General.hideFilteredStatusRecommendations.set(e);
+                                  Get.find<UnderratedService>().hideFilteredStatuses.value = e;
+                                });
+                              },
+                            ),
+                            if (hideFilteredStatusRecs) ...[
+                              const SizedBox(height: 4),
+                              ..._buildStatusToggles(),
+                            ],
                           ],
                         ),
                       ),
@@ -185,6 +205,41 @@ class _SettingsCommonState extends State<SettingsCommon> {
         ),
       ),
     );
+  }
+
+  static const Map<String, ({String label, IconData icon})> _statusMeta = {
+    'COMPLETED': (label: 'Completed', icon: Icons.check_circle_rounded),
+    'CURRENT': (label: 'Watching / Reading', icon: Icons.play_circle_rounded),
+    'DROPPED': (label: 'Dropped', icon: Icons.cancel_rounded),
+    'PAUSED': (label: 'Paused / On Hold', icon: Icons.pause_circle_rounded),
+    'PLANNING': (label: 'Planning', icon: Icons.bookmark_rounded),
+  };
+
+  List<Widget> _buildStatusToggles() {
+    final service = Get.find<UnderratedService>();
+    return _statusMeta.entries.map((entry) {
+      final status = entry.key;
+      final meta = entry.value;
+      final isActive = service.filteredStatuses.contains(status);
+      return CustomSwitchTile(
+        icon: meta.icon,
+        title: meta.label,
+        description: 'Hide "$status" titles from recommendations.',
+        switchValue: isActive,
+        onChanged: (e) {
+          setState(() {
+            final updated = service.filteredStatuses.toList();
+            if (e) {
+              if (!updated.contains(status)) updated.add(status);
+            } else {
+              updated.remove(status);
+            }
+            service.filteredStatuses.value = updated;
+            General.filteredStatusSet.set(updated);
+          });
+        },
+      );
+    }).toList();
   }
 
   void _showHomePageCardsDialog() {

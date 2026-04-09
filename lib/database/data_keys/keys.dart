@@ -15,6 +15,8 @@ enum General {
   libraryGridAutoMigrated,
   showCommunityRecommendations,
   hideNsfwRecommendations,
+  hideFilteredStatusRecommendations,
+  filteredStatusSet,
 }
 
 enum ThemeKeys {

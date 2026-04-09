@@ -140,11 +140,28 @@ class UnderratedService extends GetxController {
   RxString showsError = ''.obs;
   RxString moviesError = ''.obs;
 
-  static const Set<String> _filteredStatuses = {
+  static const Set<String> defaultFilteredStatuses = {
     'COMPLETED',
     'CURRENT',
-    'DROPPED'
+    'DROPPED',
   };
+
+  RxBool communityEnabled =
+      RxBool(General.showCommunityRecommendations.get<bool>(true));
+  RxBool hideNsfw =
+      RxBool(General.hideNsfwRecommendations.get<bool>(true));
+  RxBool hideFilteredStatuses =
+      RxBool(General.hideFilteredStatusRecommendations.get<bool>(true));
+  RxList<String> filteredStatuses = RxList<String>(
+    (General.filteredStatusSet.get<List<String>>() ??
+            defaultFilteredStatuses.toList())
+        .cast<String>(),
+  );
+
+  bool get _communityEnabled => communityEnabled.value;
+  bool get _hideNsfw => hideNsfw.value;
+  bool get _hideFilteredStatuses => hideFilteredStatuses.value;
+  Set<String> get _filteredStatusSet => filteredStatuses.toSet();
 
   ServicesType? _cachedServiceType;
 
@@ -177,14 +194,6 @@ class UnderratedService extends GetxController {
     );
   }
 
-  RxBool communityEnabled =
-      RxBool(General.showCommunityRecommendations.get<bool>(true));
-  RxBool hideNsfw =
-      RxBool(General.hideNsfwRecommendations.get<bool>(true));
-
-  bool get _communityEnabled => communityEnabled.value;
-  bool get _hideNsfw => hideNsfw.value;
-
   List<UnderratedMedia> getFilteredShows() {
     if (!_communityEnabled || underratedShows.isEmpty) return [];
     try {
@@ -192,11 +201,13 @@ class UnderratedService extends GetxController {
       final simkl = serviceHandler.onlineService;
       final userList = simkl.mangaList;
 
-      final filteredIds = userList
-          .where((item) =>
-              _filteredStatuses.contains(item.watchingStatus?.toUpperCase()))
-          .map((item) => item.id)
-          .toSet();
+      final filteredIds = _hideFilteredStatuses
+          ? userList
+              .where((item) =>
+                  _filteredStatusSet.contains(item.watchingStatus?.toUpperCase()))
+              .map((item) => item.id)
+              .toSet()
+          : <String>{};
 
       return underratedShows
           .where((item) => !filteredIds.contains(item.media.id))
@@ -220,11 +231,13 @@ class UnderratedService extends GetxController {
       final simkl = serviceHandler.onlineService;
       final userList = simkl.animeList;
 
-      final filteredIds = userList
-          .where((item) =>
-              _filteredStatuses.contains(item.watchingStatus?.toUpperCase()))
-          .map((item) => item.id)
-          .toSet();
+      final filteredIds = _hideFilteredStatuses
+          ? userList
+              .where((item) =>
+                  _filteredStatusSet.contains(item.watchingStatus?.toUpperCase()))
+              .map((item) => item.id)
+              .toSet()
+          : <String>{};
 
       return underratedMovies
           .where((item) => !filteredIds.contains(item.media.id))
@@ -248,11 +261,13 @@ class UnderratedService extends GetxController {
       final onlineService = serviceHandler.onlineService;
       final userList = onlineService.animeList;
 
-      final filteredIds = userList
-          .where((item) =>
-              _filteredStatuses.contains(item.watchingStatus?.toUpperCase()))
-          .map((item) => item.id)
-          .toSet();
+      final filteredIds = _hideFilteredStatuses
+          ? userList
+              .where((item) =>
+                  _filteredStatusSet.contains(item.watchingStatus?.toUpperCase()))
+              .map((item) => item.id)
+              .toSet()
+          : <String>{};
 
       return underratedAnimes
           .where((item) => !filteredIds.contains(item.media.id))
@@ -276,11 +291,13 @@ class UnderratedService extends GetxController {
       final onlineService = serviceHandler.onlineService;
       final userList = onlineService.mangaList;
 
-      final filteredIds = userList
-          .where((item) =>
-              _filteredStatuses.contains(item.watchingStatus?.toUpperCase()))
-          .map((item) => item.id)
-          .toSet();
+      final filteredIds = _hideFilteredStatuses
+          ? userList
+              .where((item) =>
+                  _filteredStatusSet.contains(item.watchingStatus?.toUpperCase()))
+              .map((item) => item.id)
+              .toSet()
+          : <String>{};
 
       return underratedMangas
           .where((item) => !filteredIds.contains(item.media.id))
