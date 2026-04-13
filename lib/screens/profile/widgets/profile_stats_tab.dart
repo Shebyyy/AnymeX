@@ -848,7 +848,19 @@ class _ProfileStatsTabState extends State<ProfileStatsTab> {
   Future<void> _searchFor(String label,
       {bool isGenre = false, bool isTag = false}) async {
     final handler = Get.find<ServiceHandler>();
-    if (handler.serviceType.value != ServicesType.anilist) return;
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
+    if (isTag && isMal) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tag search is not available for MAL'),
+            duration: Duration(milliseconds: 1500),
+          ),
+        );
+      }
+      return;
+    }
 
     if (isTag) {
       navigate(() => SearchPage(
@@ -858,6 +870,21 @@ class _ProfileStatsTabState extends State<ProfileStatsTab> {
               'tags': [label]
             },
           ));
+      return;
+    }
+
+    if (isMal) {
+      if (_isAnime) {
+        navigate(() => AnimeList(
+              initialTab: 'ALL',
+              initialGenres: {label},
+            ));
+      } else {
+        navigate(() => AnilistMangaList(
+              initialTab: 'ALL',
+              initialGenres: {label},
+            ));
+      }
       return;
     }
 

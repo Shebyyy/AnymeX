@@ -89,15 +89,99 @@ class Profile {
   }
 
   factory Profile.fromKitsu(Map<String, dynamic> json) {
+    final jikanData = json['data'] as Map<String, dynamic>? ?? {};
+    final animeStats = jikanData['statistics']?['anime'] as Map<String, dynamic>?;
+    final mangaStats = jikanData['statistics']?['manga'] as Map<String, dynamic>?;
+
+    DateTime? createdAt;
+    final joinedAt = json['joined_at'] as String?;
+    if (joinedAt != null) {
+      try { createdAt = DateTime.parse(joinedAt); } catch (_) {}
+    }
+
+    ProfileFavourites? favourites;
+    final favAnime = jikanData['favorites']?['anime'] as List<dynamic>?;
+    final favManga = jikanData['favorites']?['manga'] as List<dynamic>?;
+    final favCharacters = jikanData['favorites']?['characters'] as List<dynamic>?;
+    final favPeople = jikanData['favorites']?['people'] as List<dynamic>?;
+
+    if (favAnime != null || favManga != null || favCharacters != null || favPeople != null) {
+      favourites = ProfileFavourites(
+        anime: (favAnime ?? []).map((e) {
+          final item = e as Map<String, dynamic>;
+          return FavouriteMedia(
+            id: (item['mal_id'] ?? item['url'])?.toString(),
+            title: item['name'] as String?,
+            cover: item['images']?['jpg']?['image_url'] as String? ??
+                item['images']?['webp']?['image_url'] as String?,
+            averageScore: (item['score'] as num?)?.toDouble(),
+          );
+        }).toList(),
+        manga: (favManga ?? []).map((e) {
+          final item = e as Map<String, dynamic>;
+          return FavouriteMedia(
+            id: (item['mal_id'] ?? item['url'])?.toString(),
+            title: item['name'] as String?,
+            cover: item['images']?['jpg']?['image_url'] as String? ??
+                item['images']?['webp']?['image_url'] as String?,
+            averageScore: (item['score'] as num?)?.toDouble(),
+          );
+        }).toList(),
+        characters: (favCharacters ?? []).map((e) {
+          final item = e as Map<String, dynamic>;
+          return FavouriteCharacter(
+            id: (item['mal_id'] ?? item['url'])?.toString(),
+            name: item['name'] as String?,
+            image: item['images']?['jpg']?['image_url'] as String? ??
+                item['images']?['webp']?['image_url'] as String?,
+          );
+        }).toList(),
+      );
+    }
+
+    final isSupporter = json['is_supporter'] as bool? ?? false;
+
+    AnimeStats? animeStatObj;
+    if (animeStats != null) {
+      animeStatObj = AnimeStats(
+        animeCount: animeStats['total_entries']?.toString(),
+        episodesWatched: animeStats['episodes_watched']?.toString(),
+        meanScore: animeStats['mean_score']?.toString(),
+        minutesWatched: ((animeStats['days_watched'] as num?)?.toDouble() ?? 0) != 0
+            ? ((animeStats['days_watched'] as num).toDouble() * 24 * 60).round().toString()
+            : null,
+      );
+    }
+
+    MangaStats? mangaStatObj;
+    if (mangaStats != null) {
+      mangaStatObj = MangaStats(
+        mangaCount: mangaStats['total_entries']?.toString(),
+        chaptersRead: mangaStats['chapters_read']?.toString(),
+        volumesRead: mangaStats['volumes_read']?.toString(),
+        meanScore: mangaStats['mean_score']?.toString(),
+      );
+    }
+
     return Profile(
-      id: json['data']?['mal_id']?.toString(),
-      name: json['data']?['username'],
+      id: (json['id'] ?? jikanData['mal_id'])?.toString(),
+      name: json['name'] ?? jikanData['username'],
+      userName: json['name'] ?? jikanData['username'],
       avatar: json['picture'] ??
-          json['data']?['images']?['jpg']?['image_url'] ??
-          json['data']?['images']?['webp']?['image_url'],
-      stats: ProfileStatistics.fromKitsu(json['data']?['statistics']),
-      followers: null,
+          jikanData['images']?['jpg']?['image_url'] ??
+          jikanData['images']?['webp']?['image_url'],
+      about: jikanData['about'],
+      stats: ProfileStatistics(
+        animeStats: animeStatObj,
+        mangaStats: mangaStatObj,
+      ),
+      followers: jikanData['friends'] != null
+          ? (jikanData['friends'] as List<dynamic>).length
+          : null,
       following: null,
+      favourites: favourites,
+      createdAt: createdAt != null ? createdAt.millisecondsSinceEpoch ~/ 1000 : null,
+      donatorBadge: isSupporter ? 'MAL Supporter' : 'MAL Member',
     );
   }
 }

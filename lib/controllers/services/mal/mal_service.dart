@@ -372,28 +372,270 @@ class MalService extends GetxController implements BaseService, OnlineService {
 
   Future<void> fetchUserAnimeList() async {
     final data = await fetchMAL(
-        'https://api.myanimelist.net/v2/users/@me/animelist?fields=num_episodes,mean,list_status&limit=1000&sort=list_updated_at&nsfw=1',
+        'https://api.myanimelist.net/v2/users/@me/animelist?fields=num_episodes,mean,list_status{status,score,num_episodes_watched,is_rewatching,start_date,finish_date,updated_at,priority,num_times_rewatched,rewatch_value,tags,comments},genres,media_type,start_season,studios,nsfw&limit=1000&sort=list_updated_at&nsfw=1',
         auth: false,
         useAuthHeader: true);
     animeList.value = (data['data'] as List<dynamic>)
         .map((e) => TrackedMedia.fromMAL(e))
         .toList();
+    _rawAnimeListData = (data['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     continueWatching.value = animeList
         .where((e) => e.watchingStatus?.toUpperCase().trim() == "CURRENT")
         .toList();
+    _computeAnimeStatsFromList();
   }
 
   Future<void> fetchUserMangaList() async {
     final data = await fetchMAL(
-        'https://api.myanimelist.net/v2/users/@me/mangalist?fields=num_chapters,mean,list_status&limit=1000&sort=list_updated_at&nsfw=1',
+        'https://api.myanimelist.net/v2/users/@me/mangalist?fields=num_chapters,num_volumes,mean,list_status{status,score,num_chapters_read,num_volumes_read,is_rereading,start_date,finish_date,updated_at,priority,num_times_reread,reread_value,tags,comments},genres,media_type,authors,serialization,nsfw&limit=1000&sort=list_updated_at&nsfw=1',
         auth: false,
         useAuthHeader: true);
     mangaList.value = (data['data'] as List<dynamic>)
         .map((e) => TrackedMedia.fromMAL(e))
         .toList();
+    _rawMangaListData = (data['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     continueReading.value = mangaList
         .where((e) => e.watchingStatus?.toUpperCase().trim() == "CURRENT")
         .toList();
+    _computeMangaStatsFromList();
+  }
+
+  List<Map<String, dynamic>> _rawAnimeListData = [];
+  List<Map<String, dynamic>> _rawMangaListData = [];
+
+  void _computeAnimeStatsFromList() {
+    if (_rawAnimeListData.isEmpty) return;
+    final current = profileData.value;
+
+    final scoreCounts = <int, int>{};
+    for (var i = 1; i <= 10; i++) scoreCounts[i] = 0;
+    int totalScore = 0;
+    int scoredCount = 0;
+
+    final genreCounts = <String, int>{};
+
+    final formatCounts = <String, int>{};
+
+    final statusCounts = <String, int>{
+      'watching': 0, 'completed': 0, 'on_hold': 0, 'dropped': 0, 'plan_to_watch': 0,
+    };
+
+    final activityMap = <String, int>{};
+
+    for (final entry in _rawAnimeListData) {
+      final node = entry['node'] as Map<String, dynamic>? ?? {};
+      final listStatus = node['my_list_status'] as Map<String, dynamic>? ?? {};
+
+      final score = (listStatus['score'] as num?)?.toInt() ?? 0;
+      if (score > 0) {
+        scoreCounts[score] = (scoreCounts[score] ?? 0) + 1;
+        totalScore += score;
+        scoredCount++;
+      }
+
+      final genres = node['genres'] as List<dynamic>? ?? [];
+      for (final g in genres) {
+        final name = (g as Map<String, dynamic>)['name'] as String? ?? 'Unknown';
+        genreCounts[name] = (genreCounts[name] ?? 0) + 1;
+      }
+
+      final mediaType = node['media_type'] as String?;
+      if (mediaType != null && mediaType.isNotEmpty) {
+        final label = _formatMediaType(mediaType);
+        formatCounts[label] = (formatCounts[label] ?? 0) + 1;
+      }
+
+      final status = (listStatus['status'] as String?) ?? '';
+      if (statusCounts.containsKey(status)) {
+        statusCounts[status] = statusCounts[status]! + 1;
+      }
+
+      final updatedAt = listStatus['updated_at'] as String?;
+      if (updatedAt != null && updatedAt.length >= 10) {
+        final dateKey = updatedAt.substring(0, 10);
+        activityMap[dateKey] = (activityMap[dateKey] ?? 0) + 1;
+      }
+    }
+
+    final scores = scoreCounts.entries.map((e) => ScoreStat(
+      score: e.key,
+      count: e.value,
+      meanScore: 0,
+      amount: 0,
+    )).toList();
+
+    final formats = formatCounts.entries.map((e) => TypeStat(
+      type: e.key,
+      count: e.value,
+      meanScore: 0,
+      amount: 0,
+    )).toList();
+
+    final statuses = statusCounts.entries.map((e) => TypeStat(
+      type: e.key,
+      count: e.value,
+      meanScore: 0,
+      amount: 0,
+    )).toList();
+
+    final genres = genreCounts.entries.map((e) => GenreStat(
+      genre: e.key,
+      count: e.value,
+      meanScore: 0,
+      amount: 0,
+    )).toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+
+    final activityHistory = activityMap.entries.map((e) {
+      try {
+        final date = DateTime.parse(e.key);
+        return ActivityHistory(
+          date: date.millisecondsSinceEpoch ~/ 1000,
+          amount: e.value,
+          level: e.value > 3 ? 3 : e.value > 1 ? 2 : 1,
+        );
+      } catch (_) {
+        return null;
+      }
+    }).whereType<ActivityHistory>().toList();
+
+    current.stats = ProfileStatistics(
+      animeStats: AnimeStats(
+        animeCount: current.stats?.animeStats?.animeCount ?? _rawAnimeListData.length.toString(),
+        episodesWatched: current.stats?.animeStats?.episodesWatched,
+        meanScore: scoredCount > 0 ? (totalScore / scoredCount).toStringAsFixed(2) : current.stats?.animeStats?.meanScore,
+        minutesWatched: current.stats?.animeStats?.minutesWatched,
+        scores: scores,
+        formats: formats,
+        statuses: statuses,
+        genres: genres,
+      ),
+      mangaStats: current.stats?.mangaStats,
+    );
+
+    if (activityHistory.isNotEmpty) {
+      current.activityHistory = activityHistory;
+    }
+
+    profileData.value = Profile(
+      id: current.id, name: current.name, userName: current.userName,
+      avatar: current.avatar, cover: current.cover, about: current.about,
+      aboutMarkdown: current.aboutMarkdown, stats: current.stats,
+      followers: current.followers, following: current.following,
+      tokenExpiry: current.tokenExpiry, favourites: current.favourites,
+      activityHistory: current.activityHistory, donatorTier: current.donatorTier,
+      donatorBadge: current.donatorBadge, isFollowing: current.isFollowing,
+      isFollower: current.isFollower, createdAt: current.createdAt,
+      splitCompletedAnime: current.splitCompletedAnime,
+      splitCompletedManga: current.splitCompletedManga,
+      animeSectionOrder: current.animeSectionOrder,
+      mangaSectionOrder: current.mangaSectionOrder,
+    );
+  }
+
+  void _computeMangaStatsFromList() {
+    if (_rawMangaListData.isEmpty) return;
+    final current = profileData.value;
+
+    final scoreCounts = <int, int>{};
+    for (var i = 1; i <= 10; i++) scoreCounts[i] = 0;
+    int totalScore = 0;
+    int scoredCount = 0;
+
+    final genreCounts = <String, int>{};
+
+    final formatCounts = <String, int>{};
+
+    final statusCounts = <String, int>{
+      'reading': 0, 'completed': 0, 'on_hold': 0, 'dropped': 0, 'plan_to_read': 0,
+    };
+
+    for (final entry in _rawMangaListData) {
+      final node = entry['node'] as Map<String, dynamic>? ?? {};
+      final listStatus = node['my_list_status'] as Map<String, dynamic>? ?? {};
+
+      final score = (listStatus['score'] as num?)?.toInt() ?? 0;
+      if (score > 0) {
+        scoreCounts[score] = (scoreCounts[score] ?? 0) + 1;
+        totalScore += score;
+        scoredCount++;
+      }
+
+      final genres = node['genres'] as List<dynamic>? ?? [];
+      for (final g in genres) {
+        final name = (g as Map<String, dynamic>)['name'] as String? ?? 'Unknown';
+        genreCounts[name] = (genreCounts[name] ?? 0) + 1;
+      }
+
+      final mediaType = node['media_type'] as String?;
+      if (mediaType != null && mediaType.isNotEmpty) {
+        final label = _formatMediaType(mediaType);
+        formatCounts[label] = (formatCounts[label] ?? 0) + 1;
+      }
+
+      final status = (listStatus['status'] as String?) ?? '';
+      if (statusCounts.containsKey(status)) {
+        statusCounts[status] = statusCounts[status]! + 1;
+      }
+    }
+
+    final scores = scoreCounts.entries.map((e) => ScoreStat(
+      score: e.key, count: e.value, meanScore: 0, amount: 0,
+    )).toList();
+
+    final formats = formatCounts.entries.map((e) => TypeStat(
+      type: e.key, count: e.value, meanScore: 0, amount: 0,
+    )).toList();
+
+    final statuses = statusCounts.entries.map((e) => TypeStat(
+      type: e.key, count: e.value, meanScore: 0, amount: 0,
+    )).toList();
+
+    final genres = genreCounts.entries.map((e) => GenreStat(
+      genre: e.key, count: e.value, meanScore: 0, amount: 0,
+    )).toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+
+    current.stats = ProfileStatistics(
+      animeStats: current.stats?.animeStats,
+      mangaStats: MangaStats(
+        mangaCount: current.stats?.mangaStats?.mangaCount ?? _rawMangaListData.length.toString(),
+        chaptersRead: current.stats?.mangaStats?.chaptersRead,
+        volumesRead: current.stats?.mangaStats?.volumesRead,
+        meanScore: scoredCount > 0 ? (totalScore / scoredCount).toStringAsFixed(2) : current.stats?.mangaStats?.meanScore,
+        scores: scores,
+        formats: formats,
+        statuses: statuses,
+        genres: genres,
+      ),
+    );
+
+    profileData.value = Profile(
+      id: current.id, name: current.name, userName: current.userName,
+      avatar: current.avatar, cover: current.cover, about: current.about,
+      aboutMarkdown: current.aboutMarkdown, stats: current.stats,
+      followers: current.followers, following: current.following,
+      tokenExpiry: current.tokenExpiry, favourites: current.favourites,
+      activityHistory: current.activityHistory, donatorTier: current.donatorTier,
+      donatorBadge: current.donatorBadge, isFollowing: current.isFollowing,
+      isFollower: current.isFollower, createdAt: current.createdAt,
+      splitCompletedAnime: current.splitCompletedAnime,
+      splitCompletedManga: current.splitCompletedManga,
+      animeSectionOrder: current.animeSectionOrder,
+      mangaSectionOrder: current.mangaSectionOrder,
+    );
+  }
+
+  String _formatMediaType(String type) {
+    const map = {
+      'tv': 'TV', 'ova': 'OVA', 'movie': 'Movie', 'special': 'Special',
+      'ona': 'ONA', 'music': 'Music', 'unknown': 'Unknown',
+      'manga': 'Manga', 'novel': 'Novel', 'one_shot': 'One Shot',
+      'manhwa': 'Manhwa', 'manhua': 'Manhua',
+    };
+    return map[type.toLowerCase()] ?? type;
   }
 
   Future<void> fetchUserInfo({String? token}) async {
@@ -402,7 +644,8 @@ class MalService extends GetxController implements BaseService, OnlineService {
         auth: true, useAuthHeader: true, token: tokenn);
     profileData.value = Profile.fromKitsu(data);
     isLoggedIn.value = true;
-    Future.wait([fetchUserAnimeList(), fetchUserMangaList()]);
+    await fetchUserAnimeList();
+    await fetchUserMangaList();
   }
 
   @override
@@ -822,9 +1065,7 @@ class MalService extends GetxController implements BaseService, OnlineService {
 
   @override
   Future<void> refresh() async {
-    Future.wait([
-      fetchUserAnimeList(),
-      fetchUserMangaList(),
-    ]);
+    await fetchUserAnimeList();
+    await fetchUserMangaList();
   }
 }

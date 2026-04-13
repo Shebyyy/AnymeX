@@ -270,8 +270,7 @@ class SettingsSheet extends StatelessWidget {
       child: Row(
         children: [
           GestureDetector(
-            onTap: serviceHandler.isLoggedIn.value &&
-                    serviceHandler.serviceType.value == ServicesType.anilist
+            onTap: serviceHandler.isLoggedIn.value
                 ? () {
                     Get.back();
                     navigate(() => const ProfilePage());
@@ -371,7 +370,7 @@ class SettingsSheet extends StatelessWidget {
   Widget _buildMenuSection(BuildContext context, ColorScheme theme) {
     final items = <_SheetMenuItem>[
       if (serviceHandler.isLoggedIn.value &&
-          serviceHandler.serviceType.value == ServicesType.anilist)
+          serviceHandler.serviceType.value != ServicesType.simkl)
         _SheetMenuItem(
           icon: IconlyLight.profile,
           label: 'View Profile',

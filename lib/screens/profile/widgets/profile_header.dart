@@ -70,10 +70,18 @@ class DesktopProfileHeader extends StatelessWidget {
         Get.find<ServiceHandler>().profileData.value.donatorTier ?? 0;
     final donatorBadge =
         Get.find<ServiceHandler>().profileData.value.donatorBadge;
-    final badgeText =
-        (donatorTier > 0 && donatorBadge != null && donatorBadge.isNotEmpty)
-            ? donatorBadge
-            : 'AniList Member';
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
+    String badgeText;
+    if (isMal) {
+      badgeText = donatorBadge ?? 'MAL Member';
+    } else {
+      badgeText =
+          (donatorTier > 0 && donatorBadge != null && donatorBadge.isNotEmpty)
+              ? donatorBadge
+              : 'AniList Member';
+    }
 
     final isDesktop = getResponsiveValue(
       context,
@@ -383,7 +391,9 @@ class DesktopProfileHeader extends StatelessWidget {
                             HoverActionButton(
                               icon: Icons.north_east_rounded,
                               onTap: () => launchUrlString(
-                                'https://anilist.co/user/$name',
+                                isMal
+                                    ? 'https://myanimelist.net/profile/$name'
+                                    : 'https://anilist.co/user/$name',
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -435,11 +445,13 @@ class DesktopProfileHeader extends StatelessWidget {
                                           _buildBottomSheetOption(
                                             ctx,
                                             icon: Icons.north_east_rounded,
-                                            label: 'View on AniList',
+                                            label: isMal ? 'View on MAL' : 'View on AniList',
                                             onTap: () {
                                               Navigator.pop(ctx);
                                               launchUrlString(
-                                                'https://anilist.co/user/$name',
+                                                isMal
+                                                    ? 'https://myanimelist.net/profile/$name'
+                                                    : 'https://anilist.co/user/$name',
                                               );
                                             },
                                           ),
@@ -450,7 +462,9 @@ class DesktopProfileHeader extends StatelessWidget {
                                             onTap: () {
                                               Navigator.pop(ctx);
                                               Share.share(
-                                                'https://anilist.co/user/$name',
+                                                isMal
+                                                    ? 'https://myanimelist.net/profile/$name'
+                                                    : 'https://anilist.co/user/$name',
                                               );
                                             },
                                           ),
@@ -530,10 +544,13 @@ class MobileProfileHeaderSliver extends StatelessWidget {
     final handler = Get.find<ServiceHandler>();
     final donatorTier = handler.profileData.value.donatorTier ?? 0;
     final donatorBadge = handler.profileData.value.donatorBadge;
-    final badgeText =
-        (donatorTier > 0 && donatorBadge != null && donatorBadge.isNotEmpty)
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
+    final badgeText = isMal
+        ? (donatorBadge ?? 'MAL Member')
+        : ((donatorTier > 0 && donatorBadge != null && donatorBadge.isNotEmpty)
             ? donatorBadge
-            : 'AniList Member';
+            : 'AniList Member');
 
     String? expiryText;
     final expiry = handler.profileData.value.tokenExpiry;
@@ -625,10 +642,14 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                         _buildBottomSheetOption(
                           ctx,
                           icon: Icons.north_east_rounded,
-                          label: 'View on AniList',
+                          label: isMal ? 'View on MAL' : 'View on AniList',
                           onTap: () {
                             Navigator.pop(ctx);
-                            launchUrlString('https://anilist.co/user/$name');
+                            launchUrlString(
+                              isMal
+                                  ? 'https://myanimelist.net/profile/$name'
+                                  : 'https://anilist.co/user/$name',
+                            );
                           },
                         ),
                         _buildBottomSheetOption(
@@ -637,7 +658,11 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                           label: 'Share Profile',
                           onTap: () {
                             Navigator.pop(ctx);
-                            Share.share('https://anilist.co/user/$name');
+                            Share.share(
+                              isMal
+                                  ? 'https://myanimelist.net/profile/$name'
+                                  : 'https://anilist.co/user/$name',
+                            );
                           },
                         ),
                         _buildBottomSheetOption(

@@ -1,5 +1,6 @@
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/models/Anilist/anilist_activity.dart';
+import 'package:anymex/models/Anilist/anilist_media_user.dart';
 
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
@@ -84,7 +85,13 @@ class _ProfilePageState extends State<ProfilePage>
     ).animate(
       CurvedAnimation(parent: _bannerController, curve: Curves.easeInOut),
     );
-    _fetchActivities();
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+    if (!isMal) {
+      _fetchActivities();
+    } else {
+      _activitiesLoading = false;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _ready = true);
@@ -145,6 +152,43 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  Map<String, List<TrackedMedia>> _buildMalPreloadedLists(bool isAnime) {
+    final handler = Get.find<ServiceHandler>();
+    final rawList = isAnime ? handler.animeList : handler.mangaList;
+    final watchingLabel = isAnime ? 'Watching' : 'Reading';
+    final onHoldLabel = 'On Hold';
+    final planLabel = isAnime ? 'Plan to Watch' : 'Plan to Read';
+
+    final Map<String, List<TrackedMedia>> lists = {
+      watchingLabel: [],
+      'Completed': [],
+      onHoldLabel: [],
+      'Dropped': [],
+      planLabel: [],
+      'All': List.from(rawList),
+    };
+
+    for (final item in rawList) {
+      final status = item.watchingStatus?.toUpperCase().trim() ?? '';
+      switch (status) {
+        case 'CURRENT':
+          lists[watchingLabel]!.add(item);
+        case 'COMPLETED':
+          lists['Completed']!.add(item);
+        case 'PAUSED':
+          lists[onHoldLabel]!.add(item);
+        case 'DROPPED':
+          lists['Dropped']!.add(item);
+        case 'PLANNING':
+          lists[planLabel]!.add(item);
+        default:
+          lists[watchingLabel]!.add(item);
+      }
+    }
+
+    return lists;
+  }
+
   Future<void> _refreshActivityTab({bool showMessage = true}) async {
     if (mounted) {
       setState(() {
@@ -176,32 +220,57 @@ class _ProfilePageState extends State<ProfilePage>
     _fetchActivities(reset: false);
   }
 
-  List<NavItem> get _profileNavItems => [
-        NavItem(
-          selectedIcon: IconlyBold.home,
-          unselectedIcon: IconlyLight.home,
-          label: 'Overview',
-          onTap: (i) => setState(() => _selectedTab = 0),
-        ),
-        NavItem(
-          selectedIcon: Icons.forum_rounded,
-          unselectedIcon: Icons.forum_outlined,
-          label: 'Activity',
-          onTap: (i) => setState(() => _selectedTab = 1),
-        ),
-        NavItem(
-          selectedIcon: IconlyBold.chart,
-          unselectedIcon: IconlyLight.chart,
-          label: 'Stats',
-          onTap: (i) => setState(() => _selectedTab = 2),
-        ),
-        NavItem(
-          selectedIcon: IconlyBold.user_3,
-          unselectedIcon: IconlyLight.user_1,
-          label: 'Social',
-          onTap: (i) => setState(() => _selectedTab = 3),
-        ),
-      ];
+  List<NavItem> get _profileNavItems {
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
+    final items = [
+      NavItem(
+        selectedIcon: IconlyBold.home,
+        unselectedIcon: IconlyLight.home,
+        label: 'Overview',
+        onTap: (i) => setState(() => _selectedTab = _getActualTabIndex(0)),
+      ),
+    ];
+
+    if (!isMal) {
+      items.add(NavItem(
+        selectedIcon: Icons.forum_rounded,
+        unselectedIcon: Icons.forum_outlined,
+        label: 'Activity',
+        onTap: (i) => setState(() => _selectedTab = _getActualTabIndex(1)),
+      ));
+    }
+
+    items.add(NavItem(
+      selectedIcon: IconlyBold.chart,
+      unselectedIcon: IconlyLight.chart,
+      label: 'Stats',
+      onTap: (i) => setState(() => _selectedTab = _getActualTabIndex(isMal ? 1 : 2)),
+    ));
+
+    if (!isMal) {
+      items.add(NavItem(
+        selectedIcon: IconlyBold.user_3,
+        unselectedIcon: IconlyLight.user_1,
+        label: 'Social',
+        onTap: (i) => setState(() => _selectedTab = _getActualTabIndex(3)),
+      ));
+    }
+
+    return items;
+  }
+
+  int _getActualTabIndex(int navIndex) => navIndex;
+
+  int _getNavIndexForTab(int tabIndex) {
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+    if (isMal) {
+      return tabIndex <= 1 ? tabIndex : 1;
+    }
+    return tabIndex.clamp(0, 3);
+  }
 
   Widget _buildBody(BuildContext context, bool isDesktop) {
     final handler = Get.find<ServiceHandler>();
@@ -259,6 +328,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 icon: IconlyBold.video,
                                 color: context.theme.colorScheme.primary,
                                 onTap: () {
+                                  final handler = Get.find<ServiceHandler>();
+                                  final isMal = handler.serviceType.value == ServicesType.mal;
                                   final userId =
                                       int.tryParse(user.id ?? '') ?? 0;
                                   navigate(
@@ -268,6 +339,9 @@ class _ProfilePageState extends State<ProfilePage>
                                       userName: user.name ?? 'User',
                                       favourites: user.favourites?.anime,
                                       sectionOrder: user.animeSectionOrder,
+                                      preloadedLists: isMal
+                                          ? _buildMalPreloadedLists(true)
+                                          : null,
                                     ),
                                   );
                                 },
@@ -284,6 +358,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 icon: IconlyBold.document,
                                 color: context.theme.colorScheme.secondary,
                                 onTap: () {
+                                  final handler = Get.find<ServiceHandler>();
+                                  final isMal = handler.serviceType.value == ServicesType.mal;
                                   final userId =
                                       int.tryParse(user.id ?? '') ?? 0;
                                   navigate(
@@ -293,6 +369,9 @@ class _ProfilePageState extends State<ProfilePage>
                                       userName: user.name ?? 'User',
                                       favourites: user.favourites?.manga,
                                       sectionOrder: user.mangaSectionOrder,
+                                      preloadedLists: isMal
+                                          ? _buildMalPreloadedLists(false)
+                                          : null,
                                     ),
                                   );
                                 },
@@ -370,7 +449,7 @@ class _ProfilePageState extends State<ProfilePage>
             ? null
             : ResponsiveNavBar(
                 isDesktop: false,
-                currentIndex: _selectedTab,
+                currentIndex: _getNavIndexForTab(_selectedTab),
                 items: _profileNavItems,
               ),
         body: _ready
@@ -499,6 +578,9 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   List<Widget> _buildTabSlivers(BuildContext context, Profile user) {
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
     Widget content;
     switch (_selectedTab) {
       case 0:
@@ -508,21 +590,30 @@ class _ProfilePageState extends State<ProfilePage>
         content = ProfileStatsTab(user: user);
         break;
       case 3:
-        content = SocialTab(
-          key: _socialTabKey,
-          userId: int.tryParse(
-                  Get.find<ServiceHandler>().profileData.value.id?.toString() ??
-                      '0') ??
-              0,
-          onCountsFetched: (followingCount, followersCount) {
-            final profile = Get.find<ServiceHandler>().profileData.value;
-            profile.following = followingCount;
-            profile.followers = followersCount;
-          },
-        );
+        if (isMal) {
+          content = _buildOverviewTab(context, user);
+        } else {
+          content = SocialTab(
+            key: _socialTabKey,
+            userId: int.tryParse(
+                    Get.find<ServiceHandler>().profileData.value.id?.toString() ??
+                        '0') ??
+                0,
+            onCountsFetched: (followingCount, followersCount) {
+              final profile = Get.find<ServiceHandler>().profileData.value;
+              profile.following = followingCount;
+              profile.followers = followersCount;
+            },
+          );
+        }
         break;
       case 1:
-        return _buildActivitySlivers(context);
+        if (isMal) {
+          content = ProfileStatsTab(user: user);
+        } else {
+          return _buildActivitySlivers(context);
+        }
+        break;
       default:
         content = _buildOverviewTab(context, user);
     }
@@ -796,14 +887,15 @@ class _ProfilePageState extends State<ProfilePage>
     Widget buildActivitySection({bool needsPadding = true}) {
       if (!hasActivity) return const SizedBox.shrink();
 
-      final auth = Get.find<AnilistAuth>();
+      final handler = Get.find<ServiceHandler>();
+
       final animeStatuses =
           ['CURRENT', 'COMPLETED', 'PAUSED', 'DROPPED', 'PLANNING'].map((
         status,
       ) {
         return TypeStat(
           type: status,
-          count: auth.animeList
+          count: handler.animeList
               .where((e) => e.watchingStatus?.toUpperCase() == status)
               .length,
           meanScore: 0,
@@ -817,7 +909,7 @@ class _ProfilePageState extends State<ProfilePage>
       ) {
         return TypeStat(
           type: status,
-          count: auth.mangaList
+          count: handler.mangaList
               .where((e) => e.watchingStatus?.toUpperCase() == status)
               .length,
           meanScore: 0,

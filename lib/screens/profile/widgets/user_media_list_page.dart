@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
@@ -40,6 +41,22 @@ const _mangaStandardOrder = [
   'Rereading',
 ];
 
+const _malAnimeTabOrder = [
+  'Watching',
+  'Completed',
+  'On Hold',
+  'Dropped',
+  'Plan to Watch',
+];
+
+const _malMangaTabOrder = [
+  'Reading',
+  'Completed',
+  'On Hold',
+  'Dropped',
+  'Plan to Read',
+];
+
 enum _SortMode { lastUpdated, score, title, releaseDate }
 
 const _anilistGenres = [
@@ -70,6 +87,8 @@ class UserMediaListPage extends StatefulWidget {
   final String userName;
   final List<FavouriteMedia>? favourites;
   final List<String> sectionOrder;
+  final Map<String, List<TrackedMedia>>? preloadedLists;
+
   const UserMediaListPage({
     super.key,
     required this.userId,
@@ -77,6 +96,7 @@ class UserMediaListPage extends StatefulWidget {
     required this.userName,
     this.favourites,
     this.sectionOrder = const [],
+    this.preloadedLists,
   });
 
   @override
@@ -104,6 +124,8 @@ class _UserMediaListPageState extends State<UserMediaListPage>
 
   TabController? _tabController;
 
+  bool get _isMal => widget.preloadedLists != null;
+
   @override
   void initState() {
     super.initState();
@@ -122,7 +144,127 @@ class _UserMediaListPageState extends State<UserMediaListPage>
     super.dispose();
   }
 
+  Map<String, List<TrackedMedia>> _groupMalListByStatus(
+      List<TrackedMedia> items) {
+    final isAnime = widget.type == 'ANIME';
+    final watchingLabel = isAnime ? 'Watching' : 'Reading';
+    final onHoldLabel = 'On Hold';
+    final planLabel = isAnime ? 'Plan to Watch' : 'Plan to Read';
+
+    final result = <String, List<TrackedMedia>>{
+      watchingLabel: [],
+      'Completed': [],
+      onHoldLabel: [],
+      'Dropped': [],
+      planLabel: [],
+    };
+
+    for (final item in items) {
+      final status = item.watchingStatus?.toUpperCase().trim() ?? '';
+      switch (status) {
+        case 'CURRENT':
+          result[watchingLabel]!.add(item);
+          break;
+        case 'COMPLETED':
+          result['Completed']!.add(item);
+          break;
+        case 'PAUSED':
+          result[onHoldLabel]!.add(item);
+          break;
+        case 'DROPPED':
+          result['Dropped']!.add(item);
+          break;
+        case 'PLANNING':
+          result[planLabel]!.add(item);
+          break;
+        default:
+          result[watchingLabel]!.add(item);
+      }
+    }
+
+    result['All'] = List.from(items);
+
+    return result;
+  }
+
   Future<void> _fetchList() async {
+    if (widget.preloadedLists != null) {
+      final data = Map<String, List<TrackedMedia>>.from(widget.preloadedLists!);
+
+      if (widget.favourites != null && widget.favourites!.isNotEmpty) {
+        final trackedById = <String, TrackedMedia>{};
+        for (final list in data.values) {
+          for (final entry in list) {
+            final id = (entry.id ?? '').trim();
+            if (id.isEmpty || trackedById.containsKey(id)) continue;
+            trackedById[id] = entry;
+          }
+        }
+
+        final favEntries = widget.favourites!.map((f) {
+          final id = (f.id ?? '').trim();
+          final tracked = trackedById[id];
+
+          if (tracked != null) {
+            return TrackedMedia(
+              id: tracked.id,
+              title: tracked.title,
+              poster: tracked.poster,
+              episodeCount: tracked.episodeCount,
+              chapterCount: tracked.chapterCount,
+              rating: tracked.rating,
+              totalEpisodes: tracked.totalEpisodes,
+              releasedEpisodes: tracked.releasedEpisodes,
+              watchingStatus: tracked.watchingStatus,
+              format: tracked.format,
+              mediaStatus: tracked.mediaStatus,
+              score: tracked.score,
+              type: tracked.type,
+              mediaListId: tracked.mediaListId,
+              servicesType: tracked.servicesType,
+              userName: tracked.userName,
+              userId: tracked.userId,
+              userAvatar: tracked.userAvatar,
+              userProgress: tracked.userProgress,
+              userScore: tracked.userScore,
+              genres: tracked.genres,
+              startYear: tracked.startYear,
+              updatedAt: tracked.updatedAt,
+            );
+          }
+
+          return TrackedMedia(
+            id: f.id,
+            title: f.title,
+            poster: f.cover,
+            episodeCount: '0',
+            totalEpisodes: f.episodes?.toString() ?? '?',
+            rating: f.averageScore?.toStringAsFixed(1),
+            score: f.averageScore?.toStringAsFixed(1),
+            servicesType: ServicesType.mal,
+          );
+        }).toList();
+        data['Favourites'] = favEntries;
+      }
+
+      final genres = <String>{};
+      for (final list in data.values) {
+        for (final entry in list) {
+          genres.addAll(entry.genres);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _lists = data;
+          _allGenres = genres;
+          _loading = false;
+        });
+        _initTabController();
+      }
+      return;
+    }
+
     final anilistAuth = Get.find<AnilistAuth>();
     final data =
         await anilistAuth.fetchUserMediaList(widget.userId, widget.type);
@@ -209,8 +351,16 @@ class _UserMediaListPageState extends State<UserMediaListPage>
 
   List<String> get _tabNames {
     final sectionOrder = widget.sectionOrder;
-    final fallbackOrder =
-        widget.type == 'ANIME' ? _animeStandardOrder : _mangaStandardOrder;
+    List<String> fallbackOrder;
+
+    if (_isMal) {
+      fallbackOrder =
+          widget.type == 'ANIME' ? _malAnimeTabOrder : _malMangaTabOrder;
+    } else {
+      fallbackOrder =
+          widget.type == 'ANIME' ? _animeStandardOrder : _mangaStandardOrder;
+    }
+
     final order = sectionOrder.isNotEmpty ? sectionOrder : fallbackOrder;
     final sorted = <String>[];
     final remaining = <String>[];

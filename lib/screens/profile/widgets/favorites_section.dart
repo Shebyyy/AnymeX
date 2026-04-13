@@ -190,6 +190,8 @@ class FavoritesSection extends StatelessWidget {
     FavouriteMedia item,
     bool isAnime,
   ) {
+    final handler = Get.find<ServiceHandler>();
+    final serviceType = handler.serviceType.value;
     final mediaId = item.id;
     final mediaTag = item.title ?? 'fav-${item.id}';
     final media = mediaId == null
@@ -198,7 +200,7 @@ class FavoritesSection extends StatelessWidget {
             id: mediaId,
             title: item.title ?? '?',
             poster: item.cover ?? '',
-            serviceType: ServicesType.anilist,
+            serviceType: serviceType,
           );
 
     return GestureDetector(

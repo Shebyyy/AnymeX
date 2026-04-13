@@ -1,7 +1,10 @@
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
+import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/screens/library/online/anime_list.dart';
 import 'package:anymex/screens/library/online/manga_list.dart';
+import 'package:anymex/screens/profile/widgets/user_media_list_page.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -84,37 +87,11 @@ class ListStatusCard extends StatelessWidget {
 
             return InkWell(
               onTap: canOpen
-                  ? () async {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) =>
-                            const Center(child: CircularProgressIndicator()),
-                      );
-
-                      final auth = Get.find<AnilistAuth>();
-                      final type = isAnime ? 'ANIME' : 'MANGA';
-                      final lists = await auth.fetchUserMediaList(userId, type);
-
-                      if (context.mounted) Navigator.pop(context);
-
-                      final data = lists['All'] ?? [];
-                      if (isAnime) {
-                        Get.to(() => AnimeList(
-                              data: data,
-                              title: "Anime",
-                              initialTab: mappedTabForNav,
-                              userName: userName,
-                            ));
-                      } else {
-                        Get.to(() => AnilistMangaList(
-                              data: data,
-                              title: "Manga",
-                              initialTab: mappedTabForNav,
-                              userName: userName,
-                            ));
-                      }
-                    }
+                  ? () => _openListPage(
+                        context,
+                        typeStr: typeStr,
+                        mappedTabForNav: mappedTabForNav,
+                      )
                   : null,
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: isDesktop ? 4.0 : 1.5),
@@ -156,5 +133,128 @@ class ListStatusCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _openListPage(
+    BuildContext context, {
+    required String typeStr,
+    required String mappedTabForNav,
+  }) {
+    final handler = Get.find<ServiceHandler>();
+    final isMal = handler.serviceType.value == ServicesType.mal;
+
+    if (isMal) {
+      _openMalListPage(handler, typeStr: typeStr);
+    } else {
+      _openAnilistListPage(
+        context,
+        typeStr: typeStr,
+        mappedTabForNav: mappedTabForNav,
+      );
+    }
+  }
+
+  Future<void> _openAnilistListPage(
+    BuildContext context, {
+    required String typeStr,
+    required String mappedTabForNav,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final auth = Get.find<AnilistAuth>();
+    final type = isAnime ? 'ANIME' : 'MANGA';
+    final lists = await auth.fetchUserMediaList(userId, type);
+
+    if (context.mounted) Navigator.pop(context);
+
+    final data = lists['All'] ?? [];
+    if (isAnime) {
+      Get.to(() => AnimeList(
+            data: data,
+            title: "Anime",
+            initialTab: mappedTabForNav,
+            userName: userName,
+          ));
+    } else {
+      Get.to(() => AnilistMangaList(
+            data: data,
+            title: "Manga",
+            initialTab: mappedTabForNav,
+            userName: userName,
+          ));
+    }
+  }
+
+  void _openMalListPage(ServiceHandler handler, {required String typeStr}) {
+    final rawList = isAnime ? handler.animeList : handler.mangaList;
+    final isAnimeLocal = isAnime;
+
+    final watchingLabel = isAnimeLocal ? 'Watching' : 'Reading';
+    final onHoldLabel = 'On Hold';
+    final planLabel = isAnimeLocal ? 'Plan to Watch' : 'Plan to Read';
+
+    final Map<String, List<TrackedMedia>> preloadedLists = {
+      watchingLabel: [],
+      'Completed': [],
+      onHoldLabel: [],
+      'Dropped': [],
+      planLabel: [],
+      'All': List.from(rawList),
+    };
+
+    for (final item in rawList) {
+      final status = item.watchingStatus?.toUpperCase().trim() ?? '';
+      switch (status) {
+        case 'CURRENT':
+          preloadedLists[watchingLabel]!.add(item);
+          break;
+        case 'COMPLETED':
+          preloadedLists['Completed']!.add(item);
+          break;
+        case 'PAUSED':
+          preloadedLists[onHoldLabel]!.add(item);
+          break;
+        case 'DROPPED':
+          preloadedLists['Dropped']!.add(item);
+          break;
+        case 'PLANNING':
+          preloadedLists[planLabel]!.add(item);
+          break;
+        default:
+          preloadedLists[watchingLabel]!.add(item);
+      }
+    }
+
+    String initialTab;
+    switch (typeStr) {
+      case 'CURRENT':
+        initialTab = watchingLabel;
+        break;
+      case 'COMPLETED':
+        initialTab = 'Completed';
+        break;
+      case 'PAUSED':
+        initialTab = onHoldLabel;
+        break;
+      case 'DROPPED':
+        initialTab = 'Dropped';
+        break;
+      case 'PLANNING':
+        initialTab = planLabel;
+        break;
+      default:
+        initialTab = 'All';
+    }
+
+    Get.to(() => UserMediaListPage(
+          userId: userId,
+          type: isAnimeLocal ? 'ANIME' : 'MANGA',
+          userName: userName,
+          preloadedLists: preloadedLists,
+        ));
   }
 }

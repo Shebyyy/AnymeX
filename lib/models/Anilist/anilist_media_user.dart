@@ -160,27 +160,44 @@ class TrackedMedia {
   }
 
   factory TrackedMedia.fromMAL(Map<String, dynamic> json) {
+    final node = json['node'] as Map<String, dynamic>? ?? {};
+    final listStatus = json['list_status'] as Map<String, dynamic>? ?? {};
+
+    final genresRaw = node['genres'] as List<dynamic>? ?? [];
+    final genres = genresRaw
+        .map((g) => (g as Map<String, dynamic>)['name'] as String? ?? '')
+        .where((g) => g.isNotEmpty)
+        .toList();
+
+    final startSeason = node['start_season'] as Map<String, dynamic>?;
+    final startYear = startSeason?['year'] as int?;
+
+    final mediaType = node['media_type'] as String?;
+
     return TrackedMedia(
-      id: json['node']['id']?.toString(),
-      idMal: json['node']['id']?.toString(),
-      title: json['node']['title'],
+      id: node['id']?.toString(),
+      idMal: node['id']?.toString(),
+      title: node['title'],
       servicesType: ServicesType.mal,
-      poster: json['node']['main_picture']['large'],
-      chapterCount:
-          json['node']?['list_status']?['num_chapters_read']?.toString() ?? '?',
-      episodeCount: json['list_status']?['num_chapters_read']?.toString() ??
-          json['list_status']?['num_episodes_watched']?.toString() ??
+      poster: node['main_picture']?['large'] ?? node['main_picture']?['medium'],
+      chapterCount: listStatus['num_chapters_read']?.toString() ?? '?',
+      episodeCount: listStatus['num_episodes_watched']?.toString() ??
+          listStatus['num_chapters_read']?.toString() ??
           '?',
-      totalEpisodes: json['node']?['num_episodes']?.toString() ??
-          json['node']?['num_chapters']?.toString() ??
+      totalEpisodes: node['num_episodes']?.toString() ??
+          node['num_chapters']?.toString() ??
           '?',
-      rating: json['node']?['mean']?.toString() ?? '?',
-      watchingStatus: returnConvertedStatus(json['list_status']['status']),
-      score: json['list_status']['score']?.toString(),
+      rating: node['mean']?.toString() ?? '?',
+      watchingStatus: returnConvertedStatus(listStatus['status'] ?? ''),
+      score: listStatus['score']?.toString(),
       type: null,
-      mediaListId: json['node']['id']?.toString(),
-      startedAt: _parseMalDate(json['list_status']?['start_date']),
-      completedAt: _parseMalDate(json['list_status']?['finish_date']),
+      format: mediaType,
+      mediaListId: node['id']?.toString(),
+      genres: genres,
+      startYear: startYear,
+      startedAt: _parseMalDate(listStatus['start_date']),
+      completedAt: _parseMalDate(listStatus['finish_date']),
+      updatedAt: _parseMalDateToEpoch(listStatus['updated_at']),
     );
   }
 }
@@ -197,6 +214,14 @@ DateTime? _parseFuzzyDate(Map<String, dynamic>? date) {
 DateTime? _parseMalDate(String? dateStr) {
   if (dateStr == null || dateStr.isEmpty) return null;
   try { return DateTime.parse(dateStr); } catch (_) { return null; }
+}
+
+int? _parseMalDateToEpoch(String? dateStr) {
+  if (dateStr == null || dateStr.isEmpty) return null;
+  try {
+    final dt = DateTime.parse(dateStr);
+    return dt.millisecondsSinceEpoch ~/ 1000;
+  } catch (_) { return null; }
 }
 
 class Simkl {
