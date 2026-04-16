@@ -1,3 +1,4 @@
+import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
@@ -277,31 +278,171 @@ class _SettingsCommentsState extends State<SettingsComments> {
   }
 
   void _showCommentPreferences() {
+    final currentMode = General.commentDisplayMode.get<int>(0);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Comment Preferences'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Comment Display Mode'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildModeOption(
+                    context: context,
+                    title: 'Default',
+                    description: 'Classic nested view with compact deep threads',
+                    icon: Icons.view_list_rounded,
+                    value: 0,
+                    groupValue: currentMode,
+                    onChanged: (val) {
+                      General.commentDisplayMode.set(val);
+                      setDialogState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildModeOption(
+                    context: context,
+                    title: 'Reddit',
+                    description: 'Full nested tree with deeper indentation',
+                    icon: Icons.account_tree_rounded,
+                    value: 1,
+                    groupValue: currentMode,
+                    onChanged: (val) {
+                      General.commentDisplayMode.set(val);
+                      setDialogState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildModeOption(
+                    context: context,
+                    title: 'Discord',
+                    description: 'Flat layout with quoted parent references',
+                    icon: Icons.forum_rounded,
+                    value: 2,
+                    groupValue: currentMode,
+                    onChanged: (val) {
+                      General.commentDisplayMode.set(val);
+                      setDialogState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildModeOption(
+                    context: context,
+                    title: 'Hybrid',
+                    description: 'Tree view with full-thread drawer for deep replies',
+                    icon: Icons.device_hub_rounded,
+                    value: 3,
+                    groupValue: currentMode,
+                    onChanged: (val) {
+                      General.commentDisplayMode.set(val);
+                      setDialogState(() {});
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildModeOption({
+    required BuildContext context,
+    required String title,
+    required String description,
+    required IconData icon,
+    required int value,
+    required int groupValue,
+    required ValueChanged<int> onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isSelected = value == groupValue;
+
+    return InkWell(
+      onTap: () => onChanged(value),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? colorScheme.primary.opaque(0.08)
+              : colorScheme.surfaceContainerLow.opaque(0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? colorScheme.primary.opaque(0.4)
+                : colorScheme.outlineVariant.opaque(0.2),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
           children: [
-            Text(
-                'Comment display preferences will be available in future updates.'),
-            SizedBox(height: 8),
-            Text('Planned features:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            BulletPoint(text: 'Default sorting order'),
-            BulletPoint(text: 'Comment density settings'),
-            BulletPoint(text: 'Show/hide avatars'),
-            BulletPoint(text: 'Font size adjustment'),
-            BulletPoint(text: 'Auto-play videos in comments'),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colorScheme.primary.opaque(0.15)
+                    : colorScheme.surfaceContainerHighest.opaque(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Radio<int>(
+              value: value,
+              groupValue: groupValue,
+              onChanged: (val) {
+                if (val != null) onChanged(val);
+              },
+              activeColor: colorScheme.primary,
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }

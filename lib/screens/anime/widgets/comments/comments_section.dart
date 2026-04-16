@@ -18,6 +18,9 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/profile/user_profile_page.dart';
+import 'package:anymex/screens/anime/widgets/comments/thread_drawer.dart';
+
+enum CommentDisplayMode { defaultMode, reddit, discord, hybrid }
 
 class CommentSection extends StatefulWidget {
   final Media media;
@@ -635,10 +638,16 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 
+  CommentDisplayMode _getDisplayMode() {
+    final modeInt = General.commentDisplayMode.get<int>(0);
+    return CommentDisplayMode.values[modeInt.clamp(0, CommentDisplayMode.values.length - 1)];
+  }
+
   Widget _buildCommentsList(
       BuildContext context, CommentSectionController controller) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final displayMode = _getDisplayMode();
 
     return Obx(() {
       if (controller.isLoading.value) {
@@ -706,24 +715,565 @@ class _CommentSectionState extends State<CommentSection> {
         );
       }
 
-      return ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        itemCount: controller.comments.length,
-        separatorBuilder: (context, index) => Container(
-          height: 1,
-          margin: const EdgeInsets.only(left: 56, top: 24, bottom: 24),
-          decoration: BoxDecoration(
-            color: colorScheme.outlineVariant.opaque(0.2),
-          ),
-        ),
-        itemBuilder: (context, index) {
-          return _buildCommentWithReplies(
-              context, controller.comments[index], controller, 0, isParentLocked: false);
-        },
-      );
+      switch (displayMode) {
+        case CommentDisplayMode.reddit:
+          return _buildRedditList(context, controller);
+        case CommentDisplayMode.discord:
+          return _buildDiscordList(context, controller);
+        case CommentDisplayMode.hybrid:
+          return _buildHybridList(context, controller);
+        case CommentDisplayMode.defaultMode:
+        default:
+          return _buildDefaultList(context, controller);
+      }
     });
+  }
+
+  Widget _buildDefaultList(BuildContext context, CommentSectionController controller) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      itemCount: controller.comments.length,
+      separatorBuilder: (context, index) => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 56, top: 24, bottom: 24),
+        decoration: BoxDecoration(
+          color: colorScheme.outlineVariant.opaque(0.2),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        return _buildCommentWithReplies(
+            context, controller.comments[index], controller, 0, isParentLocked: false);
+      },
+    );
+  }
+
+  Widget _buildRedditList(BuildContext context, CommentSectionController controller) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      itemCount: controller.comments.length,
+      separatorBuilder: (context, index) => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 56, top: 24, bottom: 24),
+        decoration: BoxDecoration(
+          color: colorScheme.outlineVariant.opaque(0.2),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        return _buildRedditComment(
+            context, controller.comments[index], controller, 0, isParentLocked: false);
+      },
+    );
+  }
+
+  Widget _buildDiscordList(BuildContext context, CommentSectionController controller) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      itemCount: controller.comments.length,
+      separatorBuilder: (context, index) => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 56, top: 24, bottom: 24),
+        decoration: BoxDecoration(
+          color: colorScheme.outlineVariant.opaque(0.2),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        return _buildDiscordCommentGroup(
+            context, controller.comments[index], controller);
+      },
+    );
+  }
+
+  Widget _buildHybridList(BuildContext context, CommentSectionController controller) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      itemCount: controller.comments.length,
+      separatorBuilder: (context, index) => Container(
+        height: 1,
+        margin: const EdgeInsets.only(left: 56, top: 24, bottom: 24),
+        decoration: BoxDecoration(
+          color: colorScheme.outlineVariant.opaque(0.2),
+        ),
+      ),
+      itemBuilder: (context, index) {
+        return _buildHybridComment(
+            context, controller.comments[index], controller, 0, isParentLocked: false, parentChain: []);
+      },
+    );
+  }
+
+  double _getRedditIndent(int depth, double screenWidth) {
+    if (depth == 0) return 0;
+    final baseIndent = screenWidth * 0.04;
+    final maxIndent = screenWidth * 0.30;
+    return (baseIndent * depth).clamp(0.0, maxIndent);
+  }
+
+  Widget _buildRedditComment(BuildContext context, Comment comment,
+      CommentSectionController controller, int depth, {bool isParentLocked = false}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final effectiveLocked = comment.locked == true || isParentLocked;
+    final indent = _getRedditIndent(depth, screenWidth);
+    final threadColor = colorScheme.primary.opaque(0.4, iReallyMeanIt: true);
+
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (comment.pinned == true && depth == 0) ...[
+              Container(
+                margin: EdgeInsets.only(left: indent),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.opaque(0.08),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  border: Border.all(
+                    color: colorScheme.primary.opaque(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.push_pin_rounded,
+                        size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pinned',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            Container(
+              margin: EdgeInsets.only(left: indent),
+              child: _buildCommentItem(context, comment, controller,
+                  effectiveLocked: effectiveLocked, depth: depth, forceNoCompact: true),
+            ),
+            if (controller.isReplyingTo(comment.id) && !effectiveLocked) ...[
+              const SizedBox(height: 8),
+              _buildReplyInput(context, comment, controller, depth, isParentLocked: isParentLocked),
+            ],
+            if (comment.replies != null && comment.replies!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                margin: EdgeInsets.only(left: indent),
+                padding: EdgeInsets.only(left: indent > 0 ? 10 : 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: threadColor,
+                      width: 2.5,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...comment.replies!.asMap().entries.map((entry) {
+                      final replyIndex = entry.key;
+                      final reply = entry.value;
+                      final isLastReply =
+                          replyIndex == comment.replies!.length - 1;
+
+                      return Column(
+                        children: [
+                          _buildRedditComment(
+                              context, reply, controller, depth + 1, isParentLocked: effectiveLocked),
+                          if (!isLastReply)
+                            Container(
+                              margin: EdgeInsets.only(
+                                left: _getRedditIndent(depth + 1, screenWidth) + 10,
+                                top: 10,
+                                bottom: 10,
+                              ),
+                              height: 1,
+                              decoration: BoxDecoration(
+                                color: colorScheme.outlineVariant
+                                    .opaque(0.12, iReallyMeanIt: true),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ));
+  }
+
+  Widget _buildDiscordCommentGroup(BuildContext context, Comment parentComment,
+      CommentSectionController controller) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final effectiveLocked = parentComment.locked == true;
+    final totalReplies = _countReplies(parentComment);
+
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (parentComment.pinned == true) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.opaque(0.08),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  border: Border.all(
+                    color: colorScheme.primary.opaque(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.push_pin_rounded,
+                        size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pinned',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            Container(
+              child: _buildCommentItem(context, parentComment, controller,
+                  effectiveLocked: effectiveLocked, depth: 0, forceNoCompact: true),
+            ),
+            if (controller.isReplyingTo(parentComment.id) && !effectiveLocked) ...[
+              const SizedBox(height: 8),
+              _buildReplyInput(context, parentComment, controller, 0, isParentLocked: false),
+            ],
+            if (totalReplies > 0) ...[
+              Container(
+                margin: const EdgeInsets.only(left: 52, top: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.opaque(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colorScheme.primary.opaque(0.2),
+                  ),
+                ),
+                child: Text(
+                  '$totalReplies ${totalReplies == 1 ? 'reply' : 'replies'}',
+                  style: TextStyle(
+                    color: colorScheme.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+            if (parentComment.replies != null && parentComment.replies!.isNotEmpty) ...[
+              ...parentComment.replies!.asMap().entries.map((entry) {
+                final replyIndex = entry.key;
+                final reply = entry.value;
+                final isLastReply =
+                    replyIndex == parentComment.replies!.length - 1;
+                return Column(
+                  children: [
+                    _buildDiscordReply(context, reply, parentComment, controller, effectiveLocked),
+                    if (!isLastReply)
+                      Container(
+                        margin: const EdgeInsets.only(left: 52, top: 8, bottom: 8),
+                        height: 1,
+                        decoration: BoxDecoration(
+                          color: colorScheme.outlineVariant.opaque(0.15, iReallyMeanIt: true),
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ],
+            _buildDiscordNestedReplies(context, parentComment.replies, parentComment, controller, effectiveLocked),
+          ],
+        ));
+  }
+
+  Widget _buildDiscordReply(BuildContext context, Comment reply, Comment parentComment,
+      CommentSectionController controller, bool isParentLocked) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final effectiveLocked = reply.locked == true || isParentLocked;
+
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(left: 0),
+              child: _buildCommentItem(context, reply, controller,
+                  effectiveLocked: effectiveLocked, depth: 0, forceNoCompact: true),
+            ),
+            if (controller.isReplyingTo(reply.id) && !effectiveLocked) ...[
+              const SizedBox(height: 8),
+              _buildReplyInput(context, reply, controller, 0, isParentLocked: isParentLocked),
+            ],
+          ],
+        ));
+  }
+
+  Widget _buildDiscordNestedReplies(BuildContext context, List<Comment>? replies,
+      Comment directParent, CommentSectionController controller, bool isParentLocked) {
+    if (replies == null || replies.isEmpty) return const SizedBox.shrink();
+
+    final children = <Widget>[];
+    for (final reply in replies) {
+      children.add(_buildDiscordFlatReply(
+          context, reply, directParent, controller, isParentLocked));
+      if (reply.replies != null && reply.replies!.isNotEmpty) {
+        children.add(_buildDiscordNestedReplies(
+            context, reply.replies, directParent, controller, isParentLocked));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  Widget _buildDiscordFlatReply(BuildContext context, Comment reply, Comment directParent,
+      CommentSectionController controller, bool isParentLocked) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final effectiveLocked = reply.locked == true || isParentLocked;
+
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(left: 52),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow.opaque(0.5),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(8),
+                        topRight: Radius.circular(8),
+                      ),
+                      border: Border(
+                        left: BorderSide(
+                          color: colorScheme.primary.opaque(0.5),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '@${directParent.username}',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            directParent.commentText.length > 80
+                                ? '${directParent.commentText.substring(0, 80)}...'
+                                : directParent.commentText,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildCommentItem(context, reply, controller,
+                      effectiveLocked: effectiveLocked, depth: 0, forceNoCompact: true),
+                  if (controller.isReplyingTo(reply.id) && !effectiveLocked) ...[
+                    const SizedBox(height: 8),
+                    _buildReplyInput(context, reply, controller, 0, isParentLocked: isParentLocked),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ));
+  }
+
+  Widget _buildHybridComment(BuildContext context, Comment comment,
+      CommentSectionController controller, int depth, {bool isParentLocked = false, List<Comment> parentChain = const []}) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final effectiveLocked = comment.locked == true || isParentLocked;
+    final indent = _getRedditIndent(depth, screenWidth);
+    final threadColor = colorScheme.primary.opaque(0.4, iReallyMeanIt: true);
+
+    return Obx(() => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (comment.pinned == true && depth == 0) ...[
+              Container(
+                margin: EdgeInsets.only(left: indent),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.opaque(0.08),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                  border: Border.all(
+                    color: colorScheme.primary.opaque(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.push_pin_rounded,
+                        size: 14, color: colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pinned',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            Container(
+              margin: EdgeInsets.only(left: indent),
+              child: _buildCommentItem(context, comment, controller,
+                  effectiveLocked: effectiveLocked, depth: depth, forceNoCompact: true),
+            ),
+            if (controller.isReplyingTo(comment.id) && !effectiveLocked) ...[
+              const SizedBox(height: 8),
+              _buildReplyInput(context, comment, controller, depth, isParentLocked: isParentLocked),
+            ],
+            if (comment.replies != null && comment.replies!.isNotEmpty) ...[
+              if (depth >= 2) ...[
+                const SizedBox(height: 6),
+                Container(
+                  margin: EdgeInsets.only(left: indent),
+                  child: InkWell(
+                    onTap: () {
+                      final newChain = [...parentChain, comment];
+                      _openThreadDrawer(context, comment, controller, newChain);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: threadColor.opaque(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: threadColor.opaque(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.forum_rounded,
+                              size: 16, color: threadColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Open Full Thread (${_countReplies(comment)} replies) →',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: threadColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 10),
+                Container(
+                  margin: EdgeInsets.only(left: indent),
+                  padding: EdgeInsets.only(left: indent > 0 ? 10 : 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: threadColor,
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...comment.replies!.asMap().entries.map((entry) {
+                        final replyIndex = entry.key;
+                        final reply = entry.value;
+                        final isLastReply =
+                            replyIndex == comment.replies!.length - 1;
+
+                        return Column(
+                          children: [
+                            _buildHybridComment(
+                                context, reply, controller, depth + 1,
+                                isParentLocked: effectiveLocked,
+                                parentChain: [...parentChain, comment]),
+                            if (!isLastReply)
+                              Container(
+                                margin: EdgeInsets.only(
+                                  left: _getRedditIndent(depth + 1, screenWidth) + 10,
+                                  top: 10,
+                                  bottom: 10,
+                                ),
+                                height: 1,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.outlineVariant
+                                      .opaque(0.12, iReallyMeanIt: true),
+                                ),
+                              ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ));
+  }
+
+  void _openThreadDrawer(BuildContext context, Comment rootComment,
+      CommentSectionController controller, List<Comment> parentChain) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => ThreadDrawer(
+        rootComment: rootComment,
+        controller: controller,
+        parentChain: parentChain,
+      ),
+    );
   }
 
   String _getTotalCommentCount(List<Comment> comments) {
@@ -1053,7 +1603,7 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   Widget _buildCommentItem(BuildContext context, Comment comment,
-      CommentSectionController controller, {bool effectiveLocked = false, int depth = 0}) {
+      CommentSectionController controller, {bool effectiveLocked = false, int depth = 0, bool forceNoCompact = false}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isSpoiler = comment.tag.toLowerCase().contains('spoiler');
@@ -1061,7 +1611,7 @@ class _CommentSectionState extends State<CommentSection> {
         comment.userId == controller.profile.id?.toString();
     final canModerate = controller.canModerate();
     final isLocked = comment.locked == true || effectiveLocked;
-    final isCompact = depth >= 2;
+    final isCompact = forceNoCompact ? false : depth >= 2;
     final avatarSize = isCompact ? 28.0 : 40.0;
     final iconSize = isCompact ? 14.0 : 18.0;
     final nameFontSize = isCompact ? 13.0 : 15.0;

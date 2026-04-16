@@ -23,6 +23,7 @@ enum General {
   filterPaused,
   filterRepeating,
   communityListViewIsGrid,
+  commentDisplayMode,
 }
 
 enum ThemeKeys {
