@@ -2,6 +2,7 @@ import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/screens/downloads/download_screen.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/local_source/local_source_view.dart';
+import 'package:anymex/screens/other/ai_advisor_screen.dart';
 import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/settings/settings.dart';
 import 'package:anymex/utils/function.dart';
@@ -386,6 +387,14 @@ class SettingsSheet extends StatelessWidget {
         onTap: () {
           Get.back();
           showServiceSelector(context);
+        },
+      ),
+      _SheetMenuItem(
+        icon: HugeIcons.strokeRoundedAiSetting,
+        label: 'AI Advisor',
+        onTap: () {
+          Get.back();
+          navigate(() => const AiAdvisorScreen());
         },
       ),
       _SheetMenuItem(
