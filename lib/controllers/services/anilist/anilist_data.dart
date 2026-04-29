@@ -322,6 +322,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
       media(type: ANIME, status: NOT_YET_RELEASED, sort: [POPULARITY_DESC, TRENDING_DESC]) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -337,6 +338,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
       media(type: ANIME, sort: POPULARITY_DESC) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -353,6 +355,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
       media(type: ANIME, sort: TRENDING_DESC) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -378,6 +381,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
       ) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -399,6 +403,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
     ) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -414,8 +419,10 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
   }
 ''';
 
+    final token = AuthKeys.authToken.get<String?>();
     final headers = {
       'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
 
     final response = await post(
@@ -453,6 +460,7 @@ class AnilistData extends GetxController implements BaseService, OnlineService {
       media(sort: POPULARITY_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -470,6 +478,7 @@ averageScore
       media(sort: POPULARITY_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -490,6 +499,7 @@ averageScore
       popularity_greater: 10000, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -507,6 +517,7 @@ averageScore
       media(sort: FAVOURITES_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -524,6 +535,7 @@ averageScore
       media(sort: SCORE_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -542,6 +554,7 @@ averageScore
       media(sort: UPDATED_AT_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -560,6 +573,7 @@ averageScore
       media(status: RELEASING, sort: SCORE_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -578,6 +592,7 @@ averageScore
       media(sort: TRENDING_DESC, type: MANGA) {
         id
         title {
+          userPreferred
           romaji
           english
           native
@@ -595,8 +610,10 @@ averageScore
   }
 ''';
 
+    final token = AuthKeys.authToken.get<String?>();
     final headers = {
       'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
 
     final response = await post(
@@ -668,7 +685,11 @@ averageScore
             edges {
               node {
                 id
-                title { romaji english userPreferred }
+                title {
+                  userPreferred
+                  romaji
+                  english
+                }
                 coverImage { large }
                 type
                 format
@@ -957,6 +978,7 @@ averageScore
     final String commonFields = '''
     id
     title {
+          userPreferred
       english
       romaji
       native

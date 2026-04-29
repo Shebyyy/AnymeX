@@ -149,9 +149,9 @@ class FavouriteMedia {
   factory FavouriteMedia.fromJson(Map<String, dynamic> json) {
     return FavouriteMedia(
       id: json['id']?.toString(),
-      title: json['title']?['english'] ??
-          json['title']?['romaji'] ??
-          json['title']?['userPreferred'],
+      title: json['title']?['userPreferred'] ??
+          json['title']?['english'] ??
+          json['title']?['romaji'],
       cover: json['coverImage']?['large'],
       averageScore: json['averageScore'] != null
           ? (json['averageScore'] / 10).toDouble()
@@ -171,7 +171,7 @@ class FavouriteCharacter {
   factory FavouriteCharacter.fromJson(Map<String, dynamic> json) {
     return FavouriteCharacter(
       id: json['id']?.toString(),
-      name: json['name']?['full'] ?? json['name']?['userPreferred'],
+      name: json['name']?['userPreferred'] ?? json['name']?['full'],
       image: json['image']?['large'],
     );
   }
@@ -187,7 +187,7 @@ class FavouriteStaff {
   factory FavouriteStaff.fromJson(Map<String, dynamic> json) {
     return FavouriteStaff(
       id: json['id']?.toString(),
-      name: json['name']?['full'] ?? json['name']?['userPreferred'],
+      name: json['name']?['userPreferred'] ?? json['name']?['full'],
       image: json['image']?['large'],
     );
   }
@@ -533,7 +533,9 @@ class PersonStat {
     final person = json[key] as Map<String, dynamic>?;
     return PersonStat(
       id: person?['id']?.toString(),
-      name: person?['name']?['full'] as String? ?? 'Unknown',
+      name: person?['name']?['userPreferred'] as String? ??
+          person?['name']?['full'] as String? ??
+          'Unknown',
       image: person?['image']?['medium'] as String?,
       count: json['count'] as int? ?? 0,
       meanScore: (json['meanScore'] as num?)?.toDouble() ?? 0,
