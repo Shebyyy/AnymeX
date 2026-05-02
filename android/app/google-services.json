@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "655963122485",
-    "project_id": "anymex-ryan7",
-    "storage_bucket": "anymex-ryan7.firebasestorage.app"
+    "project_number": "676591884315",
+    "project_id": "anymex-f6912",
+    "storage_bucket": "anymex-f6912.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:655963122485:android:928a151d682058a33dba7c",
+        "mobilesdk_app_id": "1:676591884315:android:369fd5aa76ddfa78d3c0be",
         "android_client_info": {
           "package_name": "com.ryan.anymex"
         }
@@ -15,7 +15,26 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyB5sGDX3VFXZn8Co4FaeODwQzqT3H1ifK0"
+          "current_key": "AIzaSyAKplngBm1N2h2R1Svo8aogBxIeQh4n3pY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676591884315:android:ac673579667be089d3c0be",
+        "android_client_info": {
+          "package_name": "com.ryan.anymexbeta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKplngBm1N2h2R1Svo8aogBxIeQh4n3pY"
         }
       ],
       "services": {
