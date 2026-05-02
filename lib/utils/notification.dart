@@ -4,6 +4,7 @@ import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/deeplink.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,11 +12,15 @@ import 'package:get/get.dart';
 
 /// Handles all push notification logic: FCM token management,
 /// foreground notifications, background message handling, and tap routing.
+///
+/// All Firebase access is wrapped in try-catch and guarded by Firebase
+/// initialization checks so this service can NEVER crash the app.
 class NotificationService extends GetxController {
   static NotificationService get instance => Get.find<NotificationService>();
 
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  // Lazy Firebase references — only accessed after confirming Firebase is ready
+  FirebaseMessaging? _firebaseMessaging;
+  FlutterLocalNotificationsPlugin? _localNotifications;
 
   // Rx vars
   final RxnString fcmToken = RxnString(null);
@@ -32,6 +37,15 @@ class NotificationService extends GetxController {
 
   Future<void> _init() async {
     try {
+      // Guard: check Firebase is initialized before doing anything
+      if (Firebase.apps.isEmpty) {
+        Logger.i('NotificationService: Firebase not initialized, skipping');
+        return;
+      }
+
+      _firebaseMessaging = FirebaseMessaging.instance;
+      _localNotifications = FlutterLocalNotificationsPlugin();
+
       await _setupLocalNotifications();
       await _setupFirebaseMessaging();
       await _requestPermission();
@@ -42,6 +56,9 @@ class NotificationService extends GetxController {
 
   /// Setup local notification channels and plugin
   Future<void> _setupLocalNotifications() async {
+    final local = _localNotifications;
+    if (local == null) return;
+
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
@@ -52,58 +69,55 @@ class NotificationService extends GetxController {
       android: androidSettings,
       iOS: iosSettings,
     );
-    await _localNotifications.initialize(
+    await local.initialize(
       settings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
     // Create Android notification channels
     if (Platform.isAndroid) {
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const AndroidNotificationChannel(
-            'comments',
-            'Comments',
-            description: 'New comments, replies, and edits',
-            importance: Importance.high,
-          ));
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const AndroidNotificationChannel(
-            'votes',
-            'Votes',
-            description: 'Upvotes and downvotes on your comments',
-            importance: Importance.defaultImportance,
-          ));
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const AndroidNotificationChannel(
-            'moderation',
-            'Moderation',
-            description: 'Warnings, mutes, bans, and moderation actions',
-            importance: Importance.high,
-          ));
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const AndroidNotificationChannel(
-            'reports',
-            'Reports',
-            description: 'Report filed, resolved, dismissed',
-            importance: Importance.defaultImportance,
-          ));
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const AndroidNotificationChannel(
-            'announcements',
-            'Announcements',
-            description: 'Official announcements',
-            importance: Importance.high,
-          ));
+      final androidPlugin = local
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin == null) return;
+
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'comments',
+        'Comments',
+        description: 'New comments, replies, and edits',
+        importance: Importance.high,
+      ));
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'votes',
+        'Votes',
+        description: 'Upvotes and downvotes on your comments',
+        importance: Importance.defaultImportance,
+      ));
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'moderation',
+        'Moderation',
+        description: 'Warnings, mutes, bans, and moderation actions',
+        importance: Importance.high,
+      ));
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'reports',
+        'Reports',
+        description: 'Report filed, resolved, dismissed',
+        importance: Importance.defaultImportance,
+      ));
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'announcements',
+        'Announcements',
+        description: 'Official announcements',
+        importance: Importance.high,
+      ));
     }
   }
 
   /// Setup Firebase Messaging listeners
   Future<void> _setupFirebaseMessaging() async {
+    final fm = _firebaseMessaging;
+    if (fm == null) return;
+
     // Foreground messages - show as local notification
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
@@ -111,13 +125,17 @@ class NotificationService extends GetxController {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
     // Check if app was opened from a terminated state via notification
-    final initialMessage = await _firebaseMessaging.getInitialMessage();
-    if (initialMessage != null) {
-      _handleMessageOpenedApp(initialMessage);
+    try {
+      final initialMessage = await fm.getInitialMessage();
+      if (initialMessage != null) {
+        _handleMessageOpenedApp(initialMessage);
+      }
+    } catch (e) {
+      Logger.e('Error getting initial message: $e');
     }
 
     // Listen for token refresh
-    _firebaseMessaging.onTokenRefresh.listen((newToken) {
+    fm.onTokenRefresh.listen((newToken) {
       Logger.i('FCM token refreshed');
       fcmToken.value = newToken;
       _registerTokenWithBackend(newToken);
@@ -126,37 +144,47 @@ class NotificationService extends GetxController {
 
   /// Request notification permission
   Future<void> _requestPermission() async {
-    final settings = await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+    final fm = _firebaseMessaging;
+    if (fm == null) return;
 
-    final authorized = settings.authorizationStatus == AuthorizationStatus.authorized;
-    final provisional = settings.authorizationStatus == AuthorizationStatus.provisional;
-    notificationsEnabled.value = authorized || provisional;
+    try {
+      final settings = await fm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
 
-    if (notificationsEnabled.value) {
-      final token = await _firebaseMessaging.getToken();
-      if (token != null) {
-        fcmToken.value = token;
-        Logger.i('FCM token obtained: ${token.substring(0, 20)}...');
-        _registerTokenWithBackend(token);
+      final authorized = settings.authorizationStatus == AuthorizationStatus.authorized;
+      final provisional = settings.authorizationStatus == AuthorizationStatus.provisional;
+      notificationsEnabled.value = authorized || provisional;
+
+      if (notificationsEnabled.value) {
+        final token = await fm.getToken();
+        if (token != null) {
+          fcmToken.value = token;
+          Logger.i('FCM token obtained: ${token.substring(0, 20)}...');
+          _registerTokenWithBackend(token);
+        }
       }
+    } catch (e) {
+      Logger.e('Error requesting notification permission: $e');
     }
   }
 
   /// Handle foreground messages - display as local notification
   void _handleForegroundMessage(RemoteMessage message) {
     try {
+      final local = _localNotifications;
+      if (local == null) return;
+
       final notification = message.notification;
       if (notification == null) return;
 
       final android = message.notification?.android;
       final channelId = android?.channelId ?? 'comments';
 
-      _localNotifications.show(
+      local.show(
         message.hashCode,
         notification.title,
         notification.body,
@@ -230,8 +258,6 @@ class NotificationService extends GetxController {
 
   /// Determine the expected service type from media type string
   ServicesType _serviceTypeFromMediaType(String mediaType) {
-    // Commentum uses 'anime' and 'manga' as client types
-    // These correspond to the service type's name
     switch (mediaType) {
       case 'anime':
       case 'manga':
@@ -242,7 +268,6 @@ class NotificationService extends GetxController {
   }
 
   /// Refresh the unread notification count from the backend.
-  /// Can be called from outside (e.g., after navigating back to the notification screen).
   Future<void> refreshUnreadCount() async {
     try {
       if (Get.isRegistered<CommentumService>()) {
@@ -301,8 +326,6 @@ class NotificationService extends GetxController {
     required String userId,
   }) async {
     try {
-      // Import CommentumService and call the registerFcmToken method
-      // This avoids circular imports - will be called from CommentumService
       Logger.i('FCM token registered for user $userId ($clientType)');
       return true;
     } catch (e) {
@@ -343,7 +366,6 @@ class NotificationService extends GetxController {
 /// Background message handler - MUST be a top-level function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // No need to initialize Firebase here - it's handled by the OS
-  // Just log it
+  // Firebase is auto-initialized by the OS for background messages
   print('Background notification received: ${message.notification?.title}');
 }

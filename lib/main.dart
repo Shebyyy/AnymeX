@@ -53,7 +53,6 @@ import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/non_widgets/settings_sheet.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:app_links/app_links.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +75,6 @@ WebViewEnvironment? webViewEnvironment;
 late Isar isar;
 final appLinks = AppLinks();
 
-FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
 class MyHttpoverrides extends HttpOverrides {
   @override
@@ -89,11 +87,11 @@ class MyHttpoverrides extends HttpOverrides {
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.trackpad,
-        PointerDeviceKind.stylus
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus
+  };
 }
 
 void initDeepLinkListener() async {
@@ -107,7 +105,7 @@ void initDeepLinkListener() async {
   }
 
   appLinks.uriLinkStream.listen(
-    (uri) => Deeplink.handleDeepLink(uri),
+        (uri) => Deeplink.handleDeepLink(uri),
     onError: (err) => errorSnackBar('Error Opening link: $err'),
   );
 }
@@ -125,15 +123,10 @@ void main(List<String> args) async {
     await Logger.init();
     await dotenv.load(fileName: ".env");
 
-    // Set up background message handler for FCM (must be before Firebase init)
+    // Firebase init is fire-and-forget with a timeout.
+    // If it hangs or fails, the app still starts normally.
     if (!Platform.isLinux) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    }
-
-    if (!Platform.isLinux) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      _initFirebase();
     }
 
     if (Platform.isWindows) {
@@ -185,6 +178,22 @@ void main(List<String> args) async {
   ));
 }
 
+/// Non-blocking Firebase initialization with a 5-second timeout.
+/// This ensures runApp() is NEVER blocked by Firebase issues.
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 5));
+    Logger.i('Firebase initialized successfully');
+    // Only register the background handler after successful init
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    // Log but NEVER let this block the app
+    Logger.e('Firebase init skipped (non-fatal): $e');
+  }
+}
+
 void _initializeGetxController() async {
   Get.put(ProfileManager(), permanent: true);
   Get.put(Settings());
@@ -202,9 +211,10 @@ void _initializeGetxController() async {
   Get.put(GreetingController());
   Get.put(CommentumService());
   Get.put(CommentPreloader());
-  Get.put(NotificationService());
   Get.put(GistSyncController(), permanent: true);
   Get.put(DownloadController(), permanent: true);
+  // NotificationService initialized lazily to avoid blocking startup
+  Get.lazyPut(() => NotificationService());
   Get.lazyPut(() => CacheController());
   await StorageManagerService().enforceImageCacheLimit();
 }
@@ -241,7 +251,7 @@ class _MainAppState extends State<MainApp> {
     } else if (event is KeyDownEvent &&
         event.logicalKey == LogicalKeyboardKey.enter) {
       final isAltPressed = HardwareKeyboard.instance.logicalKeysPressed
-              .contains(LogicalKeyboardKey.altLeft) ||
+          .contains(LogicalKeyboardKey.altLeft) ||
           HardwareKeyboard.instance.logicalKeysPressed
               .contains(LogicalKeyboardKey.altRight);
       if (isAltPressed) {
@@ -293,8 +303,8 @@ class _MainAppState extends State<MainApp> {
         themeMode: theme.isSystemMode
             ? ThemeMode.system
             : theme.isLightMode
-                ? ThemeMode.light
-                : ThemeMode.dark,
+            ? ThemeMode.light
+            : ThemeMode.dark,
         home: _showMainApp ? const ProfileGate() : const AnymeXSplashScreen(),
         builder: (context, child) {
           if (PlatformDispatcher.instance.views.length > 1) {
@@ -474,7 +484,7 @@ class _AutoStartHandlerState extends State<_AutoStartHandler> {
                 Expanded(
                   child: _LockAutoStartWidget(
                     profile: manager.profiles.firstWhere(
-                        (p) => p.id == widget.profileId),
+                            (p) => p.id == widget.profileId),
                     onSubmit: _submitLock,
                     onSwitchProfile: _goToProfileSelection,
                   ),
@@ -609,7 +619,7 @@ class _LockAutoStartWidgetState extends State<_LockAutoStartWidget> {
           const SizedBox(height: 40),
           Container(
             padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(20),
@@ -623,8 +633,8 @@ class _LockAutoStartWidgetState extends State<_LockAutoStartWidget> {
                         profile.isPinLocked
                             ? Icons.dialpad_rounded
                             : profile.isPasswordLocked
-                                ? Icons.password_rounded
-                                : Icons.grid_3x3_rounded,
+                            ? Icons.password_rounded
+                            : Icons.grid_3x3_rounded,
                         size: 20,
                         color: colorScheme.primary.withOpacity(0.8)),
                     const SizedBox(width: 8),
@@ -650,37 +660,37 @@ class _LockAutoStartWidgetState extends State<_LockAutoStartWidget> {
                   )
                 else
                   TextField(
-                  controller: _controller,
-                  keyboardType: profile.isPinLocked
-                      ? TextInputType.number
-                      : TextInputType.text,
-                  obscureText: true,
-                  maxLength: profile.isPinLocked ? 6 : 32,
-                  autofocus: true,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontFamily: 'Poppins',
-                    fontSize: 28,
-                    letterSpacing: 10,
-                  ),
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: colorScheme.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: _error
-                          ? const BorderSide(color: Colors.red, width: 2)
-                          : BorderSide.none,
+                    controller: _controller,
+                    keyboardType: profile.isPinLocked
+                        ? TextInputType.number
+                        : TextInputType.text,
+                    obscureText: true,
+                    maxLength: profile.isPinLocked ? 6 : 32,
+                    autofocus: true,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontFamily: 'Poppins',
+                      fontSize: 28,
+                      letterSpacing: 10,
                     ),
-                    counterText: '',
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: _error
+                            ? const BorderSide(color: Colors.red, width: 2)
+                            : BorderSide.none,
+                      ),
+                      counterText: '',
+                    ),
+                    onChanged: (_) => setState(() {
+                      _error = false;
+                      _errorMessage = '';
+                    }),
+                    onSubmitted: (_) => _submit(),
                   ),
-                  onChanged: (_) => setState(() {
-                    _error = false;
-                    _errorMessage = '';
-                  }),
-                  onSubmitted: (_) => _submit(),
-                ),
                 if (_error) ...[
                   const SizedBox(height: 8),
                   Text(_errorMessage,
@@ -691,8 +701,8 @@ class _LockAutoStartWidgetState extends State<_LockAutoStartWidget> {
                 Obx(() {
                   final manager = Get.find<ProfileManager>();
                   final attempts = manager.profiles
-                          .firstWhereOrNull((p) => p.id == profile.id)
-                          ?.failedAttempts ??
+                      .firstWhereOrNull((p) => p.id == profile.id)
+                      ?.failedAttempts ??
                       0;
                   if (attempts > 0) {
                     return Text(
@@ -930,19 +940,19 @@ class _FilterScreenState extends State<FilterScreen> {
                                       .withValues(alpha: 0.3),
                                   child: authService.isLoggedIn.value
                                       ? ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(59),
-                                          child: AnymeXImage(
-                                              width: 40,
-                                              height: 40,
-                                              fit: BoxFit.cover,
-                                              radius: 0,
-                                              imageUrl: authService
-                                                      .profileData
-                                                      .value
-                                                      .avatar ??
-                                                  ''),
-                                        )
+                                    borderRadius:
+                                    BorderRadius.circular(59),
+                                    child: AnymeXImage(
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        radius: 0,
+                                        imageUrl: authService
+                                            .profileData
+                                            .value
+                                            .avatar ??
+                                            ''),
+                                  )
                                       : const Icon((IconlyBold.profile))),
                             );
                           })),
@@ -960,7 +970,7 @@ class _FilterScreenState extends State<FilterScreen> {
                       ),
                       NavItem(
                         unselectedIcon:
-                            isSimkl ? Iconsax.monitor : Iconsax.book,
+                        isSimkl ? Iconsax.monitor : Iconsax.book,
                         selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
                         onTap: _onItemTapped,
                         label: 'Manga',
