@@ -5,6 +5,7 @@ const detailsPrimaryQuery = '''
         idMal
         isAdult
         title {
+          userPreferred
           romaji
           english
           native
@@ -74,6 +75,7 @@ const detailsPrimaryQuery = '''
             node {
               id
               title {
+          userPreferred
                 romaji
                 english
               }
@@ -93,6 +95,7 @@ const detailsPrimaryQuery = '''
               mediaRecommendation {
                 id
                 title {
+          userPreferred
                   romaji
                   english
                 }
@@ -190,7 +193,7 @@ const characterDetailsQuery = '''
           node {
             id
             title {
-              userPreferred
+          userPreferred
               english
               romaji
               native
@@ -271,7 +274,7 @@ const staffDetailsQuery = '''
                nodes {
                  id
                  title {
-                   userPreferred
+          userPreferred
                    english
                    romaji
                    native
@@ -291,7 +294,7 @@ const staffDetailsQuery = '''
           node {
             id
             title {
-              userPreferred
+          userPreferred
               english
               romaji
               native
