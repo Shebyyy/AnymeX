@@ -125,15 +125,12 @@ void main(List<String> args) async {
     await Logger.init();
     await dotenv.load(fileName: ".env");
 
-    // Set up background message handler for FCM (must be before Firebase init)
-    if (!Platform.isLinux) {
-      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    }
-
     if (!Platform.isLinux) {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      // Set up background message handler after Firebase init
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     }
 
     if (Platform.isWindows) {
@@ -202,9 +199,10 @@ void _initializeGetxController() async {
   Get.put(GreetingController());
   Get.put(CommentumService());
   Get.put(CommentPreloader());
-  Get.put(NotificationService());
   Get.put(GistSyncController(), permanent: true);
   Get.put(DownloadController(), permanent: true);
+  // NotificationService initialized lazily to avoid blocking startup
+  Get.lazyPut(() => NotificationService());
   Get.lazyPut(() => CacheController());
   await StorageManagerService().enforceImageCacheLimit();
 }
