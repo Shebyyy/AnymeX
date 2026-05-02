@@ -798,57 +798,60 @@ class _FilterScreenState extends State<FilterScreen> {
 
   Widget _buildNotificationBell(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final commentumService = Get.find<CommentumService>();
-    
-    return Obx(() {
-      // Poll unread count reactively
-      return FutureBuilder<int>(
-        future: commentumService.getUnreadNotificationCount(),
-        builder: (context, snapshot) {
-          final unreadCount = snapshot.data ?? 0;
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                Icons.notifications_rounded,
-                color: colorScheme.primary,
-                size: 22,
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  right: -2,
-                  top: -2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: colorScheme.error,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.error.withOpacity(0.4),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      unreadCount > 99 ? '99+' : '$unreadCount',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
+
+    return FutureBuilder<int>(
+      future: () async {
+        try {
+          final commentumService = Get.find<CommentumService>();
+          return await commentumService.getUnreadNotificationCount();
+        } catch (_) {
+          return 0;
+        }
+      }(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              Icons.notifications_rounded,
+              color: colorScheme.primary,
+              size: 22,
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: colorScheme.error,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.error.withOpacity(0.4),
+                        blurRadius: 4,
+                        spreadRadius: 1,
                       ),
-                      textAlign: TextAlign.center,
+                    ],
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-            ],
-          );
-        },
-      );
-    });
+              ),
+          ],
+        );
+      },
+    );
   }
 
   final routes = [
