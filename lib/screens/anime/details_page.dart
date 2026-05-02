@@ -16,6 +16,7 @@ import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/widgets/anime_stats.dart';
+import 'package:anymex/screens/anime/widgets/reviews_section.dart';
 import 'package:anymex/screens/anime/widgets/comments/comments_section.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
 import 'package:anymex/screens/anime/widgets/custom_list_dialog.dart';
@@ -978,6 +979,12 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
         CharactersCarousel(characters: anilistData!.characters ?? []),
         if (anilistData?.staff != null && anilistData!.staff!.isNotEmpty)
           StaffCarousel(staff: anilistData!.staff!),
+        if (int.tryParse(anilistData!.id) != null)
+          ReviewsSection(
+            mediaId: int.parse(anilistData!.id),
+            mediaType: 'ANIME',
+            mediaTitle: anilistData!.title,
+          ),
         ReusableCarousel(
           data: anilistData!.recommendations,
           title: widget.media.serviceType == ServicesType.simkl

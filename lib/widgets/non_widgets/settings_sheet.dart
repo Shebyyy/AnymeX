@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/screens/community/forums_page.dart';
 import 'package:anymex/screens/downloads/download_screen.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/local_source/local_source_view.dart';
@@ -14,7 +13,6 @@ import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -295,12 +293,12 @@ class SettingsSheet extends StatelessWidget {
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(50),
                         child: AnymeXImage(
-                            fit: BoxFit.cover,
-                            width: 40,
-                            height: 40,
-                            radius: 0,
-                            imageUrl:
-                                serviceHandler.profileData.value.avatar ?? ''),
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                          radius: 0,
+                          imageUrl:
+                              serviceHandler.profileData.value.avatar ?? ''),
                       )
                     : Icon(
                         Icons.person_rounded,
@@ -383,6 +381,16 @@ class SettingsSheet extends StatelessWidget {
             navigate(() => const ProfilePage());
           },
         ),
+      if (serviceHandler.isLoggedIn.value &&
+          serviceHandler.serviceType.value == ServicesType.anilist)
+        _SheetMenuItem(
+          icon: Icons.forum_rounded,
+          label: 'Forums',
+          onTap: () {
+            Get.back();
+            navigate(() => const ForumsPage());
+          },
+        ),
       _SheetMenuItem(
         icon: HugeIcons.strokeRoundedAiSetting,
         label: 'Change Service',
@@ -391,17 +399,6 @@ class SettingsSheet extends StatelessWidget {
           showServiceSelector(context);
         },
       ),
-      if ((Platform.isAndroid || Platform.isIOS) ||
-          (kDebugMode &&
-              (Platform.isWindows || Platform.isMacOS || Platform.isLinux)))
-        _SheetMenuItem(
-          icon: Icons.extension_rounded,
-          label: 'Extensions',
-          onTap: () {
-            Get.back();
-            navigate(() => const ExtensionScreen());
-          },
-        ),
       _SheetMenuItem(
         icon: HugeIcons.strokeRoundedDownload04,
         label: 'Downloads',
@@ -428,6 +425,15 @@ class SettingsSheet extends StatelessWidget {
       ),
     ];
 
+    final mobileExtensionItem = _SheetMenuItem(
+      icon: Icons.extension_rounded,
+      label: 'Extensions',
+      onTap: () {
+        Get.back();
+        navigate(() => const ExtensionScreen());
+      },
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: theme.surfaceContainer.opaque(0.25),
@@ -435,20 +441,32 @@ class SettingsSheet extends StatelessWidget {
         border: Border.all(color: theme.outline.opaque(0.1)),
       ),
       child: Column(
-        children: items.asMap().entries.map((entry) {
-          final index = entry.key;
-          final item = entry.value;
-          final isMobile = MediaQuery.of(context).size.width < 600;
-          final effectiveFirst = isMobile ? false : index == 0;
-          final isLast = index == items.length - 1;
-          return _buildMenuItem(
-            context,
-            theme,
-            item,
-            isFirst: effectiveFirst,
-            isLast: isLast,
-          );
-        }).toList(),
+        children: [
+          PlatformBuilder(
+            androidBuilder: _buildMenuItem(
+              context,
+              theme,
+              mobileExtensionItem,
+              isFirst: true,
+              isLast: false,
+            ),
+            desktopBuilder: const SizedBox.shrink(),
+          ),
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            final effectiveFirst = isMobile ? false : index == 0;
+            final isLast = index == items.length - 1;
+            return _buildMenuItem(
+              context,
+              theme,
+              item,
+              isFirst: effectiveFirst,
+              isLast: isLast,
+            );
+          }),
+        ],
       ),
     );
   }
