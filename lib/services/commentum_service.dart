@@ -8,6 +8,7 @@ import 'package:anymex/database/comments/model/comment.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:anymex/utils/notification.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -24,11 +25,35 @@ class CommentumService extends GetxController {
   }
 
   final RxString currentUserRole = 'user'.obs;
+  bool _fcmTokenRegistered = false;
 
   Profile? get currentUser => serviceHandler.profileData.value;
   String? get currentUserId => currentUser?.id?.toString();
   String? get currentUsername => currentUser?.name;
   String? get currentUserAvatar => currentUser?.avatar;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Once profile data loads, register FCM token (fixes race condition)
+    ever(serviceHandler.profileData, (_) => _tryRegisterFcm());
+    // Also try after a short delay in case profile loaded before this listener
+    Future.delayed(const Duration(seconds: 3), () => _tryRegisterFcm());
+  }
+
+  /// Attempt to register the FCM token once user profile is available.
+  /// Called automatically when profile data changes or after a delay.
+  Future<void> _tryRegisterFcm() async {
+    if (_fcmTokenRegistered || currentUserId == null) return;
+    if (!Get.isRegistered<NotificationService>()) return;
+
+    final ns = Get.find<NotificationService>();
+    final token = ns.getToken();
+    if (token == null) return;
+
+    final success = await registerFcmToken(token);
+    if (success) _fcmTokenRegistered = true;
+  }
 
   Future<String?> get _authToken async {
     Get.find<AnilistAuth>();
