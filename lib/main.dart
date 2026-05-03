@@ -987,13 +987,6 @@ class _FilterScreenState extends State<FilterScreen> {
                         onTap: _onItemTapped,
                         label: "Extensions",
                       ),
-                      NavItem(
-                        unselectedIcon: Icons.notifications_outlined,
-                        selectedIcon: Icons.notifications_rounded,
-                        onTap: (_) => _openNotifications(),
-                        label: "Alerts",
-                        altIcon: _buildNotificationBell(context),
-                      ),
                     ],
                   ),
                 ],
@@ -1043,13 +1036,6 @@ class _FilterScreenState extends State<FilterScreen> {
               selectedIcon: HugeIcons.strokeRoundedLibrary,
               onTap: _onMobileItemTapped,
               label: 'Library',
-            ),
-            NavItem(
-              unselectedIcon: Icons.notifications_outlined,
-              selectedIcon: Icons.notifications_rounded,
-              onTap: (_) => _openNotifications(),
-              label: 'Alerts',
-              altIcon: _buildNotificationBell(context),
             ),
           ],
         ));

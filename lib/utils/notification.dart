@@ -10,23 +10,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
-/// Handles all push notification logic: FCM token management,
-/// foreground notifications, background message handling, and tap routing.
-///
-/// All Firebase access is wrapped in try-catch and guarded by Firebase
-/// initialization checks so this service can NEVER crash the app.
 class NotificationService extends GetxController {
   static NotificationService get instance => Get.find<NotificationService>();
 
-  // Lazy Firebase references — only accessed after confirming Firebase is ready
   FirebaseMessaging? _firebaseMessaging;
   FlutterLocalNotificationsPlugin? _localNotifications;
 
-  // Rx vars
   final RxnString fcmToken = RxnString(null);
   final RxBool notificationsEnabled = true.obs;
 
-  // Callback for when user taps a notification
   VoidCallback? onNotificationTap;
 
   @override
@@ -37,7 +29,6 @@ class NotificationService extends GetxController {
 
   Future<void> _init() async {
     try {
-      // Guard: check Firebase is initialized before doing anything
       if (Firebase.apps.isEmpty) {
         Logger.i('NotificationService: Firebase not initialized, skipping');
         return;
@@ -54,7 +45,6 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Setup local notification channels and plugin
   Future<void> _setupLocalNotifications() async {
     final local = _localNotifications;
     if (local == null) return;
@@ -74,7 +64,6 @@ class NotificationService extends GetxController {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // Create Android notification channels
     if (Platform.isAndroid) {
       final androidPlugin = local
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -113,18 +102,14 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Setup Firebase Messaging listeners
   Future<void> _setupFirebaseMessaging() async {
     final fm = _firebaseMessaging;
     if (fm == null) return;
 
-    // Foreground messages - show as local notification
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // Background/terminated tap handler
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
-    // Check if app was opened from a terminated state via notification
     try {
       final initialMessage = await fm.getInitialMessage();
       if (initialMessage != null) {
@@ -134,7 +119,6 @@ class NotificationService extends GetxController {
       Logger.e('Error getting initial message: $e');
     }
 
-    // Listen for token refresh
     fm.onTokenRefresh.listen((newToken) {
       Logger.i('FCM token refreshed');
       fcmToken.value = newToken;
@@ -142,7 +126,6 @@ class NotificationService extends GetxController {
     });
   }
 
-  /// Request notification permission
   Future<void> _requestPermission() async {
     final fm = _firebaseMessaging;
     if (fm == null) return;
@@ -172,7 +155,6 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Handle foreground messages - display as local notification
   void _handleForegroundMessage(RemoteMessage message) {
     try {
       final local = _localNotifications;
@@ -209,34 +191,29 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Handle notification tap (background or terminated)
   void _handleMessageOpenedApp(RemoteMessage message) {
     Logger.i('Notification tapped: ${message.data}');
     onNotificationTap?.call();
     _navigateFromNotification(message.data);
   }
 
-  /// Navigate to the appropriate screen based on notification data
   void _navigateFromNotification(Map<String, dynamic> data) {
     final clickAction = data['click_action'] as String?;
     final mediaId = data['media_id']?.toString();
     final mediaType = data['media_type'] as String?;
 
-    // Try deep link first (from click_action)
     if (clickAction != null && clickAction.startsWith('anymex://')) {
       Logger.i('Navigating via deep link: $clickAction');
       Deeplink.handleDeepLink(Uri.parse(clickAction));
       return;
     }
 
-    // Fallback: construct navigation from media_id and media_type
     if (mediaId != null && mediaType != null) {
       final normalizedType = mediaType.toLowerCase();
       final isManga = normalizedType == 'manga' || normalizedType == 'novel';
 
       Logger.i('Navigating to $mediaType/$mediaId (isManga=$isManga)');
 
-      // Ensure correct service type is active before navigating
       try {
         final handler = Get.find<ServiceHandler>();
         final expectedType = _serviceTypeFromMediaType(normalizedType);
@@ -252,11 +229,9 @@ class NotificationService extends GetxController {
       return;
     }
 
-    // No media info to navigate to
     Logger.i('Notification has no navigable media info');
   }
 
-  /// Determine the expected service type from media type string
   ServicesType _serviceTypeFromMediaType(String mediaType) {
     switch (mediaType) {
       case 'anime':
@@ -267,7 +242,6 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Refresh the unread notification count from the backend.
   Future<void> refreshUnreadCount() async {
     try {
       if (Get.isRegistered<CommentumService>()) {
@@ -280,7 +254,6 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Register FCM token with Commentum backend
   Future<void> _registerTokenWithBackend(String token) async {
     try {
       if (Get.isRegistered<CommentumService>()) {
@@ -316,10 +289,8 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Get current FCM token
   String? getToken() => fcmToken.value;
 
-  /// Public method to manually register token with backend
   Future<bool> registerToken({
     required String token,
     required String clientType,
@@ -334,7 +305,6 @@ class NotificationService extends GetxController {
     }
   }
 
-  /// Public method to unregister token
   Future<bool> unregisterToken({
     required String token,
     required String clientType,
@@ -363,9 +333,7 @@ class NotificationService extends GetxController {
   }
 }
 
-/// Background message handler - MUST be a top-level function
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Firebase is auto-initialized by the OS for background messages
   print('Background notification received: ${message.notification?.title}');
 }

@@ -68,7 +68,6 @@ class NotificationItem {
     );
   }
 
-  /// Get the icon emoji based on notification type
   String get typeIcon {
     switch (type) {
       case 'comment_reply':
@@ -118,7 +117,6 @@ class NotificationItem {
     }
   }
 
-  /// Get a color category for the notification type (used for accent color)
   String get typeCategory {
     if (type.startsWith('comment_')) return 'comment';
     if (type.startsWith('vote_')) return 'vote';

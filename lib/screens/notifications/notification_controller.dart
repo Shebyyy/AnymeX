@@ -16,7 +16,6 @@ class NotificationController extends GetxController {
   final int _pageSize = 30;
   bool _hasMore = true;
 
-  // Filter state
   final RxString selectedFilter = 'all'.obs;
   final RxBool showUnreadOnly = false.obs;
 
@@ -27,7 +26,6 @@ class NotificationController extends GetxController {
     loadUnreadCount();
   }
 
-  /// Load initial notifications
   Future<void> loadNotifications() async {
     isLoading.value = true;
     error.value = '';
@@ -58,7 +56,6 @@ class NotificationController extends GetxController {
     }
   }
 
-  /// Load more notifications (pagination)
   Future<void> loadMoreNotifications() async {
     if (isLoadingMore.value || !_hasMore) return;
 
@@ -84,19 +81,17 @@ class NotificationController extends GetxController {
       notifications.addAll(newItems);
       _hasMore = newItems.length >= _pageSize;
     } catch (e) {
-      _currentPage--; // Revert page on error
+      _currentPage--;
     } finally {
       isLoadingMore.value = false;
     }
   }
 
-  /// Load just the unread count
   Future<void> loadUnreadCount() async {
     unreadCount.value =
         await _commentumService.getUnreadNotificationCount();
   }
 
-  /// Mark a single notification as read
   Future<void> markAsRead(int notificationId) async {
     final success =
         await _commentumService.markNotificationRead(notificationId);
@@ -130,7 +125,6 @@ class NotificationController extends GetxController {
     }
   }
 
-  /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     final success =
         await _commentumService.markAllNotificationsRead(
@@ -165,7 +159,6 @@ class NotificationController extends GetxController {
     }
   }
 
-  /// Set filter
   void setFilter(String filter) {
     if (selectedFilter.value != filter) {
       selectedFilter.value = filter;
@@ -173,13 +166,11 @@ class NotificationController extends GetxController {
     }
   }
 
-  /// Toggle unread only
   void toggleUnreadOnly() {
     showUnreadOnly.value = !showUnreadOnly.value;
     loadNotifications();
   }
 
-  /// Refresh
   Future<void> refresh() async {
     await loadNotifications();
     await loadUnreadCount();

@@ -64,17 +64,14 @@ class NotificationScreen extends GetView<NotificationController> {
               ],
             ),
 
-            // Filter chips row
             SliverToBoxAdapter(
               child: _buildFilterChips(context, colorScheme),
             ),
 
-            // Unread only toggle
             SliverToBoxAdapter(
               child: _buildUnreadToggle(context, colorScheme),
             ),
 
-            // Content
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               sliver: Obx(() {
@@ -113,7 +110,6 @@ class NotificationScreen extends GetView<NotificationController> {
               }),
             ),
 
-            // Load more indicator
             SliverToBoxAdapter(
               child: Obx(() {
                 if (controller.isLoadingMore.value) {
@@ -418,24 +414,20 @@ class NotificationScreen extends GetView<NotificationController> {
   }
 
   void _handleNotificationTap(NotificationItem notification) {
-    // Mark as read
     if (!notification.isRead) {
       controller.markAsRead(notification.id);
     }
 
-    // Navigate if we have media info
     if (notification.mediaId != null && notification.mediaType != null) {
       final mediaType = notification.mediaType!.toLowerCase();
       final isManga = mediaType == 'manga' || mediaType == 'novel';
       final mediaId = notification.mediaId!;
 
-      // Determine initial tab index (2 = comments tab)
       int initialTabIndex = 0;
       if (notification.commentId != null) {
         initialTabIndex = 2;
       }
 
-      // Construct deep link URI and navigate
       final uri = Uri.parse(
         'anymex://$mediaType/$mediaId#comment-${initialTabIndex == 2 ? notification.commentId ?? '' : ''}',
       );
@@ -480,14 +472,12 @@ class _NotificationCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Unread dot + type icon
               Column(
                 children: [
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Unread indicator dot
                       if (!notification.isRead) ...[
                         Container(
                           width: 8,
@@ -509,7 +499,6 @@ class _NotificationCard extends StatelessWidget {
                       ] else ...[
                         const SizedBox(width: 14),
                       ],
-                      // Type icon
                       Container(
                         width: 42,
                         height: 42,
@@ -528,12 +517,10 @@ class _NotificationCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 12),
-              // Title, body, metadata
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title row with time ago
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -560,7 +547,6 @@ class _NotificationCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Body text
                     if (notification.body.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       AnymexText(
@@ -572,7 +558,6 @@ class _NotificationCard extends StatelessWidget {
                         color: colorScheme.onSurface.opaque(0.55),
                       ),
                     ],
-                    // Media title context
                     if (notification.mediaTitle != null &&
                         notification.mediaTitle!.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -597,7 +582,6 @@ class _NotificationCard extends StatelessWidget {
                         ],
                       ),
                     ],
-                    // Actor username context (for comment replies etc.)
                     if (notification.actorUsername != null &&
                         notification.actorUsername!.isNotEmpty &&
                         notification.body.isEmpty) ...[

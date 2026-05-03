@@ -5,6 +5,8 @@ import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/screens/downloads/download_screen.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/local_source/local_source_view.dart';
+import 'package:anymex/screens/notifications/notification_screen.dart';
+import 'package:anymex/screens/notifications/notification_controller.dart';
 import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/profile/widgets/profile_avatar.dart';
 import 'package:anymex/screens/profile/widgets/profile_switcher_overlay.dart';
@@ -428,7 +430,13 @@ class SettingsSheet extends StatelessWidget {
             ),
           ),
           AnymexOnTap(
-            onTap: () => snackBar('This feature is not available yet.'),
+            onTap: () {
+              Get.back();
+              if (!Get.isRegistered<NotificationController>()) {
+                Get.put(NotificationController());
+              }
+              Get.to(() => const NotificationScreen());
+            },
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

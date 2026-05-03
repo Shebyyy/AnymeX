@@ -35,14 +35,10 @@ class CommentumService extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Once profile data loads, register FCM token (fixes race condition)
     ever(serviceHandler.profileData, (_) => _tryRegisterFcm());
-    // Also try after a short delay in case profile loaded before this listener
     Future.delayed(const Duration(seconds: 3), () => _tryRegisterFcm());
   }
 
-  /// Attempt to register the FCM token once user profile is available.
-  /// Called automatically when profile data changes or after a delay.
   Future<void> _tryRegisterFcm() async {
     if (_fcmTokenRegistered || currentUserId == null) return;
     if (!Get.isRegistered<NotificationService>()) return;
@@ -280,7 +276,7 @@ class CommentumService extends GetxController {
 
   Future<Map<String, dynamic>?> voteComment({
     required int commentId,
-    required String voteType, // 'upvote', 'downvote', 'remove'
+    required String voteType,
   }) async {
     if (currentUserId == null) {
       Logger.i('User not logged in');
@@ -592,9 +588,8 @@ class CommentumService extends GetxController {
     return role == 'super_admin';
   }
 
-  // ── FCM Push Notification Methods ──
 
-  /// Register the user's FCM token with the Commentum backend
+
   Future<bool> registerFcmToken(String fcmToken) async {
     if (currentUserId == null) return false;
 
@@ -608,7 +603,7 @@ class CommentumService extends GetxController {
           'user_id': currentUserId,
           'fcm_token': fcmToken,
           'platform': Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : 'other',
-          'app_version': '3.0.7', // Could use package_info_plus
+          'app_version': '3.0.7',
         }),
       );
 
@@ -624,7 +619,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Unregister FCM token
+
   Future<bool> unregisterFcmToken(String fcmToken) async {
     if (currentUserId == null) return false;
 
@@ -647,7 +642,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Get notification preferences
+
   Future<Map<String, bool>> getNotificationPreferences() async {
     if (currentUserId == null) return {};
 
@@ -673,7 +668,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Update notification preferences
+
   Future<bool> updateNotificationPreferences(Map<String, bool> preferences) async {
     if (currentUserId == null) return false;
 
@@ -700,9 +695,8 @@ class CommentumService extends GetxController {
     }
   }
 
-  // ── Notification History Methods ──
 
-  /// Fetch notification history from the backend
+
   Future<Map<String, dynamic>> fetchNotificationHistory({
     int page = 1,
     int limit = 30,
@@ -746,7 +740,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Mark a single notification as read
+
   Future<bool> markNotificationRead(int notificationId) async {
     if (currentUserId == null) return false;
 
@@ -769,7 +763,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Mark all notifications as read
+
   Future<bool> markAllNotificationsRead({String? type}) async {
     if (currentUserId == null) return false;
 
@@ -794,7 +788,7 @@ class CommentumService extends GetxController {
     }
   }
 
-  /// Get unread notification count
+
   Future<int> getUnreadNotificationCount() async {
     if (currentUserId == null) return 0;
 
