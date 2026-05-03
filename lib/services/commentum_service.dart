@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
@@ -7,6 +8,7 @@ import 'package:anymex/database/comments/model/comment.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/utils/logger.dart';
+import 'package:anymex/utils/notification.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -23,11 +25,38 @@ class CommentumService extends GetxController {
   }
 
   final RxString currentUserRole = 'user'.obs;
+  final RxInt unreadNotificationCount = 0.obs;
+  bool _fcmTokenRegistered = false;
 
   Profile? get currentUser => serviceHandler.profileData.value;
   String? get currentUserId => currentUser?.id?.toString();
   String? get currentUsername => currentUser?.name;
   String? get currentUserAvatar => currentUser?.avatar;
+
+  @override
+  void onInit() {
+    super.onInit();
+    ever(serviceHandler.profileData, (_) {
+      _tryRegisterFcm();
+      refreshUnreadCount();
+    });
+    Future.delayed(const Duration(seconds: 3), () {
+      _tryRegisterFcm();
+      refreshUnreadCount();
+    });
+  }
+
+  Future<void> _tryRegisterFcm() async {
+    if (_fcmTokenRegistered || currentUserId == null) return;
+    if (!Get.isRegistered<NotificationService>()) return;
+
+    final ns = Get.find<NotificationService>();
+    final token = ns.getToken();
+    if (token == null) return;
+
+    final success = await registerFcmToken(token);
+    if (success) _fcmTokenRegistered = true;
+  }
 
   Future<String?> get _authToken async {
     Get.find<AnilistAuth>();
@@ -564,5 +593,232 @@ class CommentumService extends GetxController {
   Future<bool> isSuperAdmin() async {
     final role = await getUserRole();
     return role == 'super_admin';
+  }
+
+  Future<bool> registerFcmToken(String fcmToken) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: { 'Content-Type': 'application/json' },
+        body: json.encode({
+          'action': 'register_token',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+          'fcm_token': fcmToken,
+          'platform': Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : 'other',
+          'app_version': '3.0.7',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        Logger.i('FCM token registered successfully');
+        return true;
+      }
+      Logger.i('Failed to register FCM token: ${response.body}');
+      return false;
+    } catch (e) {
+      Logger.i('Error registering FCM token: $e');
+      return false;
+    }
+  }
+
+  Future<bool> unregisterFcmToken(String fcmToken) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: { 'Content-Type': 'application/json' },
+        body: json.encode({
+          'action': 'unregister_token',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+          'fcm_token': fcmToken,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      Logger.i('Error unregistering FCM token: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, bool>> getNotificationPreferences() async {
+    if (currentUserId == null) return {};
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: { 'Content-Type': 'application/json' },
+        body: json.encode({
+          'action': 'get_preferences',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return Map<String, bool>.from(data['preferences'] ?? {});
+      }
+      return {};
+    } catch (e) {
+      Logger.i('Error getting notification preferences: $e');
+      return {};
+    }
+  }
+
+  Future<bool> updateNotificationPreferences(Map<String, bool> preferences) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: { 'Content-Type': 'application/json' },
+        body: json.encode({
+          'action': 'update_preferences',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+          'preferences': preferences,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        Logger.i('Notification preferences updated');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      Logger.i('Error updating notification preferences: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchNotificationHistory({
+    int page = 1,
+    int limit = 30,
+    String? type,
+    bool unreadOnly = false,
+  }) async {
+    if (currentUserId == null) {
+      return {'notifications': [], 'total': 0, 'unread_count': 0};
+    }
+
+    try {
+      final body = <String, dynamic>{
+        'action': 'get_history',
+        'client_type': _clientType,
+        'user_id': currentUserId,
+        'page': page,
+        'limit': limit,
+      };
+      if (type != null) body['type'] = type;
+      if (unreadOnly) body['unreadOnly'] = true;
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'notifications':
+              (data['notifications'] as List?)?.map((n) => n).toList() ?? [],
+          'total': data['total'] ?? 0,
+          'unread_count': data['unread_count'] ?? 0,
+        };
+      }
+      return {'notifications': [], 'total': 0, 'unread_count': 0};
+    } catch (e) {
+      Logger.i('Error fetching notification history: $e');
+      return {'notifications': [], 'total': 0, 'unread_count': 0};
+    }
+  }
+
+  Future<bool> markNotificationRead(int notificationId) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'action': 'mark_read',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+          'notification_id': notificationId,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      Logger.i('Error marking notification as read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> markAllNotificationsRead({String? type}) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final body = <String, dynamic>{
+        'action': 'mark_all_read',
+        'client_type': _clientType,
+        'user_id': currentUserId,
+      };
+      if (type != null) body['type'] = type;
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      Logger.i('Error marking all notifications as read: $e');
+      return false;
+    }
+  }
+
+  Future<int> getUnreadNotificationCount() async {
+    if (currentUserId == null) return 0;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'action': 'get_unread_count',
+          'client_type': _clientType,
+          'user_id': currentUserId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final count = data['unread_count'] as int? ?? 0;
+        unreadNotificationCount.value = count;
+        return count;
+      }
+      return 0;
+    } catch (e) {
+      Logger.i('Error getting unread count: $e');
+      return 0;
+    }
+  }
+
+  Future<void> refreshUnreadCount() async {
+    if (currentUserId == null) {
+      unreadNotificationCount.value = 0;
+      return;
+    }
+    final count = await getUnreadNotificationCount();
+    unreadNotificationCount.value = count;
   }
 }
