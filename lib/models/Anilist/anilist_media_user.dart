@@ -63,7 +63,8 @@ class TrackedMedia {
     return TrackedMedia(
       id: json['media']['id']?.toString(),
       idMal: json['media']['idMal']?.toString(),
-      title: json['media']['title']['english'] ??
+      title: json['media']['title']['userPreferred'] ??
+          json['media']['title']['english'] ??
           json['media']['title']['romaji'] ??
           json['media']['title']['native'],
       poster: json['media']['coverImage']['large'],

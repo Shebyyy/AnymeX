@@ -40,7 +40,7 @@ const settingsSearchCategoryIcons = <String, IconData>{
 
 const settingsSearchIndex = <String, Map<String?, List<String>>>{
   'Accounts': {
-    null: ['Anilist', 'MyAnimeList', 'Simkl'],
+    null: ['Anilist', 'MyAnimeList', 'Simkl', 'Anilist Settings'],
   },
   'Common': {
     null: [
@@ -215,6 +215,7 @@ const settingsSearchIndex = <String, Map<String?, List<String>>>{
 };
 
 const settingsSearchTitleIcons = <String, IconData>{
+  'Anilist Settings': Icons.tune_rounded,
   'Ask for tracking permission': Icons.touch_app_rounded,
   'Hide Adult Content': Icons.play_disabled_rounded,
   'Show Continue Watching Card': Icons.play_circle_fill_rounded,
