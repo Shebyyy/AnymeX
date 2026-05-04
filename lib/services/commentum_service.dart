@@ -26,7 +26,8 @@ class CommentumService extends GetxController {
 
   final RxString currentUserRole = 'user'.obs;
   final RxInt unreadNotificationCount = 0.obs;
-  bool _fcmTokenRegistered = false;
+  final Set<String> _registeredClientTypes = {};
+  String? _pendingFcmToken;
 
   Profile? get currentUser => serviceHandler.profileData.value;
   String? get currentUserId => currentUser?.id?.toString();
@@ -36,6 +37,7 @@ class CommentumService extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    ever(serviceHandler.serviceType, (_) => _tryRegisterFcm());
     ever(serviceHandler.profileData, (_) {
       _tryRegisterFcm();
       refreshUnreadCount();
@@ -47,7 +49,10 @@ class CommentumService extends GetxController {
   }
 
   Future<void> _tryRegisterFcm() async {
-    if (_fcmTokenRegistered || currentUserId == null) return;
+    final clientType = _clientType;
+    final userId = currentUserId;
+    if (userId == null) return;
+    if (_registeredClientTypes.contains(clientType)) return;
     if (!Get.isRegistered<NotificationService>()) return;
 
     final ns = Get.find<NotificationService>();
@@ -55,7 +60,10 @@ class CommentumService extends GetxController {
     if (token == null) return;
 
     final success = await registerFcmToken(token);
-    if (success) _fcmTokenRegistered = true;
+    if (success) {
+      _registeredClientTypes.add(clientType);
+      _pendingFcmToken = token;
+    }
   }
 
   Future<String?> get _authToken async {
