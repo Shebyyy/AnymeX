@@ -5,6 +5,7 @@ import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comments_controller.dart';
 import 'package:anymex/screens/anime/widgets/comments/discord_markdown.dart';
+import 'package:anymex/screens/anime/widgets/comments/mention_autocomplete.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/policy_sheet.dart';
@@ -366,12 +367,22 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 
+  final Map<String, LayerLink> _mentionLayerLinks = {};
+  LayerLink _getMentionLayerLink(String key) {
+    return _mentionLayerLinks.putIfAbsent(key, () => LayerLink());
+  }
+
   Widget _buildCommentInput(
       BuildContext context, CommentSectionController controller) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Obx(() => AnimatedContainer(
+    return Obx(() => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CompositedTransformTarget(
+          link: _getMentionLayerLink('main'),
+          child: AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -451,6 +462,11 @@ class _CommentSectionState extends State<CommentSection> {
               color: colorScheme.outlineVariant.opaque(0.3),
               height: 1,
             ),
+            const SizedBox(height: 12),
+            MarkdownFormattingToolbar(
+              controller: controller.commentController,
+              colorScheme: colorScheme,
+            ),
             const SizedBox(height: 16),
             _buildTagSelector(context, controller),
             const SizedBox(height: 16),
@@ -515,6 +531,14 @@ class _CommentSectionState extends State<CommentSection> {
           ],
         ],
       ),
+        ),
+      ),
+      MentionAutocomplete(
+          controller: controller.commentController,
+          layerLink: _getMentionLayerLink('main'),
+          focusNode: controller.commentFocusNode,
+        ),
+      ],
     ));
   }
 
@@ -3185,4 +3209,3 @@ class _SpoilerTextState extends State<_SpoilerText> {
     );
   }
 }
-
