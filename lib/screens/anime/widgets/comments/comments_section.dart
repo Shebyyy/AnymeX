@@ -38,6 +38,7 @@ class _CommentSectionState extends State<CommentSection> {
   String? lastMediaId;
 
   final Map<String, TextEditingController> _replyControllers = {};
+  final Map<String, FocusNode> _replyFocusNodes = {};
   final Set<String> _expandedThreads = {};
 
   @override
@@ -77,12 +78,21 @@ class _CommentSectionState extends State<CommentSection> {
     }
   }
 
+  FocusNode _getReplyFocusNode(String commentId) {
+    return _replyFocusNodes.putIfAbsent(
+        commentId, () => FocusNode());
+  }
+
   @override
   void dispose() {
     for (final c in _replyControllers.values) {
       c.dispose();
     }
+    for (final f in _replyFocusNodes.values) {
+      f.dispose();
+    }
     _replyControllers.clear();
+    _replyFocusNodes.clear();
     final isPreloaded = CommentPreloader.to.isPreloaded(widget.media.uniqueId);
     if (!isPreloaded) {
       Get.delete<CommentSectionController>(tag: widget.media.uniqueId);
@@ -988,6 +998,8 @@ class _CommentSectionState extends State<CommentSection> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final replyController = _getReplyController(comment.id);
+    final replyFocusNode = _getReplyFocusNode(comment.id);
+    final replyLayerLink = _getMentionLayerLink('reply_${comment.id}');
 
     if (comment.locked == true || isParentLocked) {
       return const SizedBox.shrink();
@@ -996,51 +1008,58 @@ class _CommentSectionState extends State<CommentSection> {
     return StatefulBuilder(
       builder: (context, setReplyState) {
         final hasText = replyController.text.trim().isNotEmpty;
-        return Container(
-          margin: EdgeInsets.only(
-            left: depth > 0 ? (16.0 + (depth * 12.0)).clamp(0.0, 80.0) : 52,
-            right: 16,
-          ),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerLowest.opaque(0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: colorScheme.primary.opaque(0.3, iReallyMeanIt: true),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.reply_rounded,
-                      size: 16, color: colorScheme.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Replying to ${comment.username}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CompositedTransformTarget(
+              link: replyLayerLink,
+              child: Container(
+                margin: EdgeInsets.only(
+                  left: depth > 0 ? (16.0 + (depth * 12.0)).clamp(0.0, 80.0) : 52,
+                  right: 16,
+                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLowest.opaque(0.5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: colorScheme.primary.opaque(0.3, iReallyMeanIt: true),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.reply_rounded,
+                            size: 16, color: colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Replying to ${comment.username}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            controller.toggleReply(comment.id);
+                            replyController.clear();
+                          },
+                          child: Icon(Icons.close_rounded,
+                              size: 18, color: colorScheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      controller.toggleReply(comment.id);
-                      replyController.clear();
-                    },
-                    child: Icon(Icons.close_rounded,
-                        size: 18, color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: replyController,
-                maxLines: 3,
-                minLines: 1,
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: replyController,
+                      focusNode: replyFocusNode,
+                      maxLines: 3,
+                      minLines: 1,
                 style: TextStyle(
                   color: colorScheme.onSurface,
                   fontSize: 14,
@@ -1114,6 +1133,14 @@ class _CommentSectionState extends State<CommentSection> {
               ),
             ],
           ),
+              ),
+            ),
+            MentionAutocomplete(
+              controller: replyController,
+              layerLink: replyLayerLink,
+              focusNode: replyFocusNode,
+            ),
+          ],
         );
       },
     );

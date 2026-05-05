@@ -106,23 +106,24 @@ class _MentionAutocompleteState extends State<MentionAutocomplete> {
 
   void _showOverlay() {
     _hideOverlay();
-    final renderBox = context.findRenderObject() as RenderBox;
-    final size = renderBox.size;
     final colorScheme = Theme.of(context).colorScheme;
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        width: size.width,
-        child: CompositedTransformFollower(
-          link: widget.layerLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0, -4),
+      builder: (context) => CompositedTransformFollower(
+        link: widget.layerLink,
+        showWhenUnlinked: false,
+        offset: const Offset(0, -4),
+        child: FractionalTranslation(
+          translation: const Offset(0, -1.0),
           child: Material(
             elevation: 8,
             shadowColor: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             color: colorScheme.surfaceContainerHigh,
-            child: _buildDropdown(colorScheme),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: _buildDropdown(colorScheme),
+            ),
           ),
         ),
       ),
@@ -301,13 +302,16 @@ class _MentionAutocompleteState extends State<MentionAutocomplete> {
     widget.focusNode.removeListener(_onFocusChange);
     _debounce?.cancel();
     _hideOverlay();
+    _keyListenerFocusNode.dispose();
     super.dispose();
   }
+
+  final FocusNode _keyListenerFocusNode = FocusNode();
 
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
-      focusNode: FocusNode(),
+      focusNode: _keyListenerFocusNode,
       onKeyEvent: _handleKeyEvent,
       child: const SizedBox.shrink(),
     );
