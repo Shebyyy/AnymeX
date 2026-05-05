@@ -532,7 +532,8 @@ class _CommentSectionState extends State<CommentSection> {
         ],
       ),
         ),
-        MentionAutocomplete(
+      ),
+      MentionAutocomplete(
           controller: controller.commentController,
           layerLink: _getMentionLayerLink('main'),
           focusNode: controller.commentFocusNode,
@@ -3208,4 +3209,3 @@ class _SpoilerTextState extends State<_SpoilerText> {
     );
   }
 }
-
