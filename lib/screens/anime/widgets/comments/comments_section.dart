@@ -1150,6 +1150,12 @@ class _CommentSectionState extends State<CommentSection> {
       CommentSectionController controller, {bool effectiveLocked = false, int depth = 0}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    // Reddit-style: show deleted comment as [deleted] but keep replies visible
+    if (comment.deleted) {
+      return _buildDeletedComment(context, comment, depth);
+    }
+
     final isSpoiler = comment.tag.toLowerCase().contains('spoiler');
     final isOwnComment =
         comment.userId == controller.profile.id?.toString();
@@ -1301,6 +1307,32 @@ class _CommentSectionState extends State<CommentSection> {
                 ],
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeletedComment(BuildContext context, Comment comment, int depth) {
+    final colorScheme = context.colors;
+    final isCompact = depth >= 2;
+    final avatarSize = isCompact ? 28.0 : 40.0;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: avatarSize + (isCompact ? 8 : 12)),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: avatarSize / 4),
+            child: Text(
+              '[deleted]',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant.opaque(0.4),
+                fontSize: isCompact ? 13.0 : 15.0,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
         ),
       ],
