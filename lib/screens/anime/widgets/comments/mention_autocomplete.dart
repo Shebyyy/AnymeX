@@ -107,21 +107,25 @@ class _MentionAutocompleteState extends State<MentionAutocomplete> {
   void _showOverlay() {
     _hideOverlay();
     final colorScheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => CompositedTransformFollower(
-        link: widget.layerLink,
-        showWhenUnlinked: false,
-        offset: const Offset(0, -4),
-        child: FractionalTranslation(
-          translation: const Offset(0, -1.0),
-          child: Material(
-            elevation: 8,
-            shadowColor: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-            color: colorScheme.surfaceContainerHigh,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
+      builder: (context) => Positioned(
+        left: 0,
+        right: 0,
+        child: CompositedTransformFollower(
+          link: widget.layerLink,
+          showWhenUnlinked: false,
+          targetAnchor: Alignment.topLeft,
+          followerAnchor: Alignment.bottomLeft,
+          offset: const Offset(0, -8),
+          child: SizedBox(
+            width: (screenWidth - 64).clamp(200.0, 340.0),
+            child: Material(
+              elevation: 8,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              color: colorScheme.surfaceContainerHigh,
               child: _buildDropdown(colorScheme),
             ),
           ),

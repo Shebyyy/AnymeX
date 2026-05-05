@@ -98,6 +98,12 @@ class NotificationService extends GetxController {
         description: 'Official announcements',
         importance: Importance.high,
       ));
+      await androidPlugin.createNotificationChannel(const AndroidNotificationChannel(
+        'mentions',
+        'Mentions',
+        description: 'When someone @mentions you in a comment',
+        importance: Importance.high,
+      ));
     }
   }
 
@@ -240,6 +246,7 @@ class NotificationService extends GetxController {
       case 'moderation': return 'Moderation';
       case 'reports': return 'Reports';
       case 'announcements': return 'Announcements';
+      case 'mentions': return 'Mentions';
       default: return 'Comments';
     }
   }
@@ -249,6 +256,7 @@ class NotificationService extends GetxController {
       case 'comments':
       case 'moderation':
       case 'announcements':
+      case 'mentions':
         return Importance.high;
       default:
         return Importance.defaultImportance;
