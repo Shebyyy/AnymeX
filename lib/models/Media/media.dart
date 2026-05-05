@@ -51,6 +51,7 @@ class Media {
   String? characterRole;
   int? seasonYear;
   List<String> synonyms;
+  List<MediaTag> tags;
 
   // String get uniqueId => "$id-${serviceType.name}";
   String get uniqueId => id.split('*').first;
@@ -95,6 +96,7 @@ class Media {
       this.userStatus,
       this.characterRole,
       this.synonyms = const [],
+      this.tags = const [],
       DateTime? createdAt})
       : createdAt = DateTime.now();
 
@@ -376,7 +378,7 @@ class Media {
       id: json['id'].toString(),
       idMal: json['idMal']?.toString() ?? '0',
       romajiTitle: json['title']['romaji'] ?? '?',
-      title: json['title']['english'] ?? json['title']['romaji'] ?? '?',
+      title: json['title']['userPreferred'] ?? json['title']['english'] ?? json['title']['romaji'] ?? '?',
       description: json['description'] ?? '?',
       poster: json['coverImage']['large'] ?? '?',
       isAdult: json['isAdult'] ?? false,
@@ -417,6 +419,11 @@ class Media {
       mediaType: type,
       serviceType: ServicesType.anilist,
       synonyms: (json['synonyms'] as List?)?.cast<String>() ?? [],
+      tags: (json['tags'] as List?)
+              ?.map((t) => MediaTag.fromJson(t))
+              .where((t) => !t.isMediaSpoiler && !t.isGeneralSpoiler)
+              .toList() ??
+          [],
     );
 
     if (json['staffPreview'] != null) {
@@ -457,7 +464,7 @@ class Media {
     return Media(
       id: (isMal ? json['idMal']?.toString() : json['id'].toString()) ?? '',
       romajiTitle: json['title']['romaji'] ?? '?',
-      title: json['title']['english'] ?? json['title']['romaji'] ?? '?',
+      title: json['title']['userPreferred'] ?? json['title']['english'] ?? json['title']['romaji'] ?? '?',
       description: json['description'] ?? '',
       isAdult: (json['isAdult'] as bool?) ?? false,
       totalEpisodes: (json['episodes'] as int?)?.toString() ?? '?',
@@ -487,22 +494,16 @@ class Media {
   }
 
   factory Media.fromRecs(Map<String, dynamic> json) {
+    final rec = json['mediaRecommendation'];
+    if (rec == null) {
+      return Media(id: '', title: '', poster: '', rating: '0', serviceType: ServicesType.anilist);
+    }
+    final title = rec['title'];
     return Media(
-        id: json['mediaRecommendation'] != null
-            ? json['mediaRecommendation']['id'].toString()
-            : '',
-        title: json['mediaRecommendation'] != null
-            ? json['mediaRecommendation']['title']['english'] ??
-                json['mediaRecommendation']['title']['romaji']
-            : '',
-        poster: json['mediaRecommendation'] != null
-            ? json['mediaRecommendation']['coverImage']['large']
-            : '',
-        rating: ((json['mediaRecommendation'] != null
-                    ? json['mediaRecommendation']['averageScore'] ?? 0
-                    : 0) /
-                10)
-            .toString(),
+        id: rec['id'].toString(),
+        title: title?['userPreferred'] ?? title?['english'] ?? title?['romaji'] ?? '',
+        poster: rec['coverImage']?['large'] ?? '',
+        rating: ((rec['averageScore'] ?? 0) / 10).toString(),
         serviceType: ServicesType.anilist);
   }
 
@@ -569,7 +570,7 @@ class Media {
       id: json['id']?.toString() ?? '0',
       idMal: json['idMal']?.toString() ?? '0',
       romajiTitle: json['title']?['romaji'] ?? '?',
-      title: json['title']?['english'] ?? json['title']?['romaji'] ?? '?',
+      title: json['title']?['userPreferred'] ?? json['title']?['english'] ?? json['title']?['romaji'] ?? '?',
       description: json['description'] ?? '',
       poster: json['coverImage']?['large'] ?? '',
       largePoster: json['coverImage']?['extraLarge'] ?? '',
@@ -643,6 +644,29 @@ class Ranking {
       rank: json['rank'] ?? 0,
       type: json['type'] ?? '?',
       year: json['year'] ?? 0,
+    );
+  }
+}
+
+class MediaTag {
+  final String name;
+  final int rank;
+  final bool isMediaSpoiler;
+  final bool isGeneralSpoiler;
+
+  const MediaTag({
+    required this.name,
+    required this.rank,
+    this.isMediaSpoiler = false,
+    this.isGeneralSpoiler = false,
+  });
+
+  factory MediaTag.fromJson(Map<String, dynamic> json) {
+    return MediaTag(
+      name: json['name'] ?? '',
+      rank: json['rank'] ?? 0,
+      isMediaSpoiler: json['isMediaSpoiler'] ?? false,
+      isGeneralSpoiler: json['isGeneralSpoiler'] ?? false,
     );
   }
 }

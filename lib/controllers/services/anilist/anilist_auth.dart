@@ -10,6 +10,7 @@ import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_activity.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
+import 'package:anymex/models/Anilist/anilist_user_settings.dart';
 import 'package:anymex/models/Anilist/social_user.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/services/commentum_service.dart';
@@ -37,6 +38,8 @@ class AnilistAuth extends GetxController {
   RxList<TrackedMedia> currentlyReading = <TrackedMedia>[].obs;
   RxList<TrackedMedia> mangaList = <TrackedMedia>[].obs;
   DateTime? _rateLimitUntil;
+  AnilistUserSettings? cachedSettings;
+  AnilistSettingsMetadata? cachedMetadata;
 
   void _handle403(http.Response response) {
     dynamic errorJson;
@@ -114,6 +117,7 @@ class AnilistAuth extends GetxController {
       await fetchUserProfile();
       await fetchUserAnimeList();
       await fetchUserMangaList();
+      prefetchSettings();
 
       try {
         final commentumService = Get.find<CommentumService>();
@@ -167,8 +171,7 @@ class AnilistAuth extends GetxController {
         final code = Uri.parse(result).queryParameters['code'];
         if (code != null) {
           Logger.i("token found");
-          await _exchangeCodeForToken(
-              code, clientId, clientSecret);
+          await _exchangeCodeForToken(code, clientId, clientSecret);
         }
       } catch (e) {
         Logger.i('Error during login: $e');
@@ -482,9 +485,9 @@ class AnilistAuth extends GetxController {
           startYears { startYear count meanScore minutesWatched }
           genres(sort: COUNT_DESC) { genre count meanScore minutesWatched }
           tags(sort: COUNT_DESC) { tag { name } count meanScore minutesWatched }
-          voiceActors(sort: COUNT_DESC) { voiceActor { id name { full } image { medium } } count meanScore minutesWatched }
+          voiceActors(sort: COUNT_DESC) { voiceActor { id name { userPreferred full } image { medium } } count meanScore minutesWatched }
           studios(sort: COUNT_DESC) { studio { id name } count meanScore minutesWatched }
-          staff(sort: COUNT_DESC) { staff { id name { full } image { medium } } count meanScore minutesWatched }
+          staff(sort: COUNT_DESC) { staff { id name { userPreferred full } image { medium } } count meanScore minutesWatched }
         }
         manga {
           count
@@ -501,7 +504,7 @@ class AnilistAuth extends GetxController {
           startYears { startYear count meanScore chaptersRead }
           genres(sort: COUNT_DESC) { genre count meanScore chaptersRead }
           tags(sort: COUNT_DESC) { tag { name } count meanScore chaptersRead }
-          staff(sort: COUNT_DESC) { staff { id name { full } image { medium } } count meanScore chaptersRead }
+          staff(sort: COUNT_DESC) { staff { id name { userPreferred full } image { medium } } count meanScore chaptersRead }
         }
       }
       favourites {
@@ -528,7 +531,7 @@ class AnilistAuth extends GetxController {
         characters {
           nodes {
             id
-            name { full }
+            name { userPreferred full }
             image { large medium }
           }
         }
@@ -597,6 +600,265 @@ class AnilistAuth extends GetxController {
     }
   }
 
+  void prefetchSettings() {
+    fetchUserSettings().then((s) => cachedSettings = s).catchError((_) {});
+    fetchSettingsMetadata().then((m) => cachedMetadata = m).catchError((_) {});
+  }
+
+  Future<AnilistUserSettings?> fetchUserSettings() async {
+    const query = r'''
+  query {
+    Viewer {
+      about
+      options {
+        titleLanguage
+        staffNameLanguage
+        activityMergeTime
+        displayAdultContent
+        airingNotifications
+        restrictMessagesToFollowing
+        timezone
+      }
+      mediaListOptions {
+        scoreFormat
+        rowOrder
+        animeList {
+          splitCompletedSectionByFormat
+          sectionOrder
+          theme
+          customLists
+          advancedScoring
+          advancedScoringEnabled
+        }
+        mangaList {
+          splitCompletedSectionByFormat
+          sectionOrder
+          theme
+          customLists
+        }
+      }
+    }
+  }
+  ''';
+
+    try {
+      final token = _requireAuthToken();
+
+      final response = await _anilistPost(
+        headers: _anilistAuthHeaders(token),
+        body: {'query': query},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        _throwIfGraphQlErrors(data, 'Failed to fetch settings');
+
+        final viewer = data['data']?['Viewer'] as Map<String, dynamic>?;
+        if (viewer == null) return null;
+        return AnilistUserSettings.fromJson(viewer);
+      }
+
+      if (response.statusCode == 403) {
+        _handle403(response);
+      }
+
+      throw Exception(
+          'Failed to fetch AniList settings (${response.statusCode})');
+    } catch (e) {
+      Logger.e('Error fetching AniList settings: $e');
+      rethrow;
+    }
+  }
+
+  Future<AnilistSettingsMetadata?> fetchSettingsMetadata() async {
+    const query = r'''
+  query SettingsMetadata {
+    titleLanguage: __type(name: "UserTitleLanguage") {
+      enumValues { name }
+    }
+    staffNameLanguage: __type(name: "UserStaffNameLanguage") {
+      enumValues { name }
+    }
+    scoreFormat: __type(name: "ScoreFormat") {
+      enumValues { name }
+    }
+    mediaFormat: __type(name: "MediaFormat") {
+      enumValues { name }
+    }
+  }
+  ''';
+
+    try {
+      final token = _requireAuthToken();
+      final response = await _anilistPost(
+        headers: _anilistAuthHeaders(token),
+        body: {'query': query},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        _throwIfGraphQlErrors(data, 'Failed to fetch settings metadata');
+
+        final payload = data['data'] as Map<String, dynamic>?;
+        if (payload == null || payload.isEmpty) return null;
+        return AnilistSettingsMetadata.fromJson(payload);
+      }
+
+      if (response.statusCode == 403) {
+        _handle403(response);
+      }
+
+      throw Exception(
+          'Failed to fetch AniList settings metadata (${response.statusCode})');
+    } catch (e) {
+      Logger.e('Error fetching AniList settings metadata: $e');
+      return null;
+    }
+  }
+
+  Future<AnilistUserSettings?> updateUserSettings(
+      AnilistUserSettings settings) async {
+    const mutation = r'''
+  mutation UpdateSettings(
+    $about: String,
+    $titleLanguage: UserTitleLanguage,
+    $staffNameLanguage: UserStaffNameLanguage,
+    $activityMergeTime: Int,
+    $displayAdultContent: Boolean,
+    $airingNotifications: Boolean,
+    $scoreFormat: ScoreFormat,
+    $rowOrder: String,
+    $splitCompletedAnime: Boolean,
+    $splitCompletedManga: Boolean,
+    $restrictMessagesToFollowing: Boolean,
+    $advancedScoringEnabled: Boolean,
+    $advancedScoring: [String],
+    $animeCustomLists: [String],
+    $mangaCustomLists: [String],
+    $animeSectionOrder: [String],
+    $mangaSectionOrder: [String],
+    $animeTheme: String,
+    $mangaTheme: String,
+    $timezone: String
+  ) {
+    UpdateUser(
+      about: $about,
+      titleLanguage: $titleLanguage,
+      staffNameLanguage: $staffNameLanguage,
+      activityMergeTime: $activityMergeTime,
+      displayAdultContent: $displayAdultContent,
+      airingNotifications: $airingNotifications,
+      restrictMessagesToFollowing: $restrictMessagesToFollowing,
+      scoreFormat: $scoreFormat,
+      rowOrder: $rowOrder,
+      timezone: $timezone,
+      animeListOptions: {
+        splitCompletedSectionByFormat: $splitCompletedAnime,
+        sectionOrder: $animeSectionOrder,
+        theme: $animeTheme,
+        customLists: $animeCustomLists,
+        advancedScoringEnabled: $advancedScoringEnabled,
+        advancedScoring: $advancedScoring
+      },
+      mangaListOptions: {
+        splitCompletedSectionByFormat: $splitCompletedManga,
+        sectionOrder: $mangaSectionOrder,
+        theme: $mangaTheme,
+        customLists: $mangaCustomLists
+      }
+    ) {
+      about
+      options {
+        titleLanguage
+        staffNameLanguage
+        activityMergeTime
+        displayAdultContent
+        airingNotifications
+        restrictMessagesToFollowing
+        timezone
+      }
+      mediaListOptions {
+        scoreFormat
+        rowOrder
+        animeList {
+          splitCompletedSectionByFormat
+          sectionOrder
+          theme
+          customLists
+          advancedScoring
+          advancedScoringEnabled
+        }
+        mangaList {
+          splitCompletedSectionByFormat
+          sectionOrder
+          theme
+          customLists
+        }
+      }
+    }
+  }
+  ''';
+
+    try {
+      final token = _requireAuthToken();
+
+      final response = await _anilistPost(
+        headers: _anilistAuthHeaders(token),
+        body: {
+          'query': mutation,
+          'variables': settings.toGraphQlVariables(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        _throwIfGraphQlErrors(data, 'Failed to update settings');
+
+        final updated = data['data']?['UpdateUser'] as Map<String, dynamic>?;
+        if (updated == null) return null;
+        return AnilistUserSettings.fromJson(updated);
+      }
+
+      if (response.statusCode == 403) {
+        _handle403(response);
+      }
+
+      throw Exception(
+          'Failed to update AniList settings (${response.statusCode})');
+    } catch (e) {
+      Logger.e('Error updating AniList settings: $e');
+      rethrow;
+    }
+  }
+
+  String _requireAuthToken() {
+    final token = AuthKeys.authToken.get<String?>();
+    if (token == null || token.isEmpty) {
+      throw Exception('Please login to AniList first.');
+    }
+    return token;
+  }
+
+  Map<String, String> _anilistAuthHeaders(String token) {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  void _throwIfGraphQlErrors(Map<String, dynamic> data, String fallback) {
+    final errors = data['errors'] as List<dynamic>?;
+    if (errors == null || errors.isEmpty) return;
+
+    final first = errors.first;
+    if (first is Map<String, dynamic>) {
+      throw Exception(first['message']?.toString() ?? fallback);
+    }
+
+    throw Exception(fallback);
+  }
+
   Future<Profile?> fetchUserDetails(int userId) async {
     const query = r'''
   query ($id: Int) {
@@ -630,9 +892,9 @@ class AnilistAuth extends GetxController {
           startYears { startYear count meanScore minutesWatched }
           genres(sort: COUNT_DESC) { genre count meanScore minutesWatched }
           tags(sort: COUNT_DESC) { tag { name } count meanScore minutesWatched }
-          voiceActors(sort: COUNT_DESC) { voiceActor { id name { full } image { medium } } count meanScore minutesWatched }
+          voiceActors(sort: COUNT_DESC) { voiceActor { id name { userPreferred full } image { medium } } count meanScore minutesWatched }
           studios(sort: COUNT_DESC) { studio { id name } count meanScore minutesWatched }
-          staff(sort: COUNT_DESC) { staff { id name { full } image { medium } } count meanScore minutesWatched }
+          staff(sort: COUNT_DESC) { staff { id name { userPreferred full } image { medium } } count meanScore minutesWatched }
         }
         manga {
           count
@@ -649,7 +911,7 @@ class AnilistAuth extends GetxController {
           startYears { startYear count meanScore chaptersRead }
           genres(sort: COUNT_DESC) { genre count meanScore chaptersRead }
           tags(sort: COUNT_DESC) { tag { name } count meanScore chaptersRead }
-          staff(sort: COUNT_DESC) { staff { id name { full } image { medium } } count meanScore chaptersRead }
+          staff(sort: COUNT_DESC) { staff { id name { userPreferred full } image { medium } } count meanScore chaptersRead }
         }
       }
       favourites {
@@ -676,7 +938,7 @@ class AnilistAuth extends GetxController {
         characters {
           nodes {
             id
-            name { full }
+            name { userPreferred full }
             image { large medium }
           }
         }
@@ -801,7 +1063,7 @@ class AnilistAuth extends GetxController {
             averageScore
             genres
             startDate { year }
-            title { english romaji native }
+            title { userPreferred english romaji native }
             coverImage { large }
             nextAiringEpisode { episode }
             mediaListEntry { id }
@@ -1328,7 +1590,6 @@ class AnilistAuth extends GetxController {
   Future<List<ActivityReply>> fetchActivityReplies(int activityId) async {
     final token = AuthKeys.authToken.get<String?>();
 
-  
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -1392,7 +1653,6 @@ class AnilistAuth extends GetxController {
     final token = AuthKeys.authToken.get<String?>();
     if (token == null) return false;
 
-   
     const mutation = r'''
   mutation CreateActivity($text: String) {
     SaveTextActivity(text: $text) {
@@ -1534,9 +1794,9 @@ class AnilistAuth extends GetxController {
           'variables': {'id': id, 'pinned': isPinned},
         }),
       );
-      
+
       final data = json.decode(response.body);
-      
+
       if (response.statusCode == 200 && data['errors'] == null) {
         return null; // Success
       } else {
@@ -1656,6 +1916,7 @@ class AnilistAuth extends GetxController {
             id
             idMal
             title {
+              userPreferred
               romaji
               english
               native
@@ -1952,6 +2213,7 @@ class AnilistAuth extends GetxController {
               id
               idMal
               title {
+                userPreferred
                 romaji
                 english
                 native
@@ -2228,7 +2490,8 @@ class AnilistAuth extends GetxController {
               ));
     } else {
       final savedAnime = offlineStorage.getAnimeById(id);
-      final number = savedAnime?.currentEpisode?.number?.toInt() ?? 0;
+      final currentEpisode = savedAnime?.currentEpisode;
+      final number = currentEpisode == null ? 0 : currentEpisode.number.toInt();
       currentMedia.value = animeList.value.firstWhere((el) => el.id == id,
           orElse: () => TrackedMedia(
               episodeCount: number.toString(),

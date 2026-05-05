@@ -13,6 +13,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_anilist_api.dart';
 
 Widget _buildBottomSheetOption(
   BuildContext context, {
@@ -484,6 +485,15 @@ class DesktopProfileHeader extends StatelessWidget {
                                               }
                                             },
                                           ),
+                                          _buildBottomSheetOption(
+                                            ctx,
+                                            icon: Iconsax.setting_2,
+                                            label: 'AniList Settings',
+                                            onTap: () {
+                                              Navigator.pop(ctx);
+                                              Get.to(() => const SettingsAnilistApi());
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -661,6 +671,15 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                                 ),
                               );
                             }
+                          },
+                        ),
+                        _buildBottomSheetOption(
+                          ctx,
+                          icon: Iconsax.setting_2,
+                          label: 'AniList Settings',
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Get.to(() => const SettingsAnilistApi());
                           },
                         ),
                       ],
