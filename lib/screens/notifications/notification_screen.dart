@@ -142,6 +142,7 @@ class NotificationScreen extends GetView<NotificationController> {
     final filters = [
       ('all', 'All'),
       ('comment', 'Comments'),
+      ('mention', 'Mentions'),
       ('vote', 'Votes'),
       ('report', 'Reports'),
       ('moderation', 'Moderation'),

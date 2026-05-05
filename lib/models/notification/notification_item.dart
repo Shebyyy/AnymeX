@@ -19,6 +19,7 @@ class NotificationItem {
   final bool isRead;
   final DateTime? readAt;
   final DateTime createdAt;
+  final Map<String, dynamic> metadata;
 
   NotificationItem({
     required this.id,
@@ -39,6 +40,7 @@ class NotificationItem {
     this.isRead = false,
     this.readAt,
     required this.createdAt,
+    this.metadata = const {},
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
@@ -65,11 +67,18 @@ class NotificationItem {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
           : DateTime.now(),
+      metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     );
+  }
+
+  String? get rawCommentContent {
+    return metadata['raw_comment_content'] as String?;
   }
 
   String get typeIcon {
     switch (type) {
+      case 'user_mentioned':
+        return '💬';
       case 'comment_reply':
         return '↩️';
       case 'comment_created':
@@ -118,6 +127,7 @@ class NotificationItem {
   }
 
   String get typeCategory {
+    if (type == 'user_mentioned') return 'comment';
     if (type.startsWith('comment_')) return 'comment';
     if (type.startsWith('vote_')) return 'vote';
     if (type.startsWith('report_')) return 'report';

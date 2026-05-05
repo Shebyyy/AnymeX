@@ -17,6 +17,12 @@ class NotificationController extends GetxController {
   bool _hasMore = true;
 
   final RxString selectedFilter = 'all'.obs;
+
+  String? get _apiFilterType {
+    if (selectedFilter.value == 'all') return null;
+    if (selectedFilter.value == 'mention') return 'user_mentioned';
+    return selectedFilter.value;
+  }
   final RxBool showUnreadOnly = false.obs;
 
   @override
@@ -36,9 +42,7 @@ class NotificationController extends GetxController {
       final result = await _commentumService.fetchNotificationHistory(
         page: _currentPage,
         limit: _pageSize,
-        type: selectedFilter.value == 'all'
-            ? null
-            : selectedFilter.value,
+        type: _apiFilterType,
         unreadOnly: showUnreadOnly.value,
       );
 
@@ -67,9 +71,7 @@ class NotificationController extends GetxController {
       final result = await _commentumService.fetchNotificationHistory(
         page: _currentPage,
         limit: _pageSize,
-        type: selectedFilter.value == 'all'
-            ? null
-            : selectedFilter.value,
+        type: _apiFilterType,
         unreadOnly: showUnreadOnly.value,
       );
 
@@ -130,9 +132,7 @@ class NotificationController extends GetxController {
   Future<void> markAllAsRead() async {
     final success =
         await _commentumService.markAllNotificationsRead(
-      type: selectedFilter.value == 'all'
-          ? null
-          : selectedFilter.value,
+      type: _apiFilterType,
     );
     if (success) {
       notifications.value = notifications

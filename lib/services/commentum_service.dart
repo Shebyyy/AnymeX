@@ -646,6 +646,38 @@ class CommentumService extends GetxController {
     }
   }
 
+  Future<List<Map<String, dynamic>>> searchUsersPublic({
+    required String username,
+  }) async {
+    if (currentUserId == null) return [];
+    final token = await _authToken;
+    if (token == null) return [];
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/users'),
+        headers: { 'Content-Type': 'application/json' },
+        body: json.encode({
+          'action': 'search_users_public',
+          'client_type': _clientType,
+          'access_token': token,
+          'username': username.trim(),
+          'target_client_type': _clientType,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['users'] ?? []);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      Logger.i('Error searching users publicly: $e');
+      return [];
+    }
+  }
+
   Future<bool> moderateComment({
     required String action,
     required int commentId,
