@@ -23,10 +23,12 @@ import 'package:anymex/screens/profile/user_profile_page.dart';
 
 class CommentSection extends StatefulWidget {
   final Media media;
+  final String? scrollToCommentId;
 
   const CommentSection({
     super.key,
     required this.media,
+    this.scrollToCommentId,
   });
 
   @override
@@ -40,6 +42,8 @@ class _CommentSectionState extends State<CommentSection> {
   final Map<String, TextEditingController> _replyControllers = {};
   final Map<String, FocusNode> _replyFocusNodes = {};
   final Set<String> _expandedThreads = {};
+  final GlobalKey _targetCommentKey = GlobalKey();
+  bool _hasScrolledToTarget = false;
 
   @override
   void initState() {
@@ -53,6 +57,82 @@ class _CommentSectionState extends State<CommentSection> {
     } else {
       controller = Get.put(CommentSectionController(media: widget.media),
           tag: widget.media.uniqueId);
+    }
+
+    _setupScrollToComment();
+  }
+
+  /// After comments load, scroll to the target comment if specified
+  void _setupScrollToComment() {
+    if (widget.scrollToCommentId == null || widget.scrollToCommentId!.isEmpty) return;
+
+    ever(controller.isLoading, (isLoading) {
+      if (!isLoading && !_hasScrolledToTarget && controller.comments.isNotEmpty) {
+        // Auto-expand any collapsed threads that contain the target comment
+        _expandThreadForComment(widget.scrollToCommentId!, controller.comments);
+
+        // Wait for the widget tree to rebuild with expanded threads
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToTargetComment();
+        });
+      }
+    });
+  }
+
+  /// Recursively find and expand collapsed threads containing the target comment
+  void _expandThreadForComment(String targetId, List<Comment> comments, {int depth = 0}) {
+    for (final comment in comments) {
+      if (comment.id == targetId) return;
+      if (comment.replies != null && comment.replies!.isNotEmpty) {
+        // Check if target is in this comment's replies
+        if (_commentExistsInTree(comment.replies!, targetId)) {
+          // If this thread would be collapsed (depth >= 3), expand it
+          if (depth >= 3 || _wouldBeCollapsed(comment.replies!, targetId, depth + 1)) {
+            setState(() {
+              _expandedThreads.add(comment.id);
+            });
+          }
+          _expandThreadForComment(targetId, comment.replies!, depth: depth + 1);
+        }
+      }
+    }
+  }
+
+  bool _commentExistsInTree(List<Comment> comments, String targetId) {
+    for (final comment in comments) {
+      if (comment.id == targetId) return true;
+      if (comment.replies != null && _commentExistsInTree(comment.replies!, targetId)) return true;
+    }
+    return false;
+  }
+
+  bool _wouldBeCollapsed(List<Comment> comments, String targetId, int depth) {
+    for (final comment in comments) {
+      if (comment.id == targetId) {
+        // This comment is at depth+1 relative to the current check
+        // It would be collapsed if its depth >= 3
+        return depth >= 3;
+      }
+      if (comment.replies != null) {
+        if (_commentExistsInTree(comment.replies!, targetId)) {
+          return _wouldBeCollapsed(comment.replies!, targetId, depth + 1);
+        }
+      }
+    }
+    return false;
+  }
+
+  void _scrollToTargetComment() {
+    if (_hasScrolledToTarget) return;
+    final keyContext = _targetCommentKey.currentContext;
+    if (keyContext != null) {
+      _hasScrolledToTarget = true;
+      Scrollable.ensureVisible(
+        keyContext,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
     }
   }
 
@@ -835,6 +915,12 @@ class _CommentSectionState extends State<CommentSection> {
     return colors[depth % colors.length];
   }
 
+  bool _isTargetComment(String commentId) {
+    return widget.scrollToCommentId != null &&
+        widget.scrollToCommentId!.isNotEmpty &&
+        commentId == widget.scrollToCommentId;
+  }
+
   Widget _buildCommentWithReplies(BuildContext context, Comment comment,
       CommentSectionController controller, int depth, {bool isParentLocked = false}) {
     final theme = Theme.of(context);
@@ -843,10 +929,39 @@ class _CommentSectionState extends State<CommentSection> {
     final effectiveLocked = comment.locked == true || isParentLocked;
     final indent = _getIndentForDepth(depth, screenWidth);
     final threadColor = _getThreadColor(depth, colorScheme);
+    final isTarget = _isTargetComment(comment.id);
 
     return Obx(() => Column(
+      key: isTarget ? _targetCommentKey : null,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (isTarget)
+          Container(
+            margin: EdgeInsets.only(left: indent, bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.opaque(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: colorScheme.primary.opaque(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.notifications_active_rounded,
+                    size: 14, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Notification Target',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (comment.pinned == true && depth == 0) ...[
           Container(
             margin: EdgeInsets.only(left: indent),

@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/models/Media/media.dart';
+import 'package:anymex/screens/anime/details_page.dart';
+import 'package:anymex/screens/manga/details_page.dart';
 import 'package:anymex/services/commentum_service.dart';
-import 'package:anymex/utils/deeplink.dart';
+import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -202,16 +206,78 @@ class NotificationService extends GetxController {
     _navigateFromNotification(message.data);
   }
 
-  void _navigateFromNotification(Map<String, dynamic> data) {
-    final clickAction = data['click_action'] as String?;
+  ServicesType? _serviceTypeFromClientType(String clientType) {
+    switch (clientType.toLowerCase()) {
+      case 'anilist':
+        return ServicesType.anilist;
+      case 'mal':
+      case 'myanimelist':
+        return ServicesType.mal;
+      case 'simkl':
+        return ServicesType.simkl;
+      default:
+        return null;
+    }
+  }
 
-    if (clickAction != null && clickAction.isNotEmpty && clickAction.startsWith('anymex://')) {
-      Logger.i('Navigating via deep link: $clickAction');
-      Deeplink.handleDeepLink(Uri.parse(clickAction));
+  void _navigateFromNotification(Map<String, dynamic> data) {
+    final mediaId = data['media_id']?.toString();
+    final mediaType = data['media_type']?.toString();
+    final commentId = data['comment_id']?.toString();
+    final clientType = data['client_type']?.toString() ?? 'anilist';
+
+    if (mediaId == null || mediaId.isEmpty || mediaType == null) {
+      // Try click_action as fallback
+      final clickAction = data['click_action'] as String?;
+      if (clickAction != null && clickAction.isNotEmpty && clickAction.startsWith('anymex://')) {
+        Logger.i('Navigating via click_action (fallback): $clickAction');
+      }
+      Logger.i('Notification has no navigable media info');
       return;
     }
 
-    Logger.i('Notification has no navigable media info');
+    if (!Get.isRegistered<ServiceHandler>()) {
+      Logger.i('ServiceHandler not ready, skipping navigation');
+      return;
+    }
+
+    final type = mediaType.toLowerCase();
+    final isManga = type == 'manga' || type == 'novel';
+    final handler = Get.find<ServiceHandler>();
+
+    // Fix: Use the client_type from FCM data to determine correct service
+    final serviceType = _serviceTypeFromClientType(clientType) ?? handler.serviceType.value;
+
+    // Switch to the correct service if needed
+    if (handler.serviceType.value != serviceType) {
+      handler.changeService(serviceType);
+    }
+
+    final media = Media(
+      id: mediaId,
+      serviceType: serviceType,
+      mediaType: isManga ? ItemType.manga : ItemType.anime,
+    );
+
+    final tag = 'fcm-${DateTime.now().millisecondsSinceEpoch}';
+
+    Logger.i('Navigating to media: $mediaId ($type) on $serviceType');
+
+    if (isManga) {
+      navigate(() => MangaDetailsPage(
+        media: media,
+        tag: tag,
+        initialTabIndex: 2,
+        scrollToCommentId: commentId,
+      ));
+    } else {
+      navigate(() => AnimeDetailsPage(
+        media: media,
+        tag: tag,
+        initialTabIndex: 2,
+        scrollToCommentId: commentId,
+      ));
+    }
   }
 
   Future<void> refreshUnreadCount() async {

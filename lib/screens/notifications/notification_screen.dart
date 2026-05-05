@@ -1,6 +1,11 @@
+import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/models/notification/notification_item.dart';
+import 'package:anymex/screens/anime/details_page.dart';
+import 'package:anymex/screens/manga/details_page.dart';
+import 'package:anymex/screens/anime/widgets/comments/discord_markdown.dart';
 import 'package:anymex/screens/notifications/notification_controller.dart';
-import 'package:anymex/utils/deeplink.dart';
+import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
@@ -414,25 +419,63 @@ class NotificationScreen extends GetView<NotificationController> {
     );
   }
 
+  ServicesType? _serviceTypeFromClientType(String clientType) {
+    switch (clientType.toLowerCase()) {
+      case 'anilist':
+        return ServicesType.anilist;
+      case 'mal':
+      case 'myanimelist':
+        return ServicesType.mal;
+      case 'simkl':
+        return ServicesType.simkl;
+      default:
+        return null;
+    }
+  }
+
   void _handleNotificationTap(NotificationItem notification) {
     if (!notification.isRead) {
       controller.markAsRead(notification.id);
     }
 
-    if (notification.mediaId != null && notification.mediaType != null) {
-      final mediaType = notification.mediaType!.toLowerCase();
-      final isManga = mediaType == 'manga' || mediaType == 'novel';
-      final mediaId = notification.mediaId!;
+    if (notification.mediaId == null || notification.mediaType == null) return;
+    if (!Get.isRegistered<ServiceHandler>()) return;
 
-      int initialTabIndex = 0;
-      if (notification.commentId != null) {
-        initialTabIndex = 2;
-      }
+    final mediaType = notification.mediaType!.toLowerCase();
+    final isManga = mediaType == 'manga' || mediaType == 'novel';
+    final mediaId = notification.mediaId!;
+    final handler = Get.find<ServiceHandler>();
 
-      final uri = Uri.parse(
-        'anymex://$mediaType/$mediaId#comment-${initialTabIndex == 2 ? notification.commentId ?? '' : ''}',
-      );
-      Deeplink.handleDeepLink(uri);
+    // Fix: Use notification's clientType to determine the correct service
+    final serviceType = _serviceTypeFromClientType(notification.clientType) ?? handler.serviceType.value;
+
+    // Switch to the correct service if needed
+    if (handler.serviceType.value != serviceType) {
+      handler.changeService(serviceType);
+    }
+
+    final media = Media(
+      id: mediaId,
+      serviceType: serviceType,
+      mediaType: isManga ? ItemType.manga : ItemType.anime,
+    );
+
+    final tag = 'notif-${notification.id}-${DateTime.now().millisecondsSinceEpoch}';
+
+    if (isManga) {
+      navigate(() => MangaDetailsPage(
+        media: media,
+        tag: tag,
+        initialTabIndex: 2,
+        scrollToCommentId: notification.commentId,
+      ));
+    } else {
+      navigate(() => AnimeDetailsPage(
+        media: media,
+        tag: tag,
+        initialTabIndex: 2,
+        scrollToCommentId: notification.commentId,
+      ));
     }
   }
 }
@@ -550,13 +593,15 @@ class _NotificationCard extends StatelessWidget {
                     ),
                     if (notification.body.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      AnymexText(
+                      DiscordMarkdown(
                         text: notification.body,
-                        variant: TextVariant.regular,
-                        size: 12,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        color: colorScheme.onSurface.opaque(0.55),
+                        colorScheme: colorScheme,
+                        baseStyle: TextStyle(
+                          color: colorScheme.onSurface.opaque(0.55),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        fontSize: 12,
                       ),
                     ],
                     if (notification.mediaTitle != null &&
