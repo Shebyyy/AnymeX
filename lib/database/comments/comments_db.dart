@@ -203,11 +203,11 @@ class CommentsDatabase {
     }
   }
 
-  Future<bool> deleteComment(int commentId) async {
+  Future<bool> deleteComment(int commentId, {String? userId}) async {
     try {
       log("Deleting comment: $commentId");
       final success =
-          await commentumService.deleteComment(commentId: commentId);
+          await commentumService.deleteComment(commentId: commentId, userId: userId);
 
       if (success) {
         log('Comment deleted successfully');

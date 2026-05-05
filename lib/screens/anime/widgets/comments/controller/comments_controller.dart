@@ -405,7 +405,15 @@ class CommentSectionController extends GetxController
         return;
       }
 
-      final success = await commentsDB.deleteComment(commentId);
+      // If mod+ deleting someone else's comment, pass their userId for mod_delete
+      final isOwnComment = comment.userId == profile.id?.toString();
+      final shouldModDelete = !isOwnComment && canModerate();
+      final targetUserId = shouldModDelete ? comment.userId : null;
+
+      final success = await commentsDB.deleteComment(
+        commentId,
+        userId: targetUserId,
+      );
 
       if (success) {
         await backgroundRefresh();
