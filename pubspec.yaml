@@ -85,6 +85,7 @@ dependencies:
 
     archive: any
     image: any
+    image_scaler: ^0.0.2
     flutter_widget_from_html: ^0.15.3
     timeago: ^3.7.1
     flutter_staggered_animations: ^1.1.1
@@ -103,6 +104,8 @@ dependencies:
             ref: main
     firebase_core: ^4.4.0
     firebase_analytics: ^12.1.1
+    firebase_messaging: ^16.1.1
+    flutter_local_notifications: ^17.2.2
     background_downloader: ^9.5.2
     auto_size_text: ^3.0.0
     vibration: ^3.1.5

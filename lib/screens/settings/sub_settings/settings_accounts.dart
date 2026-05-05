@@ -8,6 +8,7 @@ import 'package:anymex/controllers/services/storage/anymex_cache_manager.dart';
 import 'package:anymex/controllers/sync/gist_sync_controller.dart';
 import 'package:anymex/controllers/sync/progress_sync_section.dart';
 import 'package:anymex/models/Service/online_service.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_anilist_api.dart';
 import 'package:anymex/screens/other_features.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/glow.dart';
@@ -438,6 +439,29 @@ class TrackingServiceCard extends StatelessWidget {
             AnymexText(
                 text: "Manage $title", variant: TextVariant.bold, size: 18),
             const SizedBox(height: 20),
+            if (title.toLowerCase() == 'anilist')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: ListTile(
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/images/anilist-icon.png',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  title: const Text('Anilist Settings'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Get.to(() => const SettingsAnilistApi());
+                  },
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  tileColor: context.colors.surfaceContainer,
+                ),
+              ),
             ListTile(
               leading: const Icon(IconlyLight.logout),
               title: const Text("Log Out"),
