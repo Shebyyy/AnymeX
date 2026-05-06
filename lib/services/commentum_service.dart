@@ -313,6 +313,8 @@ class CommentumService extends GetxController {
           'comment_id': commentId,
           'user_info': {
             "user_id": currentUserId,
+            "username": currentUsername,
+            if (currentUserAvatar != null) "avatar": currentUserAvatar,
           },
           'vote_type': voteType,
         }),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -165,7 +166,7 @@ class NotificationService extends GetxController {
     }
   }
 
-  void _handleForegroundMessage(RemoteMessage message) {
+  void _handleForegroundMessage(RemoteMessage message) async {
     try {
       final local = _localNotifications;
       if (local == null) return;
@@ -176,18 +177,58 @@ class NotificationService extends GetxController {
       final android = message.notification?.android;
       final channelId = android?.channelId ?? 'comments';
 
-      local.show(
-        message.hashCode,
-        notification.title,
-        notification.body,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
+      // Check for actor avatar in FCM data (for profile pic in push)
+      final actorAvatar = message.data['actor_avatar'] as String?;
+
+      // Build Android notification style with avatar if available
+      AndroidNotificationDetails androidDetails;
+      if (actorAvatar != null && actorAvatar.isNotEmpty) {
+        // Download avatar for largeIcon (profile picture)
+        try {
+          final httpClient = HttpClient();
+          final request = await httpClient.getUrl(Uri.parse(actorAvatar));
+          final response = await request.close();
+          final bytes = <int>[];
+          await for (final chunk in response) {
+            bytes.addAll(chunk);
+          }
+          final uint8list = Uint8List.fromList(bytes);
+          httpClient.close();
+
+          androidDetails = AndroidNotificationDetails(
             channelId,
             _getChannelName(channelId),
             importance: _getChannelImportance(channelId),
             priority: Priority.high,
             icon: '@drawable/ic_stat_anymex',
-          ),
+            largeIcon: ByteArrayAndroidBitmap(uint8list),
+          );
+        } catch (e) {
+          Logger.e('Failed to load avatar for notification: $e');
+          androidDetails = AndroidNotificationDetails(
+            channelId,
+            _getChannelName(channelId),
+            importance: _getChannelImportance(channelId),
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_anymex',
+          );
+        }
+      } else {
+        androidDetails = AndroidNotificationDetails(
+          channelId,
+          _getChannelName(channelId),
+          importance: _getChannelImportance(channelId),
+          priority: Priority.high,
+          icon: '@drawable/ic_stat_anymex',
+        );
+      }
+
+      local.show(
+        message.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: androidDetails,
           iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
