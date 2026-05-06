@@ -13,6 +13,7 @@ class NotificationItem {
   final String? mediaTitle;
   final String? actorId;
   final String? actorUsername;
+  final String? actorAvatar;
   final String? moderatorUsername;
   final String? reason;
   final String? clickAction;
@@ -34,6 +35,7 @@ class NotificationItem {
     this.mediaTitle,
     this.actorId,
     this.actorUsername,
+    this.actorAvatar,
     this.moderatorUsername,
     this.reason,
     this.clickAction,
@@ -57,6 +59,7 @@ class NotificationItem {
       mediaTitle: json['media_title'] as String?,
       actorId: json['actor_id']?.toString(),
       actorUsername: json['actor_username'] as String?,
+      actorAvatar: json['actor_avatar'] as String?,
       moderatorUsername: json['moderator_username'] as String?,
       reason: json['reason'] as String?,
       clickAction: json['click_action'] as String?,

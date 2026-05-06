@@ -9,6 +9,7 @@ import 'package:anymex/screens/notifications/notification_controller.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/glow.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_image.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -517,50 +518,8 @@ class _NotificationCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                children: [
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!notification.isRead) ...[
-                        Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.only(right: 6),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    colorScheme.primary.opaque(0.4, iReallyMeanIt: true),
-                                blurRadius: 4,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ] else ...[
-                        const SizedBox(width: 14),
-                      ],
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: categoryColor.opaque(0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          notification.typeIcon,
-                          style: const TextStyle(fontSize: 22),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              const SizedBox(height: 4),
+              _buildAvatar(colorScheme, categoryColor),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -650,6 +609,128 @@ class _NotificationCard extends StatelessWidget {
     );
   }
 
+  /// Build the leading avatar: profile image > initial letter > category icon
+  Widget _buildAvatar(ColorScheme colorScheme, Color categoryColor) {
+    final hasAvatar = notification.actorAvatar != null &&
+        notification.actorAvatar!.isNotEmpty;
+    final hasActor = notification.actorUsername != null &&
+        notification.actorUsername!.isNotEmpty;
+
+    if (hasAvatar) {
+      return _AvatarWithBadge(
+        size: 42,
+        child: ClipOval(
+          child: AnymeXImage(
+            imageUrl: notification.actorAvatar!,
+            width: 42,
+            height: 42,
+            radius: 21,
+          ),
+        ),
+        showBadge: !notification.isRead,
+        badgeColor: colorScheme.primary,
+      );
+    }
+
+    if (hasActor) {
+      // Fallback: circle with first letter of username
+      final initial = notification.actorUsername!.toUpperCase().characters.first;
+      return _AvatarWithBadge(
+        size: 42,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: categoryColor.opaque(0.15),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initial,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: categoryColor,
+            ),
+          ),
+        ),
+        showBadge: !notification.isRead,
+        badgeColor: colorScheme.primary,
+      );
+    }
+
+    // No actor (announcements, etc): category icon in circle
+    return _AvatarWithBadge(
+      size: 42,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: categoryColor.opaque(0.12),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          _getCategoryIcon(),
+          size: 20,
+          color: categoryColor,
+        ),
+      ),
+      showBadge: !notification.isRead,
+      badgeColor: colorScheme.primary,
+    );
+  }
+
+  IconData _getCategoryIcon() {
+    switch (notification.type) {
+      case 'user_mentioned':
+      case 'comment_created':
+        return Icons.chat_bubble_outline_rounded;
+      case 'comment_reply':
+        return Icons.reply_rounded;
+      case 'comment_updated':
+        return Icons.edit_outlined;
+      case 'comment_deleted':
+        return Icons.delete_outline_rounded;
+      case 'comment_pinned':
+        return Icons.push_pin_outlined;
+      case 'comment_unpinned':
+        return Icons.push_pin_outlined;
+      case 'comment_locked':
+        return Icons.lock_outline_rounded;
+      case 'comment_unlocked':
+        return Icons.lock_open_outlined;
+      case 'vote_cast':
+        return Icons.thumb_up_outlined;
+      case 'vote_removed':
+        return Icons.thumb_down_outlined;
+      case 'report_filed':
+        return Icons.flag_outlined;
+      case 'report_resolved':
+        return Icons.check_circle_outline_rounded;
+      case 'report_dismissed':
+        return Icons.cancel_outlined;
+      case 'user_warned':
+        return Icons.warning_amber_rounded;
+      case 'user_muted':
+        return Icons.volume_off_outlined;
+      case 'user_unmuted':
+        return Icons.volume_up_outlined;
+      case 'user_banned':
+        return Icons.block_outlined;
+      case 'user_unbanned':
+        return Icons.remove_circle_outline_rounded;
+      case 'user_shadow_banned':
+        return Icons.visibility_off_outlined;
+      case 'announcement_published':
+        return Icons.campaign_outlined;
+      case 'moderation_action':
+        return Icons.settings_outlined;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
   Color _getCategoryColor(ColorScheme colorScheme) {
     switch (notification.typeCategory) {
       case 'comment':
@@ -682,5 +763,58 @@ class _NotificationCard extends StatelessWidget {
       return '${(difference.inDays / 30).floor()}mo ago';
     }
     return '${(difference.inDays / 365).floor()}y ago';
+  }
+}
+
+/// Circular avatar with optional unread badge dot (like Discord/WhatsApp)
+class _AvatarWithBadge extends StatelessWidget {
+  final double size;
+  final Widget child;
+  final bool showBadge;
+  final Color badgeColor;
+
+  const _AvatarWithBadge({
+    required this.size,
+    required this.child,
+    required this.showBadge,
+    required this.badgeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size + 4, // extra space for badge
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          if (showBadge)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: badgeColor.withOpacity(0.4),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
