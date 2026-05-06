@@ -52,8 +52,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final uint8list = Uint8List.fromList(bytes);
       httpClient.close();
       avatarBitmap = ByteArrayAndroidBitmap(uint8list);
-    } catch (e) {
-    }
+    } catch (_) {}
   }
 
   final androidDetails = AndroidNotificationDetails(
@@ -347,7 +346,7 @@ class NotificationService extends GetxController {
     }
   }
 
-  void _navigateFromNotification(Map<String, dynamic> data) {
+  void _navigateFromNotification(Map<String, dynamic> data, {int attempts = 0}) {
     final mediaId = data['media_id']?.toString();
     final mediaType = data['media_type']?.toString();
     final commentId = data['comment_id']?.toString();
@@ -362,8 +361,14 @@ class NotificationService extends GetxController {
       return;
     }
 
-    if (!Get.isRegistered<ServiceHandler>()) {
-      Logger.i('ServiceHandler not ready, skipping navigation');
+    if (!Get.isRegistered<ServiceHandler>() || Get.context == null) {
+      if (attempts >= 300) {
+        Logger.i('Notification nav timed out after 60s');
+        return;
+      }
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _navigateFromNotification(data, attempts: attempts + 1);
+      });
       return;
     }
 
