@@ -15,6 +15,97 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+
+  final data = message.data;
+  final title = data['title'] as String? ?? 'Notification';
+  final body = data['body'] as String? ?? '';
+  final actorAvatar = data['actor_avatar'] as String?;
+  final channelId = data['channel_id'] as String? ?? 'comments';
+
+  final localNotifications = FlutterLocalNotificationsPlugin();
+
+  const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_anymex');
+  const iosSettings = DarwinInitializationSettings(
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
+  );
+  const settings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
+  await localNotifications.initialize(settings);
+
+  ByteArrayAndroidBitmap? avatarBitmap;
+  if (actorAvatar != null && actorAvatar.isNotEmpty) {
+    try {
+      final httpClient = HttpClient();
+      final request = await httpClient.getUrl(Uri.parse(actorAvatar));
+      final response = await request.close();
+      final bytes = <int>[];
+      await for (final chunk in response) {
+        bytes.addAll(chunk);
+      }
+      final uint8list = Uint8List.fromList(bytes);
+      httpClient.close();
+      avatarBitmap = ByteArrayAndroidBitmap(uint8list);
+    } catch (e) {
+    }
+  }
+
+  final androidDetails = AndroidNotificationDetails(
+    channelId,
+    _getChannelName(channelId),
+    importance: _getChannelImportance(channelId),
+    priority: Priority.high,
+    icon: '@drawable/ic_stat_anymex',
+    largeIcon: avatarBitmap,
+    playSound: true,
+    enableVibration: true,
+  );
+
+  await localNotifications.show(
+    message.hashCode,
+    title,
+    body,
+    NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+    payload: jsonEncode(data),
+  );
+}
+
+String _getChannelName(String channelId) {
+  switch (channelId) {
+    case 'votes': return 'Votes';
+    case 'moderation': return 'Moderation';
+    case 'reports': return 'Reports';
+    case 'announcements': return 'Announcements';
+    case 'mentions': return 'Mentions';
+    default: return 'Comments';
+  }
+}
+
+Importance _getChannelImportance(String channelId) {
+  switch (channelId) {
+    case 'comments':
+    case 'moderation':
+    case 'announcements':
+    case 'mentions':
+      return Importance.high;
+    default:
+      return Importance.defaultImportance;
+  }
+}
+
 class NotificationService extends GetxController {
   static NotificationService get instance => Get.find<NotificationService>();
 
@@ -118,7 +209,6 @@ class NotificationService extends GetxController {
     if (fm == null) return;
 
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
     try {
@@ -171,19 +261,14 @@ class NotificationService extends GetxController {
       final local = _localNotifications;
       if (local == null) return;
 
-      final notification = message.notification;
-      if (notification == null) return;
+      final data = message.data;
+      final title = data['title'] as String? ?? message.notification?.title ?? 'Notification';
+      final body = data['body'] as String? ?? message.notification?.body ?? '';
+      final actorAvatar = data['actor_avatar'] as String?;
+      final channelId = data['channel_id'] as String? ?? 'comments';
 
-      final android = message.notification?.android;
-      final channelId = android?.channelId ?? 'comments';
-
-      // Check for actor avatar in FCM data (for profile pic in push)
-      final actorAvatar = message.data['actor_avatar'] as String?;
-
-      // Build Android notification style with avatar if available
       AndroidNotificationDetails androidDetails;
       if (actorAvatar != null && actorAvatar.isNotEmpty) {
-        // Download avatar for largeIcon (profile picture)
         try {
           final httpClient = HttpClient();
           final request = await httpClient.getUrl(Uri.parse(actorAvatar));
@@ -197,8 +282,8 @@ class NotificationService extends GetxController {
 
           androidDetails = AndroidNotificationDetails(
             channelId,
-            _getChannelName(channelId),
-            importance: _getChannelImportance(channelId),
+            _getChannelNameForService(channelId),
+            importance: _getChannelImportanceForService(channelId),
             priority: Priority.high,
             icon: '@drawable/ic_stat_anymex',
             largeIcon: ByteArrayAndroidBitmap(uint8list),
@@ -207,8 +292,8 @@ class NotificationService extends GetxController {
           Logger.e('Failed to load avatar for notification: $e');
           androidDetails = AndroidNotificationDetails(
             channelId,
-            _getChannelName(channelId),
-            importance: _getChannelImportance(channelId),
+            _getChannelNameForService(channelId),
+            importance: _getChannelImportanceForService(channelId),
             priority: Priority.high,
             icon: '@drawable/ic_stat_anymex',
           );
@@ -216,8 +301,8 @@ class NotificationService extends GetxController {
       } else {
         androidDetails = AndroidNotificationDetails(
           channelId,
-          _getChannelName(channelId),
-          importance: _getChannelImportance(channelId),
+          _getChannelNameForService(channelId),
+          importance: _getChannelImportanceForService(channelId),
           priority: Priority.high,
           icon: '@drawable/ic_stat_anymex',
         );
@@ -225,8 +310,8 @@ class NotificationService extends GetxController {
 
       local.show(
         message.hashCode,
-        notification.title,
-        notification.body,
+        title,
+        body,
         NotificationDetails(
           android: androidDetails,
           iOS: const DarwinNotificationDetails(
@@ -235,7 +320,7 @@ class NotificationService extends GetxController {
             presentSound: true,
           ),
         ),
-        payload: jsonEncode(message.data),
+        payload: jsonEncode(data),
       );
     } catch (e) {
       Logger.e('Error showing foreground notification: $e');
@@ -269,7 +354,6 @@ class NotificationService extends GetxController {
     final clientType = data['client_type']?.toString() ?? 'anilist';
 
     if (mediaId == null || mediaId.isEmpty || mediaType == null) {
-      // Try click_action as fallback
       final clickAction = data['click_action'] as String?;
       if (clickAction != null && clickAction.isNotEmpty && clickAction.startsWith('anymex://')) {
         Logger.i('Navigating via click_action (fallback): $clickAction');
@@ -287,10 +371,8 @@ class NotificationService extends GetxController {
     final isManga = type == 'manga' || type == 'novel';
     final handler = Get.find<ServiceHandler>();
 
-    // Fix: Use the client_type from FCM data to determine correct service
     final serviceType = _serviceTypeFromClientType(clientType) ?? handler.serviceType.value;
 
-    // Switch to the correct service if needed
     if (handler.serviceType.value != serviceType) {
       handler.changeService(serviceType);
     }
@@ -348,7 +430,7 @@ class NotificationService extends GetxController {
     }
   }
 
-  String _getChannelName(String channelId) {
+  String _getChannelNameForService(String channelId) {
     switch (channelId) {
       case 'votes': return 'Votes';
       case 'moderation': return 'Moderation';
@@ -359,7 +441,7 @@ class NotificationService extends GetxController {
     }
   }
 
-  Importance _getChannelImportance(String channelId) {
+  Importance _getChannelImportanceForService(String channelId) {
     switch (channelId) {
       case 'comments':
       case 'moderation':
@@ -413,9 +495,4 @@ class NotificationService extends GetxController {
       }
     }
   }
-}
-
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('Background notification received: ${message.notification?.title}');
 }
