@@ -90,6 +90,8 @@ final List<_BottomControl> _bottomControls = [
       icon: Icons.screen_rotation_rounded),
   const _BottomControl(
       id: 'aspect_ratio', name: 'Aspect Ratio', icon: Symbols.fit_screen),
+  const _BottomControl(
+      id: 'gif', name: 'Record GIF', icon: Symbols.gif_rounded),
 ];
 
 class _SettingsPlayerState extends State<SettingsPlayer> {
@@ -183,7 +185,7 @@ class _SettingsPlayerState extends State<SettingsPlayer> {
     deduplicate(_rightButtonIds);
     deduplicate(_hiddenButtonIds);
 
-    final essential = ['source', 'tracks', 'sync_subs'];
+    final essential = ['source', 'tracks', 'sync_subs', 'gif'];
     for (final id in essential) {
       if (!seen.contains(id)) {
         _rightButtonIds.add(id);
