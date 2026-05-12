@@ -2043,8 +2043,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       const Duration(milliseconds: 100),
       (_) async {
         if (!isGifRecording.value) return;
-
-        if (isBuffering.value) return;
+        if (!isPlaying.value || isBuffering.value) return;
 
         try {
           final frame = await _basePlayer.screenshot(
@@ -2067,8 +2066,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     _gifElapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!isGifRecording.value) return;
-
-      if (isBuffering.value) return;
+      if (!isPlaying.value || isBuffering.value) return;
 
       gifRecordingElapsed.value++;
       if (gifRecordingElapsed.value >= _gifMaxDuration) {
@@ -2086,6 +2084,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     isGifRecording.value = false;
     gifRecordingProgress.value = 1.0;
 
+    final wasPlaying = isPlaying.value;
     _basePlayer.pause();
 
     isGifEncoding.value = true;
@@ -2112,6 +2111,10 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     gifRecordingProgress.value = 0.0;
     gifRecordingElapsed.value = 0;
+
+    if (wasPlaying) {
+      _basePlayer.play();
+    }
   }
 
   void cancelGifRecording() {
@@ -2120,11 +2123,16 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     _gifElapsedTimer?.cancel();
     _gifElapsedTimer = null;
 
+    final wasPlaying = isPlaying.value;
     _gifRecorder.cancelRecording();
     isGifRecording.value = false;
     isGifEncoding.value = false;
     gifRecordingProgress.value = 0.0;
     gifRecordingElapsed.value = 0;
+
+    if (wasPlaying) {
+      _basePlayer.play();
+    }
   }
 }
 

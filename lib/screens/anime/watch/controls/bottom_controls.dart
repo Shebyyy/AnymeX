@@ -319,6 +319,7 @@ class BottomControls extends StatelessWidget {
             controller.cancelGifRecording();
             return;
           }
+          final wasPlaying = controller.isPlaying.value;
           controller.pause();
           final config = await showGifConfigPicker(context);
           if (config != null) {
@@ -326,6 +327,8 @@ class BottomControls extends StatelessWidget {
               config.durationSeconds,
               quality: config.quality,
             );
+          } else if (wasPlaying) {
+            controller.play();
           }
         },
         tooltip: 'Record GIF',
