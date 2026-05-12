@@ -84,6 +84,7 @@ dependencies:
     flutter_displaymode: any
 
     archive: any
+    gif: ^2.3.0
     image: any
     image_scaler: ^0.0.2
     flutter_widget_from_html: ^0.15.3

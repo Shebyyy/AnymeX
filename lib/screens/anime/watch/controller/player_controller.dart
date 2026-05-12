@@ -21,7 +21,9 @@ import 'package:anymex/screens/anime/watch/player/base_player.dart';
 import 'package:anymex/screens/anime/watch/player/better_player.dart';
 import 'package:anymex/screens/anime/watch/player/media_kit_player.dart';
 
+import 'package:anymex/screens/anime/watch/controls/widgets/gif_preview_dialog.dart';
 import 'package:anymex/utils/aniskip.dart' as aniskip;
+import 'package:anymex/utils/gif_recorder.dart';
 import 'package:anymex/utils/color_profiler.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/utils/player_core_visual_settings.dart';
@@ -264,6 +266,17 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   final RxBool isLocked = false.obs;
   final Rx<int?> videoHeight = Rx<int?>(null);
   final _subscriptions = <StreamSubscription>[];
+
+  final GifRecorder _gifRecorder = GifRecorder();
+  final RxBool isGifRecording = false.obs;
+  final RxBool isGifEncoding = false.obs;
+  final RxDouble gifRecordingProgress = 0.0.obs;
+  final RxInt gifRecordingElapsed = 0.obs;
+  final Rx<GifQuality> gifQuality = Rx<GifQuality>(GifQuality.medium);
+  Timer? _gifFrameTimer;
+  Timer? _gifElapsedTimer;
+  int _gifMaxDuration = 5;
+  GifQuality _gifQuality = GifQuality.medium;
   final _playerSubscriptions = <StreamSubscription>[];
   final RxInt playerReloadVersion = 0.obs;
   bool _persistentListenersInitialized = false;
@@ -2012,6 +2025,106 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       episode: currentEpisode.value,
       isCompleted: shouldRemove,
     );
+  }
+
+  void startGifRecording(int maxDurationSeconds, {GifQuality quality = GifQuality.medium}) {
+    if (isGifRecording.value) return;
+
+    _gifMaxDuration = maxDurationSeconds.clamp(1, 30);
+    _gifQuality = quality;
+    gifQuality.value = quality;
+    _gifRecorder.configure(maxDurationSeconds: _gifMaxDuration, quality: _gifQuality);
+    _gifRecorder.startRecording(maxDurationSeconds: _gifMaxDuration, quality: _gifQuality);
+    isGifRecording.value = true;
+    gifRecordingProgress.value = 0.0;
+    gifRecordingElapsed.value = 0;
+
+    _gifFrameTimer = Timer.periodic(
+      const Duration(milliseconds: 100),
+      (_) async {
+        if (!isGifRecording.value) return;
+
+        if (isBuffering.value) return;
+
+        try {
+          final frame = await _basePlayer.screenshot(
+            includeSubtitles: true,
+            format: 'image/jpeg',
+          );
+          if (frame != null) {
+            _gifRecorder.addFrame(frame);
+            gifRecordingProgress.value = _gifRecorder.progress;
+          }
+        } catch (e) {
+          debugPrint('GIF frame capture error: $e');
+        }
+
+        if (_gifRecorder.isBufferFull) {
+          stopGifRecording();
+        }
+      },
+    );
+
+    _gifElapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!isGifRecording.value) return;
+
+      if (isBuffering.value) return;
+
+      gifRecordingElapsed.value++;
+      if (gifRecordingElapsed.value >= _gifMaxDuration) {
+        stopGifRecording();
+      }
+    });
+  }
+
+  Future<void> stopGifRecording() async {
+    _gifFrameTimer?.cancel();
+    _gifFrameTimer = null;
+    _gifElapsedTimer?.cancel();
+    _gifElapsedTimer = null;
+
+    isGifRecording.value = false;
+    gifRecordingProgress.value = 1.0;
+
+    _basePlayer.pause();
+
+    isGifEncoding.value = true;
+
+    try {
+      final filePath = await _gifRecorder.stopRecordingAndSave();
+      isGifEncoding.value = false;
+
+      if (filePath != null) {
+        final context = Get.context;
+        if (context != null && context.mounted) {
+          await showGifPreviewDialog(context, gifFilePath: filePath);
+        }
+      }
+    } catch (e) {
+      isGifEncoding.value = false;
+      debugPrint('GIF preview error: $e');
+      try {
+        await _gifRecorder.shareGif();
+      } catch (e2) {
+        debugPrint('GIF sharing error: $e2');
+      }
+    }
+
+    gifRecordingProgress.value = 0.0;
+    gifRecordingElapsed.value = 0;
+  }
+
+  void cancelGifRecording() {
+    _gifFrameTimer?.cancel();
+    _gifFrameTimer = null;
+    _gifElapsedTimer?.cancel();
+    _gifElapsedTimer = null;
+
+    _gifRecorder.cancelRecording();
+    isGifRecording.value = false;
+    isGifEncoding.value = false;
+    gifRecordingProgress.value = 0.0;
+    gifRecordingElapsed.value = 0;
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart';
+import 'package:anymex/screens/anime/watch/controls/widgets/gif_config_picker.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
@@ -309,6 +310,25 @@ class BottomControls extends StatelessWidget {
         onPressed: () => controller.toggleVideoFit(),
         onLongPress: controller.resetVideoFit,
         tooltip: 'Aspect Ratio',
+        compact: true,
+      ),
+      'gif': ControlButton(
+        icon: Symbols.gif_rounded,
+        onPressed: () async {
+          if (controller.isGifRecording.value) {
+            controller.cancelGifRecording();
+            return;
+          }
+          controller.pause();
+          final config = await showGifConfigPicker(context);
+          if (config != null) {
+            controller.startGifRecording(
+              config.durationSeconds,
+              quality: config.quality,
+            );
+          }
+        },
+        tooltip: 'Record GIF',
         compact: true,
       ),
     };
