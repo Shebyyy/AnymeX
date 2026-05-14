@@ -48,8 +48,6 @@ class CommentSectionController extends GetxController
   final RxString currentUserRole = 'user'.obs;
 
   final RxMap<String, UserPoints> userPointsCache = <String, UserPoints>{}.obs;
-  final Rx<UserPoints?> currentUserPoints = Rx<UserPoints?>(null);
-  final RxBool isLoadingPoints = false.obs;
 
   late AnimationController expandController;
   late AnimationController fadeController;
@@ -67,7 +65,6 @@ class CommentSectionController extends GetxController
     _initializeAnimations();
     _setupFocusListener();
     _checkUserRole();
-    _fetchCurrentUserPoints();
     loadComments();
   }
 
@@ -136,7 +133,6 @@ class CommentSectionController extends GetxController
       final fetchedComments = await commentsDB.fetchComments(media.uniqueId,
           sort: currentSort.value);
       comments.assignAll(fetchedComments);
-      fetchBatchUserPoints();
       print(
           'Loaded ${fetchedComments.length} comments for media: $media.uniqueId');
     } catch (e) {
@@ -581,94 +577,7 @@ class CommentSectionController extends GetxController
 
   void onUserAuthChanged() {
     _checkUserRole();
-    _fetchCurrentUserPoints();
     refreshComments(silent: false);
-  }
-
-  Future<void> _fetchCurrentUserPoints() async {
-    final userId = serviceHandler.onlineService.profileData.value.id?.toString();
-    if (userId == null) return;
-
-    isLoadingPoints.value = true;
-    try {
-      final points = await commentsDB.getUserPoints(targetUserId: userId);
-      if (points != null) {
-        currentUserPoints.value = points;
-        userPointsCache[userId] = points;
-      }
-    } catch (_) {
-    } finally {
-      isLoadingPoints.value = false;
-    }
-  }
-
-  Future<void> fetchBatchUserPoints() async {
-    final userIds = <String>{};
-    for (final comment in comments) {
-      if (comment.userId.isNotEmpty && !userPointsCache.containsKey(comment.userId)) {
-        userIds.add(comment.userId);
-      }
-      if (comment.replies != null) {
-        for (final reply in comment.replies!) {
-          if (reply.userId.isNotEmpty && !userPointsCache.containsKey(reply.userId)) {
-            userIds.add(reply.userId);
-          }
-        }
-      }
-    }
-
-    if (userIds.isEmpty) {
-      _applyPointsToComments();
-      return;
-    }
-
-    try {
-      final batchPoints = await commentsDB.getBatchUserPoints(
-        userIds: userIds.toList(),
-      );
-      userPointsCache.addAll(batchPoints);
-      _applyPointsToComments();
-    } catch (_) {
-      _applyPointsToComments();
-    }
-  }
-
-  void _applyPointsToComments() {
-    bool changed = false;
-    for (int i = 0; i < comments.length; i++) {
-      final comment = comments[i];
-      final points = userPointsCache[comment.userId];
-      if (points != null && (comment.userTier != points.tier || comment.userPoints != points.totalPoints)) {
-        comments[i] = comment.copyWith(
-          userTier: points.tier,
-          userPoints: points.totalPoints,
-        );
-        changed = true;
-      }
-      if (comment.replies != null) {
-        final updatedReplies = <Comment>[];
-        bool repliesChanged = false;
-        for (final reply in comment.replies!) {
-          final replyPoints = userPointsCache[reply.userId];
-          if (replyPoints != null && (reply.userTier != replyPoints.tier || reply.userPoints != replyPoints.totalPoints)) {
-            updatedReplies.add(reply.copyWith(
-              userTier: replyPoints.tier,
-              userPoints: replyPoints.totalPoints,
-            ));
-            repliesChanged = true;
-          } else {
-            updatedReplies.add(reply);
-          }
-        }
-        if (repliesChanged) {
-          comments[i] = comments[i].copyWith(replies: updatedReplies);
-          changed = true;
-        }
-      }
-    }
-    if (changed) {
-      comments.refresh();
-    }
   }
 
   UserPoints? getUserPoints(String userId) {

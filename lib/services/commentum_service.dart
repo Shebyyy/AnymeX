@@ -1083,6 +1083,8 @@ class CommentumService extends GetxController {
       reportCount: commentData['report_count'] as int?,
       reportStatus: commentData['report_status']?.toString(),
       userRole: commentData['user_role']?.toString(),
+      userTier: commentData['user_tier']?.toString(),
+      userPoints: commentData['user_points'] as int?,
       replies: replies,
     );
   }
