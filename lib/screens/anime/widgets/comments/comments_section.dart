@@ -3744,12 +3744,16 @@ class _UserProfileSheetState extends State<_UserProfileSheet> {
           _buildPointRow(context, '📌', 'Pinned', p.breakdown.pinnedPoints),
           if (p.breakdown.streakBonus > 0)
             _buildPointRow(context, '🔥', 'Streak bonus', p.breakdown.streakBonus),
+          if (p.breakdown.roleBonus > 0)
+            _buildPointRow(context, '🛡️', 'Role bonus', p.breakdown.roleBonus),
           if (p.breakdown.downvotesReceivedPoints < 0)
             _buildPointRow(context, '👎', 'Downvotes received', p.breakdown.downvotesReceivedPoints),
           if (p.breakdown.warningsPoints < 0)
             _buildPointRow(context, '⚠️', 'Warnings', p.breakdown.warningsPoints),
           if (p.breakdown.deletedPoints < 0)
             _buildPointRow(context, '🗑️', 'Deleted', p.breakdown.deletedPoints),
+          if (p.breakdown.bannedPoints < 0)
+            _buildPointRow(context, '🚫', 'Banned', p.breakdown.bannedPoints),
         ],
       ),
     );

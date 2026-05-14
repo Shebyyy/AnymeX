@@ -885,6 +885,9 @@ class CommentumService extends GetxController {
         'action': 'get_user_points',
         'target_user_id': targetUserId,
         'target_client_type': effectiveClientType,
+        // Send requester info so backend can determine privacy level
+        if (currentUserId != null) 'requester_user_id': currentUserId,
+        if (currentUserId != null) 'requester_client_type': _clientType,
       };
 
       final response = await http.post(

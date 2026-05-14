@@ -24,13 +24,14 @@ class UserPoints {
   factory UserPoints.fromMap(Map m) {
     final breakdownData = m['breakdown'] as Map? ?? {};
     final statsData = m['stats'] as Map? ?? {};
+    final tier = m['tier']?.toString() ?? 'Newcomer';
 
     return UserPoints(
       userId: m['user_id']?.toString() ?? '',
-      totalPoints: _parseInt(m['total_points']),
-      tier: m['tier']?.toString() ?? 'Newcomer',
-      tierEmoji: m['tier_emoji']?.toString() ?? '🌱',
-      currentStreak: _parseInt(m['current_streak']),
+      totalPoints: _parseInt(m['total_points'] ?? m['points']),
+      tier: tier,
+      tierEmoji: m['tier_emoji']?.toString() ?? getTierEmoji(tier),
+      currentStreak: _parseInt(m['current_streak'] ?? m['streak']),
       longestStreak: _parseInt(m['longest_streak']),
       role: m['role']?.toString(),
       breakdown: PointsBreakdown.fromMap(breakdownData),
@@ -105,17 +106,17 @@ class PointsBreakdown {
 
   factory PointsBreakdown.fromMap(Map m) {
     return PointsBreakdown(
-      commentsPoints: UserPoints._parseInt(m['comments']),
-      repliesPoints: UserPoints._parseInt(m['replies']),
-      upvotesReceivedPoints: UserPoints._parseInt(m['upvotes_from_others']),
-      votesCastPoints: UserPoints._parseInt(m['votes_cast']),
-      pinnedPoints: UserPoints._parseInt(m['pinned']),
-      downvotesReceivedPoints: UserPoints._parseInt(m['downvotes_from_others']),
-      warningsPoints: UserPoints._parseInt(m['warnings']),
-      deletedPoints: UserPoints._parseInt(m['mod_deletions']),
-      bannedPoints: UserPoints._parseInt(m['banned']),
-      streakBonus: UserPoints._parseInt(m['streak_bonus']),
-      roleBonus: UserPoints._parseInt(m['role_bonus']),
+      commentsPoints: UserPoints._parseInt(m['comments'] ?? m['from_comments']),
+      repliesPoints: UserPoints._parseInt(m['replies'] ?? m['from_replies']),
+      upvotesReceivedPoints: UserPoints._parseInt(m['upvotes_from_others'] ?? m['from_upvotes_received']),
+      votesCastPoints: UserPoints._parseInt(m['votes_cast'] ?? m['from_votes_cast']),
+      pinnedPoints: UserPoints._parseInt(m['pinned'] ?? m['from_pinned']),
+      downvotesReceivedPoints: UserPoints._parseInt(m['downvotes_from_others'] ?? m['from_downvotes_received']),
+      warningsPoints: UserPoints._parseInt(m['warnings'] ?? m['penalty_warnings']),
+      deletedPoints: UserPoints._parseInt(m['mod_deletions'] ?? m['penalty_mod_deletes']),
+      bannedPoints: UserPoints._parseInt(m['banned'] ?? m['penalty_ban']),
+      streakBonus: UserPoints._parseInt(m['streak_bonus'] ?? m['from_streak_bonus']),
+      roleBonus: UserPoints._parseInt(m['role_bonus'] ?? m['from_role_bonus']),
     );
   }
 
@@ -152,12 +153,12 @@ class PointsStats {
 
   factory PointsStats.fromMap(Map m) {
     return PointsStats(
-      totalComments: UserPoints._parseInt(m['total_comments']),
-      totalReplies: UserPoints._parseInt(m['total_replies']),
-      totalUpvotesReceived: UserPoints._parseInt(m['total_upvotes_received']),
+      totalComments: UserPoints._parseInt(m['total_comments'] ?? m['comment_count']),
+      totalReplies: UserPoints._parseInt(m['total_replies'] ?? m['replies']),
+      totalUpvotesReceived: UserPoints._parseInt(m['total_upvotes_received'] ?? m['upvotes_from_others']),
       totalDownvotesReceived:
-          UserPoints._parseInt(m['total_downvotes_received']),
-      totalVotesCast: UserPoints._parseInt(m['total_votes_cast']),
+          UserPoints._parseInt(m['total_downvotes_received'] ?? m['downvotes_from_others']),
+      totalVotesCast: UserPoints._parseInt(m['total_votes_cast'] ?? m['vote_count']),
     );
   }
 }
