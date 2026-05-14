@@ -2743,13 +2743,12 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   void _showUserProfileSheet(BuildContext context, Comment comment) async {
-    final controller = CommentPreloader.getController(media: widget.media);
-    final cachedPoints = controller.getUserPoints(comment.userId);
+    final controller = CommentPreloader.to.getPreloadedController(widget.media.uniqueId);
+    UserPoints? points;
 
-    UserPoints? points = cachedPoints;
-
-    if (points == null) {
-      points = await controller.fetchUserPoints(comment.userId);
+    if (controller != null) {
+      points = controller.getUserPoints(comment.userId);
+      points ??= await controller.fetchUserPoints(comment.userId);
     }
 
     if (!context.mounted) return;
@@ -3729,10 +3728,9 @@ class _UserProfileSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${p.currentStreak}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
                   ),
                 ),
                 Text(
@@ -3757,10 +3755,9 @@ class _UserProfileSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${p.longestStreak}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
                   ),
                 ),
                 Text(
@@ -3804,7 +3801,7 @@ class _UserProfileSheet extends StatelessWidget {
   Widget _buildStatItem(BuildContext context, String value, String label) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
+    return SizedBox(
       width: (MediaQuery.of(context).size.width - 64) / 4,
       child: Column(
         children: [

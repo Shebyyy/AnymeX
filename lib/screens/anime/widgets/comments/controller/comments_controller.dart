@@ -586,7 +586,7 @@ class CommentSectionController extends GetxController
   }
 
   Future<void> _fetchCurrentUserPoints() async {
-    final userId = serviceHandler.onlineService.profileData.value?.id?.toString();
+    final userId = serviceHandler.onlineService.profileData.value.id?.toString();
     if (userId == null) return;
 
     isLoadingPoints.value = true;
