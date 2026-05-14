@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/profile/user_profile_page.dart';
 
@@ -1543,7 +1544,7 @@ class _CommentSectionState extends State<CommentSection> {
     if (tier == null) return const SizedBox.shrink();
 
     final emoji = UserPoints.getTierEmoji(tier);
-    final displayPoints = points != null && points > 0 ? ' $points' : '';
+    final displayName = tier[0].toUpperCase() + tier.substring(1).toLowerCase();
 
     return Container(
       margin: const EdgeInsets.only(left: 2),
@@ -1557,7 +1558,7 @@ class _CommentSectionState extends State<CommentSection> {
         ),
       ),
       child: Text(
-        '$emoji$displayPoints',
+        '$displayName $emoji',
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
@@ -2762,6 +2763,9 @@ class _CommentSectionState extends State<CommentSection> {
         avatarUrl: comment.avatarUrl,
         userRole: comment.userRole,
         points: points,
+        fallbackTier: comment.userTier,
+        fallbackPoints: comment.userPoints,
+        userId: comment.userId,
       ),
     );
   }
@@ -3477,24 +3481,82 @@ class _SpoilerTextState extends State<_SpoilerText> {
   }
 }
 
-class _UserProfileSheet extends StatelessWidget {
+class _UserProfileSheet extends StatefulWidget {
   final String username;
   final String? avatarUrl;
   final String? userRole;
   final UserPoints? points;
+  final String? fallbackTier;
+  final int? fallbackPoints;
+  final String? userId;
 
   const _UserProfileSheet({
     required this.username,
     this.avatarUrl,
     this.userRole,
     this.points,
+    this.fallbackTier,
+    this.fallbackPoints,
+    this.userId,
   });
+
+  @override
+  State<_UserProfileSheet> createState() => _UserProfileSheetState();
+}
+
+class _UserProfileSheetState extends State<_UserProfileSheet> {
+  UserPoints? _points;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _points = widget.points;
+    if (_points == null && widget.userId != null) {
+      _retryFetch();
+    }
+  }
+
+  Future<void> _retryFetch() async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final service = Get.find<CommentumService>();
+      final result = await service.getUserPoints(
+        targetUserId: widget.userId!,
+      );
+      if (mounted) {
+        setState(() {
+          _points = result;
+          _isLoading = false;
+          if (result == null) {
+            _error = 'Failed to load points';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Failed to load points';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isMod = userRole != null && userRole != 'user';
+    final isMod = widget.userRole != null && widget.userRole != 'user';
+
+    // Determine tier display from points or fallback
+    final tierName = _points?.tier ?? widget.fallbackTier;
+    final tierEmoji = tierName != null ? UserPoints.getTierEmoji(tierName) : null;
 
     return Container(
       constraints: BoxConstraints(
@@ -3521,17 +3583,17 @@ class _UserProfileSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  if (avatarUrl != null)
+                  if (widget.avatarUrl != null)
                     CircleAvatar(
                       radius: 36,
-                      backgroundImage: NetworkImage(avatarUrl!),
+                      backgroundImage: NetworkImage(widget.avatarUrl!),
                     )
                   else
                     CircleAvatar(
                       radius: 36,
                       backgroundColor: colorScheme.primaryContainer,
                       child: Text(
-                        username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        widget.username.isNotEmpty ? widget.username[0].toUpperCase() : '?',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -3545,7 +3607,7 @@ class _UserProfileSheet extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          username,
+                          widget.username,
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -3558,62 +3620,64 @@ class _UserProfileSheet extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: _getRoleColor(userRole!).withOpacity(0.15),
+                            color: _getRoleColor(widget.userRole!).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color:
-                                  _getRoleColor(userRole!).withOpacity(0.3),
+                                  _getRoleColor(widget.userRole!).withOpacity(0.3),
                             ),
                           ),
                           child: Text(
-                            _getRoleLabel(userRole!),
+                            _getRoleLabel(widget.userRole!),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _getRoleColor(userRole!),
+                              color: _getRoleColor(widget.userRole!),
                             ),
                           ),
                         ),
                     ],
                   ),
-                  if (points != null) ...[
+                  if (tierName != null) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _getTierColor(points!.tier)
+                        color: _getTierColor(tierName)
                             .withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _getTierColor(points!.tier)
+                          color: _getTierColor(tierName)
                               .withOpacity(0.2),
                         ),
                       ),
                       child: Text(
-                        '${points!.tierEmoji} ${points!.tier} • ${_formatPoints(points!.totalPoints)} pts',
+                        _points != null
+                            ? '${_points!.tierEmoji} ${_points!.tier} • ${_formatPoints(_points!.totalPoints)} pts'
+                            : '$tierEmoji $tierName',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: _getTierColor(points!.tier),
+                          color: _getTierColor(tierName),
                         ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 20),
-                  if (points != null) ...[
+                  if (_points != null) ...[
                     _buildSectionTitle(context, 'Points Breakdown'),
                     const SizedBox(height: 8),
-                    _buildBreakdownCard(context, points!),
+                    _buildBreakdownCard(context, _points!),
                     const SizedBox(height: 16),
                     _buildSectionTitle(context, 'Streak'),
                     const SizedBox(height: 8),
-                    _buildStreakCard(context, points!),
+                    _buildStreakCard(context, _points!),
                     const SizedBox(height: 16),
                     _buildSectionTitle(context, 'Stats'),
                     const SizedBox(height: 8),
-                    _buildStatsCard(context, points!),
-                  ] else ...[
+                    _buildStatsCard(context, _points!),
+                  ] else if (_isLoading) ...[
                     const SizedBox(height: 20),
                     CircularProgressIndicator(
                         color: colorScheme.primary),
@@ -3622,6 +3686,20 @@ class _UserProfileSheet extends StatelessWidget {
                       'Loading points...',
                       style: TextStyle(
                           color: colorScheme.onSurfaceVariant),
+                    ),
+                  ] else if (_error != null) ...[
+                    const SizedBox(height: 20),
+                    Icon(Icons.error_outline, color: colorScheme.error, size: 32),
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: colorScheme.error),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: _retryFetch,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Retry'),
                     ),
                   ],
                   const SizedBox(height: 24),

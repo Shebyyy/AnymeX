@@ -880,10 +880,11 @@ class CommentumService extends GetxController {
     String? targetClientType,
   }) async {
     try {
+      final effectiveClientType = targetClientType ?? _clientType;
       final body = <String, dynamic>{
         'action': 'get_user_points',
-        'user_id': targetUserId,
-        'client_type': targetClientType ?? _clientType,
+        'target_user_id': targetUserId,
+        'target_client_type': effectiveClientType,
       };
 
       final response = await http.post(
@@ -894,7 +895,9 @@ class CommentumService extends GetxController {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return UserPoints.fromMap(data);
+        // Backend wraps in { success: true, data: {...} }
+        final pointsData = data['data'] as Map? ?? data;
+        return UserPoints.fromMap(pointsData);
       } else {
         final error = json.decode(response.body);
         Logger.i('Failed to get user points: ${error['error'] ?? 'Unknown error'}');
@@ -926,7 +929,8 @@ class CommentumService extends GetxController {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final pointsMap = <String, UserPoints>{};
-        final entries = data['points'] as Map? ?? {};
+        // Backend returns { success: true, users: {...} }
+        final entries = data['users'] as Map? ?? {};
         entries.forEach((key, value) {
           pointsMap[key.toString()] = UserPoints.fromMap(value as Map);
         });
