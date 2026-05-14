@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:anymex/database/comments/model/comment.dart';
+import 'package:anymex/database/comments/model/user_points.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
@@ -1309,17 +1310,21 @@ class _CommentSectionState extends State<CommentSection> {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(
-                    comment.username,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: nameFontSize,
-                      fontWeight: FontWeight.w700,
+                  GestureDetector(
+                    onTap: () => _showUserProfileSheet(context, comment),
+                    child: Text(
+                      comment.username,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: nameFontSize,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (comment.userRole != null &&
                       comment.userRole != 'user')
                     _buildRoleBadge(context, comment.userRole!),
+                  _buildTierBadge(context, comment.userTier, comment.userPoints),
                   if (comment.tag.isNotEmpty && comment.tag != 'General')
                     _buildTag(context, comment.tag),
                   Text(
@@ -1493,25 +1498,89 @@ class _CommentSectionState extends State<CommentSection> {
   }
 
   Widget _buildRoleBadge(BuildContext context, String role) {
-    final emoji = switch (role) {
-      'super_admin' => '👑',
-      'admin' => '🛡️',
-      'moderator' => '⚙️',
-      'owner' => '💎',
-      _ => null,
-    };
+    final roleConfig = _getRoleBadgeConfig(role);
+    if (roleConfig == null) return const SizedBox.shrink();
 
-    if (emoji == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, right: 0),
+    return Container(
+      margin: const EdgeInsets.only(left: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: roleConfig.$2.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: roleConfig.$2.withOpacity(0.3),
+          width: 0.5,
+        ),
+      ),
       child: Text(
-        emoji,
-        style: const TextStyle(fontSize: 14, height: 1),
+        '${roleConfig.$1} ${roleConfig.$3}',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: roleConfig.$2,
+          height: 1.2,
+        ),
       ),
     );
+  }
+
+  (String, Color, String)? _getRoleBadgeConfig(String role) {
+    switch (role) {
+      case 'owner':
+        return ('👑', Colors.amber.shade800, 'Owner');
+      case 'super_admin':
+        return ('🛡️', Colors.red, 'S.Admin');
+      case 'admin':
+        return ('⚔️', Colors.orange, 'Admin');
+      case 'moderator':
+        return ('🔨', Colors.teal, 'Mod');
+      default:
+        return null;
+    }
+  }
+
+  Widget _buildTierBadge(BuildContext context, String? tier, int? points) {
+    if (tier == null) return const SizedBox.shrink();
+
+    final emoji = UserPoints.getTierEmoji(tier);
+    final displayPoints = points != null && points > 0 ? ' $points' : '';
+
+    return Container(
+      margin: const EdgeInsets.only(left: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: _getTierColor(tier).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _getTierColor(tier).withOpacity(0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        '$emoji$displayPoints',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: _getTierColor(tier),
+          height: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Color _getTierColor(String tier) {
+    switch (tier.toLowerCase()) {
+      case 'elite':
+        return Colors.purple.shade400;
+      case 'veteran':
+        return Colors.amber.shade600;
+      case 'active':
+        return Colors.pink.shade400;
+      case 'regular':
+        return Colors.green.shade400;
+      default:
+        return Colors.grey.shade500;
+    }
   }
 
   Widget _buildActionButton({
@@ -2673,6 +2742,31 @@ class _CommentSectionState extends State<CommentSection> {
     }
   }
 
+  void _showUserProfileSheet(BuildContext context, Comment comment) async {
+    final controller = CommentPreloader.getController(media: widget.media);
+    final cachedPoints = controller.getUserPoints(comment.userId);
+
+    UserPoints? points = cachedPoints;
+
+    if (points == null) {
+      points = await controller.fetchUserPoints(comment.userId);
+    }
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _UserProfileSheet(
+        username: comment.username,
+        avatarUrl: comment.avatarUrl,
+        userRole: comment.userRole,
+        points: points,
+      ),
+    );
+  }
+
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -3381,5 +3475,411 @@ class _SpoilerTextState extends State<_SpoilerText> {
         ),
       ),
     );
+  }
+}
+
+class _UserProfileSheet extends StatelessWidget {
+  final String username;
+  final String? avatarUrl;
+  final String? userRole;
+  final UserPoints? points;
+
+  const _UserProfileSheet({
+    required this.username,
+    this.avatarUrl,
+    this.userRole,
+    this.points,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isMod = userRole != null && userRole != 'user';
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  if (avatarUrl != null)
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundImage: NetworkImage(avatarUrl!),
+                    )
+                  else
+                    CircleAvatar(
+                      radius: 36,
+                      backgroundColor: colorScheme.primaryContainer,
+                      child: Text(
+                        username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          username,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isMod)
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _getRoleColor(userRole!).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color:
+                                  _getRoleColor(userRole!).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            _getRoleLabel(userRole!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _getRoleColor(userRole!),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (points != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getTierColor(points!.tier)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _getTierColor(points!.tier)
+                              .withOpacity(0.2),
+                        ),
+                      ),
+                      child: Text(
+                        '${points!.tierEmoji} ${points!.tier} • ${_formatPoints(points!.totalPoints)} pts',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _getTierColor(points!.tier),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  if (points != null) ...[
+                    _buildSectionTitle(context, 'Points Breakdown'),
+                    const SizedBox(height: 8),
+                    _buildBreakdownCard(context, points!),
+                    const SizedBox(height: 16),
+                    _buildSectionTitle(context, 'Streak'),
+                    const SizedBox(height: 8),
+                    _buildStreakCard(context, points!),
+                    const SizedBox(height: 16),
+                    _buildSectionTitle(context, 'Stats'),
+                    const SizedBox(height: 8),
+                    _buildStatsCard(context, points!),
+                  ] else ...[
+                    const SizedBox(height: 20),
+                    CircularProgressIndicator(
+                        color: colorScheme.primary),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Loading points...',
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildBreakdownCard(BuildContext context, UserPoints p) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          _buildPointRow(context, '💬', 'Comments', p.breakdown.commentsPoints),
+          _buildPointRow(context, '💭', 'Replies', p.breakdown.repliesPoints),
+          _buildPointRow(context, '👍', 'Upvotes received', p.breakdown.upvotesReceivedPoints),
+          _buildPointRow(context, '🗳️', 'Votes cast', p.breakdown.votesCastPoints),
+          _buildPointRow(context, '📌', 'Pinned', p.breakdown.pinnedPoints),
+          if (p.breakdown.streakBonus > 0)
+            _buildPointRow(context, '🔥', 'Streak bonus', p.breakdown.streakBonus),
+          if (p.breakdown.downvotesReceivedPoints < 0)
+            _buildPointRow(context, '👎', 'Downvotes received', p.breakdown.downvotesReceivedPoints),
+          if (p.breakdown.warningsPoints < 0)
+            _buildPointRow(context, '⚠️', 'Warnings', p.breakdown.warningsPoints),
+          if (p.breakdown.deletedPoints < 0)
+            _buildPointRow(context, '🗑️', 'Deleted', p.breakdown.deletedPoints),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPointRow(BuildContext context, String emoji, String label, int value) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isNeg = value < 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Text(
+            isNeg ? '$value' : '+$value',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isNeg ? Colors.red.shade400 : Colors.green.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakCard(BuildContext context, UserPoints p) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                Text('🔥', style: const TextStyle(fontSize: 24)),
+                const SizedBox(height: 4),
+                Text(
+                  '${p.currentStreak}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  'Current',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 40,
+            color: colorScheme.onSurfaceVariant.withOpacity(0.15),
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Text('🏆', style: const TextStyle(fontSize: 24)),
+                const SizedBox(height: 4),
+                Text(
+                  '${p.longestStreak}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  'Longest',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(BuildContext context, UserPoints p) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 10,
+        children: [
+          _buildStatItem(context, '${p.stats.totalComments}', 'Comments'),
+          _buildStatItem(context, '${p.stats.totalReplies}', 'Replies'),
+          _buildStatItem(context, '${p.stats.totalUpvotesReceived}', 'Upvotes'),
+          _buildStatItem(context, '${p.stats.totalVotesCast}', 'Votes cast'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(BuildContext context, String value, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: (MediaQuery.of(context).size.width - 64) / 4,
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatPoints(int points) {
+    if (points >= 1000000) {
+      return '${(points / 1000000).toStringAsFixed(1)}M';
+    } else if (points >= 1000) {
+      return '${(points / 1000).toStringAsFixed(1)}K';
+    }
+    return points.toString();
+  }
+
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'owner':
+        return Colors.amber.shade800;
+      case 'super_admin':
+        return Colors.red;
+      case 'admin':
+        return Colors.orange;
+      case 'moderator':
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getRoleLabel(String role) {
+    switch (role) {
+      case 'owner':
+        return '👑 Owner';
+      case 'super_admin':
+        return '🛡️ S.Admin';
+      case 'admin':
+        return '⚔️ Admin';
+      case 'moderator':
+        return '🔨 Mod';
+      default:
+        return role;
+    }
+  }
+
+  Color _getTierColor(String tier) {
+    switch (tier.toLowerCase()) {
+      case 'elite':
+        return Colors.purple.shade400;
+      case 'veteran':
+        return Colors.amber.shade600;
+      case 'active':
+        return Colors.pink.shade400;
+      case 'regular':
+        return Colors.green.shade400;
+      default:
+        return Colors.grey.shade500;
+    }
   }
 }
