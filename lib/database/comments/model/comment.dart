@@ -36,6 +36,11 @@ class Comment {
   int? parentId;
   List<Comment>? replies;
 
+  String? translatedContent;
+  String? originalLanguage;
+  String? languageName;
+  String? translatedAt;
+
   Comment({
     required this.id,
     required this.userVote,
@@ -71,6 +76,10 @@ class Comment {
     this.userPoints,
     this.parentId,
     this.replies,
+    this.translatedContent,
+    this.originalLanguage,
+    this.languageName,
+    this.translatedAt,
   });
 
   factory Comment.fromMap(Map m) {
@@ -112,6 +121,10 @@ class Comment {
       replies: m['replies'] != null 
           ? (m['replies'] as List).map((reply) => Comment.fromMap(reply)).toList()
           : null,
+      translatedContent: m['translated_content']?.toString(),
+      originalLanguage: m['original_language']?.toString(),
+      languageName: m['language_name']?.toString(),
+      translatedAt: m['translated_at']?.toString(),
     );
   }
 
@@ -151,6 +164,10 @@ class Comment {
     int? userPoints,
     int? parentId,
     List<Comment>? replies,
+    String? translatedContent,
+    String? originalLanguage,
+    String? languageName,
+    String? translatedAt,
   }) {
     return Comment(
       id: id ?? this.id,
@@ -187,6 +204,10 @@ class Comment {
       userPoints: userPoints ?? this.userPoints,
       parentId: parentId ?? this.parentId,
       replies: replies ?? this.replies,
+      translatedContent: translatedContent ?? this.translatedContent,
+      originalLanguage: originalLanguage ?? this.originalLanguage,
+      languageName: languageName ?? this.languageName,
+      translatedAt: translatedAt ?? this.translatedAt,
     );
   }
 }

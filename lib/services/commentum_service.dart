@@ -1100,6 +1100,10 @@ class CommentumService extends GetxController {
       userTier: commentData['user_tier']?.toString(),
       userPoints: commentData['user_points'] as int?,
       replies: replies,
+      translatedContent: commentData['translated_content']?.toString(),
+      originalLanguage: commentData['original_language']?.toString(),
+      languageName: commentData['language_name']?.toString(),
+      translatedAt: commentData['translated_at']?.toString(),
     );
   }
 
@@ -1140,6 +1144,43 @@ class CommentumService extends GetxController {
       Logger.i('Error getting user role: $e');
       currentUserRole.value = 'user';
       return 'user';
+    }
+  }
+
+  Future<Map<String, dynamic>?> translateComment({
+    required int commentId,
+    String targetLanguage = 'en',
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/comments'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'action': 'translate',
+          'comment_id': commentId,
+          'target_language': targetLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return {
+            'translated_content': data['translated_content'],
+            'original_language': data['original_language'],
+            'language_name': data['language_name'],
+            'translated_at': data['translated_at'],
+            'cached': data['cached'] ?? false,
+            'is_already_target': data['is_already_target'] ?? false,
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      Logger.i('Error translating comment: $e');
+      return null;
     }
   }
 

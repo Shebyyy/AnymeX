@@ -1385,6 +1385,10 @@ class _CommentSectionState extends State<CommentSection> {
                 colorScheme: colorScheme,
                 fontSize: contentFontSize,
               ),
+              if (comment.originalLanguage != null && comment.originalLanguage != 'en') ...[
+                SizedBox(height: isCompact ? 4 : 8),
+                _buildTranslationSection(context, comment, controller, isCompact),
+              ],
               if (effectiveLocked)
                 Container(
                   margin: EdgeInsets.only(top: isCompact ? 4 : 8),
@@ -1454,6 +1458,154 @@ class _CommentSectionState extends State<CommentSection> {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildLanguageBadge(BuildContext context, String languageName, bool isCompact) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(left: 2),
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 5 : 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: colorScheme.tertiary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.tertiary.withOpacity(0.25),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.translate_rounded,
+              size: isCompact ? 10 : 11, color: colorScheme.tertiary),
+          const SizedBox(width: 3),
+          Text(
+            languageName,
+            style: TextStyle(
+              fontSize: isCompact ? 9 : 10,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.tertiary,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTranslationSection(BuildContext context, Comment comment,
+      CommentSectionController controller, bool isCompact) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final hasTranslation = comment.translatedContent != null && comment.translatedContent!.isNotEmpty;
+    final isTranslating = controller.isTranslating(comment.id);
+    final isShowing = controller.isShowingTranslation(comment.id);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: isTranslating
+              ? null
+              : () => controller.translateComment(comment),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 8 : 10,
+                vertical: isCompact ? 3 : 5),
+            decoration: BoxDecoration(
+              color: colorScheme.tertiary.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: colorScheme.tertiary.withOpacity(0.15),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isTranslating)
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          colorScheme.tertiary),
+                    ),
+                  )
+                else
+                  Icon(
+                    hasTranslation
+                        ? (isShowing ? Icons.translate_rounded : Icons.translate_rounded)
+                        : Icons.translate_rounded,
+                    size: isCompact ? 12 : 14,
+                    color: colorScheme.tertiary,
+                  ),
+                const SizedBox(width: 6),
+                Text(
+                  isTranslating
+                      ? 'Translating...'
+                      : hasTranslation
+                          ? (isShowing ? 'Hide translation' : 'Show translation')
+                          : 'Translate to English',
+                  style: TextStyle(
+                    fontSize: isCompact ? 11 : 12,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.tertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Show translated content
+        if (isShowing && hasTranslation) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(isCompact ? 8 : 12),
+            decoration: BoxDecoration(
+              color: colorScheme.tertiary.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.tertiary.withOpacity(0.12),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.translate_rounded,
+                        size: 12, color: colorScheme.tertiary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Translated from ${comment.languageName ?? comment.originalLanguage}',
+                      style: TextStyle(
+                        fontSize: isCompact ? 9 : 10,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.tertiary.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                DiscordMarkdown(
+                  text: comment.translatedContent!,
+                  style: TextStyle(
+                    fontSize: isCompact ? 12.0 : 14.0,
+                    color: colorScheme.onSurface.withOpacity(0.85),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }

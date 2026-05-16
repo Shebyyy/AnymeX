@@ -39,6 +39,8 @@ class CommentSectionController extends GetxController
   final RxBool isRefreshing = false.obs;
 
   final RxSet<String> votingComments = <String>{}.obs;
+  final RxSet<String> translatingComments = <String>{}.obs;
+  final RxSet<String> showingTranslation = <String>{}.obs;
   final RxString currentSort = 'newest'.obs;
   final RxString replyingToCommentId = ''.obs;
 
@@ -568,11 +570,71 @@ class CommentSectionController extends GetxController
     if (newMedia.uniqueId != media.uniqueId) {
       comments.clear();
       votingComments.clear();
+      translatingComments.clear();
+      showingTranslation.clear();
 
       loadComments();
 
       print('Media changed to: ${newMedia.uniqueId}, refreshing comments');
     }
+  }
+
+  Future<void> translateComment(Comment comment) async {
+    if (translatingComments.contains(comment.id)) return;
+
+    if (comment.translatedContent != null && comment.translatedContent!.isNotEmpty) {
+      toggleTranslation(comment.id);
+      return;
+    }
+
+    translatingComments.add(comment.id);
+
+    try {
+      final commentId = int.tryParse(comment.id) ?? 0;
+      if (commentId == 0) return;
+
+      final result = await commentumService.translateComment(commentId: commentId);
+
+      if (result != null) {
+        final isAlreadyTarget = result['is_already_target'] == true;
+        if (isAlreadyTarget) {
+          snackBar('This comment is already in English');
+          return;
+        }
+
+        final found = findCommentById(comment.id);
+        if (found != null) {
+          found.translatedContent = result['translated_content']?.toString();
+          found.originalLanguage = result['original_language']?.toString();
+          found.languageName = result['language_name']?.toString();
+          found.translatedAt = result['translated_at']?.toString();
+          comments.refresh();
+          showingTranslation.add(comment.id);
+        }
+      } else {
+        snackBar('Translation not available right now');
+      }
+    } catch (e) {
+      snackBar('Failed to translate comment');
+    } finally {
+      translatingComments.remove(comment.id);
+    }
+  }
+
+  void toggleTranslation(String commentId) {
+    if (showingTranslation.contains(commentId)) {
+      showingTranslation.remove(commentId);
+    } else {
+      showingTranslation.add(commentId);
+    }
+  }
+
+  bool isShowingTranslation(String commentId) {
+    return showingTranslation.contains(commentId);
+  }
+
+  bool isTranslating(String commentId) {
+    return translatingComments.contains(commentId);
   }
 
   void onUserAuthChanged() {
