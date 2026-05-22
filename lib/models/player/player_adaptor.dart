@@ -34,6 +34,12 @@ class PlayerSettings {
   bool enableScreenshot;
   bool playerMenuAnimation;
   String hardwareDecoder;
+  bool enablePip;
+  bool autoEnterPip;
+  bool enableFloatingPlayer;
+  bool returnToFullscreenAfterPip;
+  String floatingPlayerSize;
+  bool rememberFloatingPosition;
 
   PlayerSettings({
     this.speed = 1.0,
@@ -67,6 +73,12 @@ class PlayerSettings {
     this.enableScreenshot = true,
     this.playerMenuAnimation = true,
     this.hardwareDecoder = 'hw',
+    this.enablePip = true,
+    this.autoEnterPip = false,
+    this.enableFloatingPlayer = true,
+    this.returnToFullscreenAfterPip = true,
+    this.floatingPlayerSize = 'medium',
+    this.rememberFloatingPosition = false,
   });
 
   factory PlayerSettings.fromDB() {
@@ -137,6 +149,12 @@ class PlayerSettings {
       playerMenuAnimation: PlayerSettingsKeys.playerMenuAnimation
           .get<bool>(defaults.playerMenuAnimation),
       hardwareDecoder: _readHardwareDecoder(),
+      enablePip: PlayerSettingsKeys.enablePip.get<bool>(defaults.enablePip),
+      autoEnterPip: PlayerSettingsKeys.autoEnterPip.get<bool>(defaults.autoEnterPip),
+      enableFloatingPlayer: PlayerSettingsKeys.enableFloatingPlayer.get<bool>(defaults.enableFloatingPlayer),
+      returnToFullscreenAfterPip: PlayerSettingsKeys.returnToFullscreenAfterPip.get<bool>(defaults.returnToFullscreenAfterPip),
+      floatingPlayerSize: PlayerSettingsKeys.floatingPlayerSize.get<String>(defaults.floatingPlayerSize),
+      rememberFloatingPosition: PlayerSettingsKeys.rememberFloatingPosition.get<bool>(defaults.rememberFloatingPosition),
     );
   }
 }

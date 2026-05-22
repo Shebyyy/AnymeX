@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
+import 'package:anymex/screens/anime/watch/pip/pip_service.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/utils/theme_extensions.dart';
@@ -310,6 +312,12 @@ class BottomControls extends StatelessWidget {
         tooltip: 'Aspect Ratio',
         compact: true,
       ),
+      'pip': ControlButton(
+        icon: Icons.picture_in_picture_alt_rounded,
+        onPressed: () => controller.enterPip(),
+        tooltip: 'Picture in Picture',
+        compact: true,
+      ),
     };
 
     List<Widget> buildButtonList(List<String> ids) {
@@ -328,6 +336,10 @@ class BottomControls extends StatelessWidget {
                 controller.embeddedSubs.value.isEmpty)) continue;
         if (id == 'orientation' && !(Platform.isAndroid || Platform.isIOS)) {
           continue;
+        }
+        if (id == 'pip') {
+          if (!(Platform.isAndroid || Platform.isIOS)) continue;
+          if (!settingsController.enablePip) continue;
         }
 
         final widget = buttonWidgets[id];

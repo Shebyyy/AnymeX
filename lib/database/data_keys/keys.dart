@@ -239,6 +239,14 @@ enum PlayerSettingsKeys {
   subtitleOutlineType,
   playerMenuAnimation,
   hardwareDecoder,
+  enablePip,
+  autoEnterPip,
+  enableFloatingPlayer,
+  returnToFullscreenAfterPip,
+  floatingPlayerSize,
+  rememberFloatingPosition,
+  floatingPlayerPositionX,
+  floatingPlayerPositionY,
 }
 
 enum UISettingsKeys {

@@ -537,6 +537,42 @@ class Settings extends GetxController {
     PlayerSettingsKeys.enableSwipeControls.set(value);
   }
 
+  bool get enablePip => _getPlayerSetting((s) => s.enablePip);
+  set enablePip(bool value) {
+    playerSettings.update((s) => s?.enablePip = value);
+    PlayerSettingsKeys.enablePip.set(value);
+  }
+
+  bool get autoEnterPip => _getPlayerSetting((s) => s.autoEnterPip);
+  set autoEnterPip(bool value) {
+    playerSettings.update((s) => s?.autoEnterPip = value);
+    PlayerSettingsKeys.autoEnterPip.set(value);
+  }
+
+  bool get enableFloatingPlayer => _getPlayerSetting((s) => s.enableFloatingPlayer);
+  set enableFloatingPlayer(bool value) {
+    playerSettings.update((s) => s?.enableFloatingPlayer = value);
+    PlayerSettingsKeys.enableFloatingPlayer.set(value);
+  }
+
+  bool get returnToFullscreenAfterPip => _getPlayerSetting((s) => s.returnToFullscreenAfterPip);
+  set returnToFullscreenAfterPip(bool value) {
+    playerSettings.update((s) => s?.returnToFullscreenAfterPip = value);
+    PlayerSettingsKeys.returnToFullscreenAfterPip.set(value);
+  }
+
+  String get floatingPlayerSize => _getPlayerSetting((s) => s.floatingPlayerSize);
+  set floatingPlayerSize(String value) {
+    playerSettings.update((s) => s?.floatingPlayerSize = value);
+    PlayerSettingsKeys.floatingPlayerSize.set(value);
+  }
+
+  bool get rememberFloatingPosition => _getPlayerSetting((s) => s.rememberFloatingPosition);
+  set rememberFloatingPosition(bool value) {
+    playerSettings.update((s) => s?.rememberFloatingPosition = value);
+    PlayerSettingsKeys.rememberFloatingPosition.set(value);
+  }
+
   int get markAsCompleted => _getPlayerSetting((s) => s.markAsCompleted);
   set markAsCompleted(int value) {
     playerSettings.update((s) => s?.markAsCompleted = value);

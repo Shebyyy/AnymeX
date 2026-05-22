@@ -97,6 +97,10 @@ final List<_BottomControl> _bottomControls = [
       icon: Icons.screen_rotation_rounded),
   const _BottomControl(
       id: 'aspect_ratio', name: 'Aspect Ratio', icon: Symbols.fit_screen),
+  const _BottomControl(
+      id: 'pip',
+      name: 'Picture in Picture',
+      icon: Icons.picture_in_picture_alt_rounded),
 ];
 
 class _SettingsPlayerState extends State<SettingsPlayer> with TickerProviderStateMixin {
@@ -704,6 +708,32 @@ class _SettingsPlayerState extends State<SettingsPlayer> with TickerProviderStat
           ),
         ),
       ),
+    );
+  }
+
+  String _floatingSizeLabel(String size) {
+    switch (size) {
+      case 'small':
+        return 'Small (160×90)';
+      case 'large':
+        return 'Large (280×158)';
+      case 'medium':
+      default:
+        return 'Medium (200×113)';
+    }
+  }
+
+  void _showFloatingSizeDialog(Settings settings) {
+    showSelectionDialog<String>(
+      title: 'Floating Player Size',
+      items: ['small', 'medium', 'large'],
+      selectedItem: settings.floatingPlayerSize.obs,
+      getTitle: _floatingSizeLabel,
+      onItemSelected: (value) {
+        settings.floatingPlayerSize = value;
+        setState(() {});
+      },
+      leadingIcon: Icons.aspect_ratio_rounded,
     );
   }
 
@@ -1837,6 +1867,69 @@ class _SettingsPlayerState extends State<SettingsPlayer> with TickerProviderStat
                                   switchValue: settings.playerMenuAnimation,
                                   onChanged: (val) =>
                                       settings.playerMenuAnimation = val),
+                              if (Platform.isAndroid || Platform.isIOS)
+                                CustomSwitchTile(
+                                    padding: const EdgeInsets.all(10),
+                                    icon: Icons.picture_in_picture_alt_rounded,
+                                    title: "Enable PiP",
+                                    description:
+                                        "Show the PiP button in player controls. When disabled, the PiP icon will not appear",
+                                    switchValue: settings.enablePip,
+                                    onChanged: (val) {
+                                      settings.enablePip = val;
+                                      if (!val) {
+                                        settings.autoEnterPip = false;
+                                      }
+                                    }),
+                              if (Platform.isAndroid || Platform.isIOS)
+                                CustomSwitchTile(
+                                    padding: const EdgeInsets.all(10),
+                                    icon: Icons.home_rounded,
+                                    title: "Auto-Enter PiP on Home",
+                                    description:
+                                        "Automatically enter Picture-in-Picture mode when pressing the home button while watching",
+                                    switchValue: settings.autoEnterPip,
+                                    onChanged: (val) {
+                                      if (val && !settings.enablePip) {
+                                        settings.enablePip = true;
+                                      }
+                                      settings.autoEnterPip = val;
+                                    }),
+                              CustomSwitchTile(
+                                  padding: const EdgeInsets.all(10),
+                                  icon: Icons.picture_in_picture_rounded,
+                                  title: "Enable Floating Player",
+                                  description:
+                                      "When enabled, pressing back will minimize the player to a floating overlay instead of closing it",
+                                  switchValue: settings.enableFloatingPlayer,
+                                  onChanged: (val) =>
+                                      settings.enableFloatingPlayer = val),
+                              if (Platform.isAndroid || Platform.isIOS)
+                                CustomSwitchTile(
+                                    padding: const EdgeInsets.all(10),
+                                    icon: Icons.fullscreen_rounded,
+                                    title: "Return to Fullscreen after PiP",
+                                    description:
+                                        "When enabled, exiting PiP mode will return to the fullscreen player instead of staying in floating mode",
+                                    switchValue: settings.returnToFullscreenAfterPip,
+                                    onChanged: (val) =>
+                                        settings.returnToFullscreenAfterPip = val),
+                              CustomTile(
+                                padding: 10,
+                                icon: Icons.aspect_ratio_rounded,
+                                title: 'Floating Player Size',
+                                description: _floatingSizeLabel(settings.floatingPlayerSize),
+                                onTap: () => _showFloatingSizeDialog(settings),
+                              ),
+                              CustomSwitchTile(
+                                  padding: const EdgeInsets.all(10),
+                                  icon: Icons.push_pin_rounded,
+                                  title: "Remember Floating Position",
+                                  description:
+                                      "When enabled, the floating player will open at the position where you last moved it",
+                                  switchValue: settings.rememberFloatingPosition,
+                                  onChanged: (val) =>
+                                      settings.rememberFloatingPosition = val),
                               CustomSliderTile(
                                 sliderValue: settings.seekDuration.toDouble(),
                                 max: 50,

@@ -22,6 +22,7 @@ import 'package:anymex/screens/anime/watch/controller/player_utils.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
 import 'package:anymex/screens/anime/watch/player/base_player.dart';
 import 'package:anymex/screens/anime/watch/player/media_kit_player.dart';
+import 'package:anymex/screens/anime/watch/pip/pip_service.dart';
 
 import 'package:anymex/utils/aniskip.dart' as aniskip;
 import 'package:anymex/utils/color_profiler.dart';
@@ -383,7 +384,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           'sync_subs',
           'speed',
           'orientation',
-          'aspect_ratio'
+          'aspect_ratio',
+          'pip'
         ],
         'hiddenButtonIds': [],
         'buttonConfigs': {
@@ -395,6 +397,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           'speed': {'visible': true},
           'orientation': {'visible': true},
           'aspect_ratio': {'visible': true},
+          'pip': {'visible': true},
         },
       };
       PlayerUiKeys.bottomControlsSettings.set(json.encode(defaultConfig));
@@ -432,7 +435,28 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       if (!kDebugMode) {
         _trackLocally();
       }
+
+      if (state == AppLifecycleState.inactive && settings.autoEnterPip && settings.enablePip) {
+        _tryAutoEnterPip();
+      }
     }
+  }
+
+  Future<void> _tryAutoEnterPip() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    final pipService = PipService();
+    final supported = await pipService.isSupported();
+    if (supported) {
+      await pipService.setup();
+      await pipService.enterPip();
+    }
+  }
+
+  Future<void> enterPip() async {
+    if (!settings.enablePip) return;
+    final pipService = PipService();
+    await pipService.setup();
+    await pipService.enterPip();
   }
 
   void _initDatabaseVars() {

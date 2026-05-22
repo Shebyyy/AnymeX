@@ -21,6 +21,7 @@ import 'package:anymex/controllers/ui/greeting.dart';
 import 'package:anymex/database/database.dart';
 import 'package:anymex/firebase_options.dart';
 import 'package:anymex/screens/anime/home_page.dart';
+import 'package:anymex/screens/anime/watch/pip/floating_player_overlay.dart';
 import 'package:anymex/screens/anime/widgets/comments/controller/comment_preloader.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/home_page.dart';
@@ -185,6 +186,7 @@ void _initializeGetxController() async {
   Get.put(CommentPreloader());
   Get.put(GistSyncController(), permanent: true);
   Get.put(DownloadController(), permanent: true);
+  Get.put(FloatingPlayerManager(), permanent: true);
   Get.lazyPut(() => CacheController());
   await StorageManagerService().enforceImageCacheLimit();
 
@@ -301,10 +303,16 @@ class _MainAppState extends State<MainApp> {
                     child: AnymexTitleBar.titleBar(),
                   ),
                 ),
+                const FloatingPlayerOverlay(),
               ],
             );
           }
-          return child!;
+          return Stack(
+            children: [
+              child!,
+              const FloatingPlayerOverlay(),
+            ],
+          );
         },
         enableLog: true,
         logWriterCallback: (text, {isError = false}) async {

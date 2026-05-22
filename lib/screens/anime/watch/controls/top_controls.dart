@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart';
+import 'package:anymex/screens/anime/watch/pip/floating_player_overlay.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_player.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:flutter/material.dart';
@@ -96,11 +98,34 @@ class TopControls extends StatelessWidget {
         children: [
           ControlButton(
             icon: Icons.arrow_back_ios_rounded,
-            onPressed: () => Get.back(),
+            onPressed: () {
+              final settings = settingsController;
+              if (settings.enableFloatingPlayer && Get.isRegistered<FloatingPlayerManager>()) {
+                final controller = Get.find<PlayerController>();
+                FloatingPlayerManager.to.startFloating(controller);
+              }
+              Get.back();
+            },
             tooltip: 'Back',
             isPrimary: true,
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 8),
+          Obx(() {
+            final settings = settingsController;
+            if (!settings.enablePip || !(Platform.isAndroid || Platform.isIOS)) {
+              return const SizedBox.shrink();
+            }
+            return ControlButton(
+              icon: Icons.picture_in_picture_alt_rounded,
+              onPressed: () {
+                final controller = Get.find<PlayerController>();
+                controller.enterPip();
+              },
+              tooltip: 'Picture in Picture',
+              compact: true,
+            );
+          }),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,11 +256,34 @@ class TopControls extends StatelessWidget {
               children: [
                 ControlButton(
                   icon: Icons.arrow_back_ios_rounded,
-                  onPressed: () => Get.back(),
+                  onPressed: () {
+                    final settings = settingsController;
+                    if (settings.enableFloatingPlayer && Get.isRegistered<FloatingPlayerManager>()) {
+                      final controller = Get.find<PlayerController>();
+                      FloatingPlayerManager.to.startFloating(controller);
+                    }
+                    Get.back();
+                  },
                   tooltip: 'Back',
                   isPrimary: true,
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 8),
+                Obx(() {
+                  final settings = settingsController;
+                  if (!settings.enablePip || !(Platform.isAndroid || Platform.isIOS)) {
+                    return const SizedBox.shrink();
+                  }
+                  return ControlButton(
+                    icon: Icons.picture_in_picture_alt_rounded,
+                    onPressed: () {
+                      final controller = Get.find<PlayerController>();
+                      controller.enterPip();
+                    },
+                    tooltip: 'Picture in Picture',
+                    compact: true,
+                  );
+                }),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

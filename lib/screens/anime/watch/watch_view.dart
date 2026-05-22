@@ -1,3 +1,4 @@
+import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/database/isar_models/episode.dart';
 import 'package:anymex/database/isar_models/video.dart' as model;
@@ -12,6 +13,7 @@ import 'package:anymex/screens/anime/watch/controls/widgets/subtitle_text.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/tracks_popup.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/source_popup.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/sync_subs_popup.dart';
+import 'package:anymex/screens/anime/watch/pip/floating_player_overlay.dart';
 import 'package:anymex/screens/anime/widgets/media_indicator.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/shader_osd.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +26,8 @@ class WatchScreen extends StatefulWidget {
   final anymex.Media anilistData;
   final List<model.Video> episodeTracks;
   final bool shouldTrack;
+  final PlayerController? existingController;
+
   const WatchScreen({
     super.key,
     required this.episodeSrc,
@@ -32,6 +36,7 @@ class WatchScreen extends StatefulWidget {
     required this.anilistData,
     required this.episodeTracks,
     this.shouldTrack = true,
+    this.existingController,
   });
 
   @override
@@ -40,96 +45,125 @@ class WatchScreen extends StatefulWidget {
 
 class _WatchScreenState extends State<WatchScreen> {
   late PlayerController controller;
+  bool _isEnteringFloating = false;
 
   @override
   initState() {
     super.initState();
-    controller = Get.put(PlayerController(
-        widget.episodeSrc,
-        widget.currentEpisode,
-        widget.episodeList,
-        widget.anilistData,
-        widget.episodeTracks,
-        shouldTrack: widget.shouldTrack));
+    if (widget.existingController != null) {
+      controller = widget.existingController!;
+      if (!Get.isRegistered<PlayerController>()) {
+        Get.put(controller);
+      }
+    } else {
+      controller = Get.put(PlayerController(
+          widget.episodeSrc,
+          widget.currentEpisode,
+          widget.episodeList,
+          widget.anilistData,
+          widget.episodeTracks,
+          shouldTrack: widget.shouldTrack));
+    }
   }
 
   @override
   void dispose() {
-    Get.delete<PlayerController>();
+    if (!_isEnteringFloating) {
+      Get.delete<PlayerController>();
+    }
     super.dispose();
+  }
+
+  void _handleBack() {
+    final settings = settingsController;
+    if (settings.enableFloatingPlayer && Get.isRegistered<FloatingPlayerManager>()) {
+      _isEnteringFloating = true;
+      FloatingPlayerManager.to.startFloating(controller);
+      Get.back();
+    } else {
+      Get.back();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: Stack(
-      children: [
-        Obx(() {
-          controller.playerReloadVersion.value;
-          return controller.videoWidget;
-        }),
-        PlayerOverlay(controller: controller),
-        BufferingOverlay(controller: controller),
-        Obx(() {
-          controller.playerReloadVersion.value;
-          if (PlayerKeys.useLibass.get<bool>(false)) {
-            return const SizedBox.shrink();
-          }
-          return SubtitleText(controller: controller);
-        }),
-        DoubleTapSeekWidget(
-          controller: controller,
-        ),
-        const Align(
-          alignment: Alignment.center,
-          child: ThemedCenterControls(),
-        ),
-        const Align(
-          alignment: Alignment.topCenter,
-          child: ThemedTopControls(),
-        ),
-        const Align(
-          alignment: Alignment.bottomCenter,
-          child: ThemedBottomControls(),
-        ),
-        MediaIndicatorBuilder(
-          isVolumeIndicator: false,
-          controller: controller,
-        ),
-        MediaIndicatorBuilder(
-          isVolumeIndicator: true,
-          controller: controller,
-        ),
-        ShaderOsd(controller: controller),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: SourcePopup(controller: controller),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: TracksPopup(controller: controller),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: SyncSubsPopup(controller: controller),
-        ),
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          child: EpisodesPane(controller: controller),
-        ),
-      ],
-    ));
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBack();
+        }
+      },
+      child: Scaffold(
+          body: Stack(
+        children: [
+          Obx(() {
+            controller.playerReloadVersion.value;
+            return controller.videoWidget;
+          }),
+          PlayerOverlay(controller: controller),
+          BufferingOverlay(controller: controller),
+          Obx(() {
+            controller.playerReloadVersion.value;
+            if (PlayerKeys.useLibass.get<bool>(false)) {
+              return const SizedBox.shrink();
+            }
+            return SubtitleText(controller: controller);
+          }),
+          DoubleTapSeekWidget(
+            controller: controller,
+          ),
+          const Align(
+            alignment: Alignment.center,
+            child: ThemedCenterControls(),
+          ),
+          const Align(
+            alignment: Alignment.topCenter,
+            child: ThemedTopControls(),
+          ),
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: ThemedBottomControls(),
+          ),
+          MediaIndicatorBuilder(
+            isVolumeIndicator: false,
+            controller: controller,
+          ),
+          MediaIndicatorBuilder(
+            isVolumeIndicator: true,
+            controller: controller,
+          ),
+          ShaderOsd(controller: controller),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            child: SourcePopup(controller: controller),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            child: TracksPopup(controller: controller),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            child: SyncSubsPopup(controller: controller),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            child: EpisodesPane(controller: controller),
+          ),
+        ],
+      )),
+    );
   }
 }
