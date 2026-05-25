@@ -10,6 +10,7 @@ import 'package:anymex/utils/torrent/torrent_stream_resolver.dart';
 import 'package:anymex/controllers/discord/discord_rpc.dart';
 import 'package:anymex/controllers/offline/offline_storage_controller.dart';
 import 'package:anymex/controllers/service_handler/params.dart';
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/controllers/sync/gist_sync_controller.dart';
@@ -35,6 +36,7 @@ import 'package:anymex/utils/subtitle_translator.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
 import 'package:anymex/widgets/non_widgets/anymex_toast.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
+import 'package:anymex/utils/media_notification_handler.dart';
 import 'package:anymex_extension_runtime_bridge/ExtensionManager.dart';
 import 'package:anymex_extension_runtime_bridge/Models/DEpisode.dart' as d;
 import 'package:flutter/foundation.dart';
@@ -314,6 +316,115 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     applyShader("Default");
   }
 
+  void _initMediaNotification() {
+    final handler = MediaNotificationHandler.instance;
+    handler.startSession(
+      onPlay: () async => _basePlayer.play(),
+      onPause: () async => _basePlayer.pause(),
+      onSeek: (position) async => _basePlayer.seek(position),
+      onSkipToNext: () async {
+        if (hasNextEpisode && nextEpisode != null) {
+          await fetchEpisode(nextEpisode!);
+        }
+      },
+      onSkipToPrevious: () async {
+        if (hasPreviousEpisode && previousEpisode != null) {
+          await fetchEpisode(previousEpisode!);
+        }
+      },
+    );
+    _notificationInitialized = true;
+    _updateNotificationMetadata();
+  }
+
+  void _updateNotificationMetadata() {
+    if (!_notificationInitialized) return;
+
+    final String title;
+    final String artist;
+    final String? artworkUrl;
+
+    if (isOffline.value) {
+      title = currentEpisode.value.title ?? itemName ?? 'Offline Media';
+      artist = 'AnymeX · Offline';
+      artworkUrl = null;
+    } else {
+      final episodeLabel = currentEpisode.value.title ?? 'Episode ${currentEpisode.value.number}';
+      title = episodeLabel;
+
+      final mediaTitle = _getMediaTitle();
+      final serviceLabel = _getServiceLabel();
+      artist = '$mediaTitle · $serviceLabel';
+
+      artworkUrl = _getMediaArtworkUrl();
+    }
+
+    MediaNotificationHandler.instance.updateMetadata(
+      title: title,
+      artist: artist,
+      artworkUrl: artworkUrl,
+      duration: episodeDuration.value,
+    );
+
+    MediaNotificationHandler.instance.updateSkipButtons(
+      canSkipNext: hasNextEpisode,
+      canSkipPrevious: hasPreviousEpisode,
+    );
+  }
+
+  String _getMediaTitle() {
+    if (anilistData.title.isNotEmpty && anilistData.title != '?') {
+      return anilistData.title;
+    }
+    if (anilistData.romajiTitle.isNotEmpty && anilistData.romajiTitle != '?') {
+      return anilistData.romajiTitle;
+    }
+    return 'AnymeX';
+  }
+
+  String _getServiceLabel() {
+    switch (anilistData.serviceType) {
+      case ServicesType.anilist:
+        return 'AniList';
+      case ServicesType.mal:
+        return 'MyAnimeList';
+      case ServicesType.simkl:
+        return 'Simkl';
+      case ServicesType.extensions:
+        return anilistData.sourceName ?? 'Extension';
+    }
+  }
+
+  String? _getMediaArtworkUrl() {
+    if (anilistData.largePoster.isNotEmpty && anilistData.largePoster != '?') {
+      return anilistData.largePoster;
+    }
+    if (anilistData.poster.isNotEmpty && anilistData.poster != '?') {
+      return anilistData.poster;
+    }
+    if (anilistData.cover != null && anilistData.cover!.isNotEmpty) {
+      return anilistData.cover;
+    }
+    return null;
+  }
+
+  void _updateNotificationState() {
+    if (!_notificationInitialized) return;
+    MediaNotificationHandler.instance.updateState(
+      position: currentPosition.value,
+      bufferPosition: bufferred.value,
+      isPlaying: isPlaying.value,
+      isBuffering: isBuffering.value,
+      playbackSpeed: playbackSpeed.value,
+    );
+  }
+
+  Future<void> _stopMediaNotification() async {
+    if (!_notificationInitialized) return;
+    _notificationInitialized = false;
+    await MediaNotificationHandler.instance.stopSession();
+  }
+
   final settings = Get.find<Settings>();
   Timer? _volumeTimer;
   Timer? _brightnessTimer;
@@ -331,6 +442,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   bool _persistentListenersInitialized = false;
   bool _isReloadingPlayer = false;
   bool _activeUseLibass = false;
+  bool _notificationInitialized = false;
 
   @override
   void onInit() {
@@ -366,6 +478,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           "if subtitle is not showing up then disable libass in settings and restart",
           duration: 3000);
     }
+
+    _initMediaNotification();
   }
 
   static void initializePlayerControlsIfNeeded(Settings settings) {
@@ -896,6 +1010,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentEpisode.value.durationInMilliseconds =
           episodeDuration.value.inMilliseconds;
 
+      _updateNotificationState();
+
       if (_shouldMarkAsCompleted && !isOffline.value) {
         _trackOnline(true);
       }
@@ -910,6 +1026,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       episodeDuration.value = dur;
       currentEpisode.value.durationInMilliseconds = dur.inMilliseconds;
       _updateRpc();
+      _updateNotificationMetadata();
     }));
 
     _playerSubscriptions.add(_basePlayer.bufferStream
@@ -923,6 +1040,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       if (e) {
         _resetAutoHideTimer();
       }
+      _updateNotificationState();
+
       if (isOffline.value) return;
       if (!e) {
         DiscordRPCController.instance.updateAnimePresencePaused(
@@ -1212,7 +1331,6 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   Future<void> fetchEpisode(Episode episode, {Duration? savedPosition}) async {
     if (isOffline.value) {
-      // Support local file switching for offline episode list
       final videoPath = episode.link;
       if (videoPath == null || videoPath.isEmpty) return;
       _basePlayer.pause();
@@ -1226,7 +1344,6 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         videoPath,
         startPosition: Duration(milliseconds: stamp ?? 0),
       );
-      // Update the selected video and offline path tracking
       selectedVideo.value = model.Video(
         url: videoPath,
         quality: 'Offline',
@@ -1258,6 +1375,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentEpisode.value = episode;
       _hasTrackedInitialLocal = false;
       _hasTrackedInitialOnline = false;
+
+      _updateNotificationMetadata();
 
       episodeTracks.value = data.map((e) => model.Video.fromVideo(e)).toList();
 
@@ -1466,6 +1585,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     _controlsTimer?.cancel();
     _autoHideTimer?.cancel();
     _autoSkipCountdownTimer?.cancel();
+
+    await _stopMediaNotification();
 
     try {
       _trackLocally(syncToCloud: false);

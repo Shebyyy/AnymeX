@@ -30,6 +30,7 @@ import 'package:anymex/services/commentum_service.dart';
 import 'package:anymex/utils/external_font_loader.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/utils/deeplink.dart';
+import 'package:anymex/utils/media_notification_handler.dart';
 import 'package:anymex/utils/register_protocol/register_protocol.dart';
 import 'package:anymex/widgets/animation/more_page_transitions.dart';
 import 'package:anymex/widgets/common/glow.dart';
@@ -129,6 +130,9 @@ void main(List<String> args) async {
     initDeepLinkListener();
     initializeDateFormatting();
     MediaKit.ensureInitialized();
+
+    await MediaNotificationHandler.instance.init();
+
     if (!Platform.isAndroid && !Platform.isIOS) {
       await windowManager.ensureInitialized();
       if (Platform.isWindows) {

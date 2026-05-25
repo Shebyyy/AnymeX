@@ -95,6 +95,7 @@ dependencies:
     expressive_loading_indicator: ^0.0.1
     photo_view: ^0.15.0
     rxdart: any
+    audio_service: ^0.18.15
     ffi: any
     win32: any
     isar_community: 3.3.0-dev.3
