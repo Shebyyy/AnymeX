@@ -170,6 +170,7 @@ jobs:
           COMMENTS_BASE_URL:  ${{ secrets.COMMENTS_BASE_URL }}
           BOT_BASE_URL: ${{ secrets.BOT_BASE_URL }}
           BOT_API_SECRET: ${{ secrets.BOT_API_SECRET }}
+          WATCHIUM_BASE_URL: ${{ secrets.WATCHIUM_BASE_URL }}
         run: |
           cat > .env << EOF
           AL_CLIENT_ID=$AL_CLIENT_ID
@@ -186,6 +187,7 @@ jobs:
           COMMENTS_BASE_URL=$COMMENTS_BASE_URL
           BOT_BASE_URL=$BOT_BASE_URL
           BOT_API_SECRET=$BOT_API_SECRET
+          WATCHIUM_BASE_URL=$WATCHIUM_BASE_URL
           EOF
       
       - name: Build Android
