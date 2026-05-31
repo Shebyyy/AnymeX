@@ -33,6 +33,7 @@ import 'package:anymex/utils/shaders.dart';
 import 'package:anymex/utils/string_extensions.dart';
 import 'package:anymex/utils/subtitle_pre_translator.dart';
 import 'package:anymex/utils/subtitle_translator.dart';
+import 'package:anymex/services/watchium_service.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
 import 'package:anymex/widgets/non_widgets/anymex_toast.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
@@ -333,6 +334,64 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   bool _persistentListenersInitialized = false;
   bool _isReloadingPlayer = false;
   bool _activeUseLibass = false;
+  WatchiumService? _watchiumService;
+  bool _watchiumIntegrated = false;
+
+  /// Integrate with Watchium watch-together service if available.
+  void _tryIntegrateWatchium() {
+    if (_watchiumIntegrated) return;
+    try {
+      if (Get.isRegistered<WatchiumService>()) {
+        _watchiumService = Get.find<WatchiumService>();
+        // Set up remote playback callback
+        _watchiumService!.onRemotePlaybackChanged = _onRemoteSync;
+        _watchiumIntegrated = true;
+        Logger.i('[PlayerController] Watchium integrated');
+      }
+    } catch (_) {}
+  }
+
+  /// Called when the Watchium service receives a remote playback change.
+  void _onRemoteSync(double position, bool playing) {
+    if (_watchiumService == null) return;
+    // Don't sync if we're the host
+    if (_watchiumService!.isHost.value) return;
+
+    final remoteDuration = Duration(
+        milliseconds: (position * 1000).round());
+    final timeDiff = (currentPosition.value - remoteDuration).abs();
+
+    // Only sync if difference is greater than 100ms to avoid jitter
+    if (timeDiff > const Duration(milliseconds: 100)) {
+      isSeeking.value = true;
+      seekTo(remoteDuration);
+      if (playing && !isPlaying.value) {
+        _basePlayer.play();
+      } else if (!playing && isPlaying.value) {
+        _basePlayer.pause();
+      }
+      Future.delayed(const Duration(milliseconds: 200), () {
+        isSeeking.value = false;
+      });
+    }
+  }
+
+  /// Notify Watchium of local playback state changes.
+  void _notifyWatchiumStateChange() {
+    if (_watchiumService == null || !_watchiumIntegrated) return;
+    _watchiumService!.onPlaybackStateChanged(
+      currentPosition.value,
+      isPlaying.value,
+    );
+  }
+
+  /// Notify Watchium when user seeks.
+  void _notifyWatchiumSeek(Duration position) {
+    if (_watchiumService == null || !_watchiumIntegrated) return;
+    if (!_watchiumService!.isHost.value) return;
+    _watchiumService!.sendPlayControl('seek',
+        currentTime: position.inMilliseconds / 1000.0);
+  }
 
   @override
   void onInit() {
@@ -354,6 +413,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     _initializeSwipeStuffs();
     _initializeControlsAutoHide();
     updateNavigatorState();
+    _tryIntegrateWatchium();
     if (isOffline.value) {
       _loadLocalSubtitles();
     }
@@ -927,6 +987,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       if (e) {
         _resetAutoHideTimer();
       }
+      _notifyWatchiumStateChange();
       if (isOffline.value) return;
       if (!e) {
         DiscordRPCController.instance.updateAnimePresencePaused(

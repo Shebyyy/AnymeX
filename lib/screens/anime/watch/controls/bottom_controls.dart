@@ -8,6 +8,7 @@ import 'package:anymex/screens/anime/watch/controls/widgets/control_button.dart'
 import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
+import 'package:anymex/screens/anime/watch/widgets/watch_room/watch_room_bottom_sheet.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:get/get.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -239,6 +240,11 @@ class BottomControls extends StatelessWidget {
         List<String>.from(decodedConfig['leftButtonIds'] ?? []);
     final List<String> rightButtonIds =
         List<String>.from(decodedConfig['rightButtonIds'] ?? []);
+
+    // Ensure watch_together is always visible in the right buttons
+    if (!rightButtonIds.contains('watch_together')) {
+      rightButtonIds.insert(0, 'watch_together');
+    }
     final Map<String, dynamic> buttonConfigs =
         Map<String, dynamic>.from(decodedConfig['buttonConfigs'] ?? {});
 
@@ -309,6 +315,13 @@ class BottomControls extends StatelessWidget {
         onLongPress: controller.resetVideoFit,
         tooltip: 'Aspect Ratio',
         compact: true,
+      ),
+      'watch_together': ControlButton(
+        icon: Symbols.group_rounded,
+        onPressed: () => WatchRoomBottomSheet.show(context),
+        tooltip: 'Watch Together',
+        compact: true,
+        isPrimary: true,
       ),
     };
 
