@@ -8,12 +8,32 @@ import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:anymex_extension_runtime_bridge/ExtensionManager.dart';
 import 'package:anymex_extension_runtime_bridge/Models/Source.dart';
+import 'package:anymex/services/watchium_service.dart';
+import 'package:anymex/screens/anime/watch/widgets/watch_room/watch_room_bottom_sheet.dart';
 import 'package:get/get.dart';
+
 
 class Deeplink {
   static Future<void> handleDeepLink(Uri uri) async {
     print("HANDLING DEEEPLIINK => ${uri.toString()}");
-    
+
+    if (_isThemeDeepLink(uri)) {
+      _handleThemeDeepLink(uri);
+      return;
+    }
+
+    if (_isWatchroomDeepLink(uri)) {
+      _handleWatchroomDeepLink(uri);
+      return;
+    }
+
+    int regAttempts = 0;
+    while (!Get.isRegistered<ExtensionManager>() && regAttempts < 30) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      regAttempts++;
+    }
+    if (!Get.isRegistered<ExtensionManager>()) return;
+
     final extensionManager = Get.find<ExtensionManager>();
     int attempts = 0;
     while (extensionManager.managers.isEmpty && attempts < 25) {
@@ -25,11 +45,6 @@ class Deeplink {
         .managers
         .expand((e) => e.schemes.toList())
         .toList();
-
-    if (_isThemeDeepLink(uri)) {
-      _handleThemeDeepLink(uri);
-      return;
-    }
 
     if (!illegalSchemes.contains(uri.scheme.toLowerCase())) {
       final mediaTarget = _parseMediaTarget(uri);
@@ -345,6 +360,100 @@ class Deeplink {
 
   static String? _extractNumericId(String raw) {
     return RegExp(r'\d+').firstMatch(raw)?.group(0);
+  }
+
+  static bool _isWatchroomDeepLink(Uri uri) {
+    final host = uri.host.toLowerCase();
+    if (host == 'watchroom' || host == 'w2t') return true;
+    final segments = _compactSegments(uri.pathSegments);
+    if (segments.isEmpty) return false;
+    final first = segments.first.toLowerCase();
+    return first == 'watchroom' || first == 'w2t';
+  }
+
+  static Future<void> _handleWatchroomDeepLink(Uri uri) async {
+    final code = (uri.queryParameters['code'] ?? '').trim().toUpperCase();
+    if (code.isEmpty) {
+      errorSnackBar('Invalid watchroom link: room code is missing.');
+      return;
+    }
+
+    final accessKey = (uri.queryParameters['pwd'] ?? '').trim();
+
+    int attempts = 0;
+    while (!Get.isRegistered<WatchiumService>() && attempts < 30) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      attempts++;
+    }
+
+    if (!Get.isRegistered<WatchiumService>()) {
+      errorSnackBar('Watch Together service is not available.');
+      return;
+    }
+
+    final service = Get.find<WatchiumService>();
+
+    if (service.isInRoom.value && service.currentRoomId.value == code) {
+      if (Get.context != null) {
+        final room = service.currentRoom.value;
+        WatchRoomBottomSheet.show(
+          Get.context!,
+          animeId: room?.animeId,
+          animeTitle: room?.animeTitle,
+          animeImage: room?.animeImage,
+          animeDescription: room?.animeDescription,
+          episodeNumber: room?.episodeNumber,
+          videoUrl: room?.videoUrl,
+          videoUrls: room?.videoUrls,
+          sourceId: room?.sourceId,
+          anilistId: room?.anilistId,
+          malId: room?.malId,
+          simklId: room?.simklId,
+        );
+      }
+      return;
+    }
+
+    snackBar('Joining Watch Together room $code...');
+    try {
+      final service = Get.find<WatchiumService>();
+
+      if (service.isInRoom.value) {
+        await service.leaveRoom();
+      }
+
+      final result = await service.joinRoom(
+        code,
+        accessKey: accessKey.isNotEmpty ? accessKey : null,
+      );
+      if (result.success) {
+        successSnackBar('Joined room successfully!');
+
+        if (Get.context != null) {
+          final room = service.currentRoom.value;
+          WatchRoomBottomSheet.show(
+            Get.context!,
+            animeId: room?.animeId,
+            animeTitle: room?.animeTitle,
+            animeImage: room?.animeImage,
+            animeDescription: room?.animeDescription,
+            episodeNumber: room?.episodeNumber,
+            videoUrl: room?.videoUrl,
+            videoUrls: room?.videoUrls,
+            sourceId: room?.sourceId,
+            anilistId: room?.anilistId,
+            malId: room?.malId,
+            simklId: room?.simklId,
+          );
+        }
+      } else {
+        errorSnackBar(service.error.value.isNotEmpty
+            ? service.error.value
+            : 'Failed to join room');
+      }
+    } catch (e) {
+      errorSnackBar('Error joining room: $e');
+    }
   }
 }
 

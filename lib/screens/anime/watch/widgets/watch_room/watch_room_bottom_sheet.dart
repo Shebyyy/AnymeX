@@ -1178,8 +1178,11 @@ class _RoomCodeCard extends StatelessWidget {
                 icon: Symbols.share_rounded,
                 tooltip: 'Share',
                 onTap: () {
+                  final link = !isPublic && accessKey != null && accessKey!.isNotEmpty
+                      ? 'anymex://w2t?code=${roomId.toUpperCase()}&pwd=$accessKey'
+                      : 'anymex://w2t?code=${roomId.toUpperCase()}';
                   Share.share(
-                    'Join my watch room! Code: ${roomId.toUpperCase()}',
+                    'Join my Watch Together room!\n\nLink: $link\nCode: ${roomId.toUpperCase()}',
                   );
                 },
                 color: cs.primary,

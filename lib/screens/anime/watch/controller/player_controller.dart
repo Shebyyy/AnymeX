@@ -348,6 +348,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         _watchiumService!.onRemoteEpisodeChanged = _onRemoteEpisodeChanged;
         _watchiumIntegrated = true;
         Logger.i('[PlayerController] Watchium integrated');
+        
+      
+        _notifyWatchiumStateChange();
       }
     } catch (_) {}
   }
@@ -379,15 +382,24 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         milliseconds: (position * 1000).round());
     final timeDiff = (currentPosition.value - remoteDuration).abs();
 
-    // Only sync if difference is greater than 100ms to avoid jitter
-    if (timeDiff > const Duration(milliseconds: 100)) {
+
+    if (playing && !isPlaying.value) {
+      Logger.i('[PlayerController] Remote play triggered');
+      _basePlayer.play();
+    } else if (!playing && isPlaying.value) {
+      Logger.i('[PlayerController] Remote pause triggered');
+      _basePlayer.pause();
+    }
+
+   
+    final threshold = playing 
+        ? const Duration(milliseconds: 3500) 
+        : const Duration(milliseconds: 500);
+
+    if (timeDiff > threshold) {
+      Logger.i('[PlayerController] Out of sync by ${timeDiff.inMilliseconds}ms. Syncing to $remoteDuration');
       isSeeking.value = true;
       seekTo(remoteDuration);
-      if (playing && !isPlaying.value) {
-        _basePlayer.play();
-      } else if (!playing && isPlaying.value) {
-        _basePlayer.pause();
-      }
       Future.delayed(const Duration(milliseconds: 200), () {
         isSeeking.value = false;
       });
@@ -1000,6 +1012,12 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentEpisode.value.timeStampInMilliseconds = pos.inMilliseconds;
       currentEpisode.value.durationInMilliseconds =
           episodeDuration.value.inMilliseconds;
+
+      if (_watchiumService != null && _watchiumIntegrated && _watchiumService!.isInRoom.value) {
+        _watchiumService!.syncState.value = _watchiumService!.syncState.value.copyWith(
+          currentTime: pos.inMilliseconds / 1000.0,
+        );
+      }
 
       if (_shouldMarkAsCompleted && !isOffline.value) {
         _trackOnline(true);
@@ -1642,6 +1660,13 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     }
     _subscriptions.clear();
 
+    if (Get.isRegistered<WatchiumService>()) {
+      final watchium = Get.find<WatchiumService>();
+      if (watchium.isInRoom.value) {
+        await watchium.leaveRoom();
+      }
+    }
+
     for (final subscription in _playerSubscriptions) {
       subscription.cancel();
     }
@@ -1673,6 +1698,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     _seekDebounce?.cancel();
     _seekDebounce = Timer(const Duration(milliseconds: 100), () {
       _seekTo(pos);
+      _notifyWatchiumSeek(pos);
     });
   }
 

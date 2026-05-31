@@ -102,7 +102,9 @@ class _WatchScreenState extends State<WatchScreen> {
           controller: controller,
         ),
         ShaderOsd(controller: controller),
-        const WatchRoomOverlayIndicator(),
+        Obx(() => WatchRoomOverlayIndicator(
+              visible: controller.showControls.value,
+            )),
         Positioned(
           right: 0,
           top: 0,

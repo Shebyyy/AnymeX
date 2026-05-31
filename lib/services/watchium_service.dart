@@ -405,8 +405,9 @@ class WatchiumService extends GetxController {
   // Internal state
   // ---------------------------------------------------------------------------
   Timer? _heartbeatTimer;
-  static const double _syncThreshold = 2.0; // seconds
-  static const double _clientSyncThreshold = 0.1; // seconds
+  Timer? _syncTimer;
+  Timer? _membersTimer;
+  Timer? _commentsTimer;
   static const Duration _heartbeatInterval = Duration(seconds: 3);
 
   /// Persistent anonymous user id (generated once per session).
@@ -666,7 +667,7 @@ class WatchiumService extends GetxController {
       isHost.value = true;
       syncState.value = WatchiumSyncState();
 
-      _startHeartbeat();
+      _startSyncing();
       Logger.i('[Watchium] Room created: ${room.roomId}');
 
       return WatchiumResult.success(room);
@@ -731,7 +732,7 @@ class WatchiumService extends GetxController {
       // Fetch members list
       await fetchMembers();
 
-      _startHeartbeat();
+      _startSyncing();
       Logger.i('[Watchium] Joined room: $roomId (host=$isUserHost)');
 
       return WatchiumResult.success(room);
@@ -751,7 +752,7 @@ class WatchiumService extends GetxController {
       return true;
     }
 
-    _stopHeartbeat();
+    _stopSyncing();
 
     try {
       final data = await _post('rooms-leave', body: {
@@ -785,7 +786,7 @@ class WatchiumService extends GetxController {
       return false;
     }
 
-    _stopHeartbeat();
+    _stopSyncing();
 
     try {
       final data = await _delete('rooms-delete', body: {
@@ -1041,6 +1042,32 @@ class WatchiumService extends GetxController {
 
         Logger.i(
             '[Watchium] Host time fetched: $hostCurrentTime playing=$hostIsPlaying');
+
+        // Check if episode changed on host's side
+        final hostEpisodeNumber = (hostTimeJson['episode_number'] as num?)?.toInt() ??
+            (data['room']?['episode_number'] as num?)?.toInt();
+        final hostVideoUrl = hostTimeJson['video_url']?.toString() ??
+            data['room']?['video_url']?.toString();
+        final hostSourceId = hostTimeJson['source_id']?.toString() ??
+            data['room']?['source_id']?.toString();
+
+        if (!isHost.value &&
+            hostEpisodeNumber != null &&
+            hostEpisodeNumber != currentRoom.value?.episodeNumber &&
+            hostVideoUrl != null &&
+            hostVideoUrl.isNotEmpty) {
+         
+          currentRoom.value = currentRoom.value?.copyWith(
+            episodeNumber: hostEpisodeNumber,
+            videoUrl: hostVideoUrl,
+            sourceId: hostSourceId,
+          );
+          onRemoteEpisodeChanged?.call(hostEpisodeNumber, hostVideoUrl, hostSourceId);
+        }
+
+        if (!isHost.value) {
+          _onRemotePlaybackChanged(hostCurrentTime, hostIsPlaying);
+        }
       }
 
       // Parse sync status
@@ -1282,22 +1309,51 @@ class WatchiumService extends GetxController {
   }
 
   // ---------------------------------------------------------------------------
-  // Heartbeat
+  // Heartbeat & Real-Time Sync Timers
   // ---------------------------------------------------------------------------
 
-  /// Starts a periodic timer that sends member status updates.
-  void _startHeartbeat() {
-    _stopHeartbeat();
-    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-      _updateMemberStatus();
+  /// Starts periodic sync and heartbeat timers.
+  void _startSyncing() {
+    _stopSyncing();
+
+    _syncTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (isInRoom.value && !isHost.value) {
+        fetchHostTime();
+      }
     });
-    Logger.i('[Watchium] Heartbeat started (${_heartbeatInterval.inSeconds}s interval)');
+
+    _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+      if (isInRoom.value) {
+        _updateMemberStatus();
+      }
+    });
+
+    _membersTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (isInRoom.value) {
+        fetchMembers();
+      }
+    });
+
+    _commentsTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (isInRoom.value) {
+        fetchRoomComments();
+      }
+    });
+
+    Logger.i('[Watchium] Real-time sync timers started');
   }
 
-  /// Cancels the heartbeat timer.
-  void _stopHeartbeat() {
+  /// Cancels all sync and heartbeat timers.
+  void _stopSyncing() {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    _membersTimer?.cancel();
+    _membersTimer = null;
+    _commentsTimer?.cancel();
+    _commentsTimer = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    Logger.i('[Watchium] Real-time sync timers stopped');
   }
 
   // ---------------------------------------------------------------------------
@@ -1370,7 +1426,7 @@ class WatchiumService extends GetxController {
 
   @override
   void onClose() {
-    _stopHeartbeat();
+    _stopSyncing();
     leaveRoom();
     super.onClose();
     Logger.i('[Watchium] Service disposed');

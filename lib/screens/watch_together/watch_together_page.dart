@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
 import 'package:anymex/screens/other_features.dart';
+import 'package:anymex/screens/anime/watch/widgets/watch_room/watch_room_bottom_sheet.dart';
 
 class WatchTogetherPage extends StatefulWidget {
   const WatchTogetherPage({super.key});
@@ -54,6 +55,30 @@ class _WatchTogetherPageState extends State<WatchTogetherPage> {
       warningSnackBar('Enter a room code');
       return;
     }
+
+    if (_service.isInRoom.value && _service.currentRoomId.value == code) {
+      if (mounted) {
+        successSnackBar('You are already in this room!');
+        Get.back();
+        final room = _service.currentRoom.value;
+        WatchRoomBottomSheet.show(
+          context,
+          animeId: room?.animeId,
+          animeTitle: room?.animeTitle,
+          animeImage: room?.animeImage,
+          animeDescription: room?.animeDescription,
+          episodeNumber: room?.episodeNumber,
+          videoUrl: room?.videoUrl,
+          videoUrls: room?.videoUrls,
+          sourceId: room?.sourceId,
+          anilistId: room?.anilistId,
+          malId: room?.malId,
+          simklId: room?.simklId,
+        );
+      }
+      return;
+    }
+
     final key = _accessKeyController.text.trim();
     final result = await _service.joinRoom(
       code,
@@ -76,6 +101,29 @@ class _WatchTogetherPageState extends State<WatchTogetherPage> {
   Future<void> _joinPublicRoom(WatchiumRoom room) async {
     final roomId = room.roomId;
     if (roomId == null || roomId.isEmpty) return;
+
+    if (_service.isInRoom.value && _service.currentRoomId.value == roomId) {
+      if (mounted) {
+        successSnackBar('You are already in this room!');
+        Get.back();
+        WatchRoomBottomSheet.show(
+          context,
+          animeId: room.animeId,
+          animeTitle: room.animeTitle,
+          animeImage: room.animeImage,
+          animeDescription: room.animeDescription,
+          episodeNumber: room.episodeNumber,
+          videoUrl: room.videoUrl,
+          videoUrls: room.videoUrls,
+          sourceId: room.sourceId,
+          anilistId: room.anilistId,
+          malId: room.malId,
+          simklId: room.simklId,
+        );
+      }
+      return;
+    }
+
     final result = await _service.joinRoom(roomId);
     if (mounted) {
       if (result.success) {
