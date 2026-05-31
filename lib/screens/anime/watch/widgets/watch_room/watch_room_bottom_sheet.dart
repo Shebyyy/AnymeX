@@ -14,15 +14,58 @@ import 'package:share_plus/share_plus.dart';
 /// - **Room Info** (only when in a room): room details, member list,
 ///   sync indicators, comments, leave/end room actions.
 class WatchRoomBottomSheet extends StatefulWidget {
-  const WatchRoomBottomSheet({super.key});
+  /// Optional anime metadata to pre-fill when creating a room.
+  final String? animeId;
+  final String? animeTitle;
+  final int? episodeNumber;
+  final String? videoUrl;
+  final List<WatchiumVideoUrl>? videoUrls;
+  final String? sourceId;
+  final String? anilistId;
+  final String? malId;
+  final String? simklId;
 
-  /// Convenience method to show the bottom sheet.
-  static Future<void> show(BuildContext context) {
+  const WatchRoomBottomSheet({
+    super.key,
+    this.animeId,
+    this.animeTitle,
+    this.episodeNumber,
+    this.videoUrl,
+    this.videoUrls,
+    this.sourceId,
+    this.anilistId,
+    this.malId,
+    this.simklId,
+  });
+
+  /// Convenience method to show the bottom sheet with anime context.
+  static Future<void> show(
+    BuildContext context, {
+    String? animeId,
+    String? animeTitle,
+    int? episodeNumber,
+    String? videoUrl,
+    List<WatchiumVideoUrl>? videoUrls,
+    String? sourceId,
+    String? anilistId,
+    String? malId,
+    String? simklId,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const WatchRoomBottomSheet(),
+      builder: (_) => WatchRoomBottomSheet(
+        animeId: animeId,
+        animeTitle: animeTitle,
+        episodeNumber: episodeNumber,
+        videoUrl: videoUrl,
+        videoUrls: videoUrls,
+        sourceId: sourceId,
+        anilistId: anilistId,
+        malId: malId,
+        simklId: simklId,
+      ),
     );
   }
 
@@ -252,15 +295,18 @@ class _WatchRoomBottomSheetState extends State<WatchRoomBottomSheet>
       return;
     }
 
-    // We need the current anime context from the player controller.
-    // The service already has / will receive the anime info from the caller.
-    // For now we use the current room's anime data as a fallback.
+    // Use anime metadata from widget props (passed from player controller),
+    // falling back to current room data if already in a room.
     final room = service.currentRoom.value;
-    final animeId = room?.animeId ?? '';
-    final animeTitle = room?.animeTitle ?? title;
-    final episodeNumber = room?.episodeNumber ?? 1;
-    final videoUrl = room?.videoUrl ?? '';
-    final sourceId = room?.sourceId;
+    final animeId = widget.animeId ?? room?.animeId ?? '';
+    final animeTitle = widget.animeTitle ?? room?.animeTitle ?? title;
+    final episodeNumber = widget.episodeNumber ?? room?.episodeNumber ?? 1;
+    final videoUrl = widget.videoUrl ?? room?.videoUrl ?? '';
+    final videoUrls = widget.videoUrls ?? room?.videoUrls;
+    final sourceId = widget.sourceId ?? room?.sourceId;
+    final anilistId = widget.anilistId ?? room?.anilistId;
+    final malId = widget.malId ?? room?.malId;
+    final simklId = widget.simklId ?? room?.simklId;
 
     final success = await service.createRoom(
       title: title,
@@ -268,7 +314,11 @@ class _WatchRoomBottomSheetState extends State<WatchRoomBottomSheet>
       animeTitle: animeTitle,
       episodeNumber: episodeNumber,
       videoUrl: videoUrl,
+      videoUrls: videoUrls,
       sourceId: sourceId,
+      anilistId: anilistId,
+      malId: malId,
+      simklId: simklId,
       isPublic: _isPublic,
     );
 

@@ -345,10 +345,28 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
         _watchiumService = Get.find<WatchiumService>();
         // Set up remote playback callback
         _watchiumService!.onRemotePlaybackChanged = _onRemoteSync;
+        _watchiumService!.onRemoteEpisodeChanged = _onRemoteEpisodeChanged;
         _watchiumIntegrated = true;
         Logger.i('[PlayerController] Watchium integrated');
       }
     } catch (_) {}
+  }
+
+  /// Called when the host changes episode — non-host users should follow.
+  void _onRemoteEpisodeChanged(int episodeNumber, String videoUrl, String? sourceId) {
+    if (_watchiumService == null) return;
+    // Don't react if we're the host
+    if (_watchiumService!.isHost.value) return;
+
+    final targetEp = episodeList.cast<Episode?>().firstWhere(
+      (e) => e?.number == episodeNumber.toString(),
+      orElse: () => null,
+    );
+    if (targetEp != null) {
+      Logger.i('[PlayerController] Remote episode change → EP $episodeNumber');
+      // Use changeEpisode which handles the full episode switch
+      changeEpisode(targetEp);
+    }
   }
 
   /// Called when the Watchium service receives a remote playback change.
@@ -391,6 +409,29 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     if (!_watchiumService!.isHost.value) return;
     _watchiumService!.sendPlayControl('seek',
         currentTime: position.inMilliseconds / 1000.0);
+  }
+
+  /// Notify Watchium when host changes episode.
+  void _notifyWatchiumEpisodeChange(Episode episode, String videoUrl) {
+    if (_watchiumService == null || !_watchiumIntegrated) return;
+    if (!_watchiumService!.isHost.value) return;
+    final epNum = int.tryParse(episode.number) ?? 1;
+    
+    // Convert all episode tracks to WatchiumVideoUrl array
+    final videoUrls = episodeTracks.value.map((track) {
+      return WatchiumVideoUrl(
+        url: track.url ?? '',
+        quality: track.quality ?? '',
+        originalUrl: track.originalUrl,
+      );
+    }).toList();
+    
+    _watchiumService!.changeEpisode(
+      episodeNumber: epNum,
+      videoUrl: videoUrl,
+      videoUrls: videoUrls,
+      sourceId: selectedVideo.value?.quality,
+    );
   }
 
   @override
@@ -1355,6 +1396,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
       await _switchMedia(matched.url ?? "", matched.headers,
           startPosition: startPosition);
+      // Notify Watchium that host changed episode
+      _notifyWatchiumEpisodeChange(episode, matched.url ?? "");
     } catch (e) {
       snackBar('Failed to load episode. Check your connection.');
     } finally {

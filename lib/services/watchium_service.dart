@@ -13,6 +13,32 @@ import 'package:http/http.dart' as http;
 // Data Models
 // ---------------------------------------------------------------------------
 
+/// A single video URL entry inside [WatchiumRoom.videoUrls].
+class WatchiumVideoUrl {
+  final String url;
+  final String quality;
+  final String? originalUrl;
+
+  WatchiumVideoUrl({
+    required this.url,
+    required this.quality,
+    this.originalUrl,
+  });
+
+  factory WatchiumVideoUrl.fromJson(Map<String, dynamic> json) =>
+      WatchiumVideoUrl(
+        url: json['url']?.toString() ?? '',
+        quality: json['quality']?.toString() ?? '',
+        originalUrl: json['originalUrl']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'quality': quality,
+        if (originalUrl != null) 'originalUrl': originalUrl,
+      };
+}
+
 /// Represents a Watchium watch-together room.
 class WatchiumRoom {
   final String? roomId;
@@ -21,7 +47,11 @@ class WatchiumRoom {
   final String? animeTitle;
   final int? episodeNumber;
   final String? videoUrl;
+  final List<WatchiumVideoUrl> videoUrls;
   final String? sourceId;
+  final String? anilistId;
+  final String? malId;
+  final String? simklId;
   final String? hostUserId;
   final String? hostUsername;
   final bool? isPublic;
@@ -41,7 +71,11 @@ class WatchiumRoom {
     this.animeTitle,
     this.episodeNumber,
     this.videoUrl,
+    this.videoUrls = const [],
     this.sourceId,
+    this.anilistId,
+    this.malId,
+    this.simklId,
     this.hostUserId,
     this.hostUsername,
     this.isPublic,
@@ -63,7 +97,14 @@ class WatchiumRoom {
       animeTitle: json['anime_title']?.toString(),
       episodeNumber: (json['episode_number'] as num?)?.toInt(),
       videoUrl: json['video_url']?.toString(),
+      videoUrls: (json['video_urls'] as List<dynamic>?)
+              ?.map((e) => WatchiumVideoUrl.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       sourceId: json['source_id']?.toString(),
+      anilistId: json['anilist_id']?.toString(),
+      malId: json['mal_id']?.toString(),
+      simklId: json['simkl_id']?.toString(),
       hostUserId: json['host_user_id']?.toString(),
       hostUsername: json['host_username']?.toString(),
       isPublic: json['is_public'] as bool?,
@@ -85,7 +126,11 @@ class WatchiumRoom {
         if (animeTitle != null) 'anime_title': animeTitle,
         if (episodeNumber != null) 'episode_number': episodeNumber,
         if (videoUrl != null) 'video_url': videoUrl,
+        if (videoUrls.isNotEmpty) 'video_urls': videoUrls.map((e) => e.toJson()).toList(),
         if (sourceId != null) 'source_id': sourceId,
+        if (anilistId != null) 'anilist_id': anilistId,
+        if (malId != null) 'mal_id': malId,
+        if (simklId != null) 'simkl_id': simklId,
         if (hostUserId != null) 'host_user_id': hostUserId,
         if (hostUsername != null) 'host_username': hostUsername,
         if (isPublic != null) 'is_public': isPublic,
@@ -106,7 +151,11 @@ class WatchiumRoom {
     String? animeTitle,
     int? episodeNumber,
     String? videoUrl,
+    List<WatchiumVideoUrl>? videoUrls,
     String? sourceId,
+    String? anilistId,
+    String? malId,
+    String? simklId,
     String? hostUserId,
     String? hostUsername,
     bool? isPublic,
@@ -126,7 +175,11 @@ class WatchiumRoom {
       animeTitle: animeTitle ?? this.animeTitle,
       episodeNumber: episodeNumber ?? this.episodeNumber,
       videoUrl: videoUrl ?? this.videoUrl,
+      videoUrls: videoUrls ?? this.videoUrls,
       sourceId: sourceId ?? this.sourceId,
+      anilistId: anilistId ?? this.anilistId,
+      malId: malId ?? this.malId,
+      simklId: simklId ?? this.simklId,
       hostUserId: hostUserId ?? this.hostUserId,
       hostUsername: hostUsername ?? this.hostUsername,
       isPublic: isPublic ?? this.isPublic,
@@ -351,6 +404,10 @@ class WatchiumService extends GetxController {
   /// the player should adopt (position, playing state).
   void Function(double position, bool playing)? onRemotePlaybackChanged;
 
+  /// Callback invoked when the host changes episode. The player should load
+  /// the new episode with the given [episodeNumber], [videoUrl], and [sourceId].
+  void Function(int episodeNumber, String videoUrl, String? sourceId)? onRemoteEpisodeChanged;
+
   // ---------------------------------------------------------------------------
   // Identity helpers
   // ---------------------------------------------------------------------------
@@ -522,7 +579,11 @@ class WatchiumService extends GetxController {
     required String animeTitle,
     required int episodeNumber,
     required String videoUrl,
+    List<WatchiumVideoUrl>? videoUrls,
     String? sourceId,
+    String? anilistId,
+    String? malId,
+    String? simklId,
     bool isPublic = true,
   }) async {
     isLoading.value = true;
@@ -539,8 +600,20 @@ class WatchiumService extends GetxController {
         'host_username': _username ?? 'Anonymous',
         'is_public': isPublic,
       };
+      if (videoUrls != null && videoUrls.isNotEmpty) {
+        body['video_urls'] = videoUrls.map((e) => e.toJson()).toList();
+      }
       if (sourceId != null && sourceId.isNotEmpty) {
         body['source_id'] = sourceId;
+      }
+      if (anilistId != null && anilistId.isNotEmpty) {
+        body['anilist_id'] = anilistId;
+      }
+      if (malId != null && malId.isNotEmpty) {
+        body['mal_id'] = malId;
+      }
+      if (simklId != null && simklId.isNotEmpty) {
+        body['simkl_id'] = simklId;
       }
 
       final data = await _post('rooms-create', body: body);
@@ -786,6 +859,108 @@ class WatchiumService extends GetxController {
       return true;
     } catch (e, st) {
       Logger.e('[Watchium] sendPlayControl error: $e', error: e, stackTrace: st);
+      return false;
+    }
+  }
+
+  /// Notifies all room members that the host changed to a new episode.
+  ///
+  /// Updates the room on the server, resets playback to 0, and triggers a
+  /// realtime broadcast so other users can switch to the new episode.
+  ///
+  /// [episodeNumber] is the new episode number (1-based).
+  /// [videoUrl] is the stream URL for the new episode.
+  /// [sourceId] is the streaming source identifier (optional).
+  Future<bool> changeEpisode({
+    required int episodeNumber,
+    required String videoUrl,
+    List<WatchiumVideoUrl>? videoUrls,
+    String? sourceId,
+    String? title,
+    String? animeTitle,
+  }) async {
+    if (!isInRoom.value) {
+      error.value = 'Not in a room';
+      return false;
+    }
+    if (!isHost.value) {
+      error.value = 'Only the host can change episodes';
+      Logger.i('[Watchium] changeEpisode rejected – not host');
+      return false;
+    }
+    if (episodeNumber < 1) {
+      error.value = 'Episode number must be >= 1';
+      return false;
+    }
+    if (videoUrl.isEmpty) {
+      error.value = 'Video URL is required';
+      return false;
+    }
+
+    try {
+      final body = <String, dynamic>{
+        'room_id': currentRoomId.value,
+        'user_id': _userId,
+        'action': 'change_episode',
+        'episode_number': episodeNumber,
+        'video_url': videoUrl,
+      };
+      if (videoUrls != null && videoUrls.isNotEmpty) {
+        body['video_urls'] = videoUrls.map((e) => e.toJson()).toList();
+      }
+      if (sourceId != null && sourceId.isNotEmpty) {
+        body['source_id'] = sourceId;
+      }
+      if (title != null) {
+        body['title'] = title;
+      }
+      if (animeTitle != null) {
+        body['anime_title'] = animeTitle;
+      }
+
+      final data = await _post('sync-control', body: body);
+      if (data == null) return false;
+
+      // Update local state
+      final roomJson = data['room'] as Map<String, dynamic>?;
+      if (roomJson != null) {
+        final newVideoUrls = (roomJson['video_urls'] as List<dynamic>?)
+            ?.map((e) => WatchiumVideoUrl.fromJson(e as Map<String, dynamic>))
+            .toList();
+        currentRoom.value = currentRoom.value?.copyWith(
+          episodeNumber: (roomJson['episode_number'] as num?)?.toInt() ?? episodeNumber,
+          videoUrl: roomJson['video_url']?.toString() ?? videoUrl,
+          videoUrls: newVideoUrls ?? videoUrls ?? currentRoom.value?.videoUrls,
+          sourceId: roomJson['source_id']?.toString() ?? sourceId,
+          currentTime: 0.0,
+          isPlaying: false,
+        );
+      } else {
+        currentRoom.value = currentRoom.value?.copyWith(
+          episodeNumber: episodeNumber,
+          videoUrl: videoUrl,
+          videoUrls: videoUrls ?? currentRoom.value?.videoUrls,
+          sourceId: sourceId,
+          currentTime: 0.0,
+          isPlaying: false,
+        );
+      }
+
+      syncState.value = WatchiumSyncState(
+        currentTime: 0.0,
+        isPlaying: false,
+        isSynced: true,
+        lastSyncedAt: DateTime.now(),
+      );
+
+      // Clear comments and fetch new episode's comments
+      roomComments.clear();
+      fetchRoomComments();
+
+      Logger.i('[Watchium] Episode changed to $episodeNumber');
+      return true;
+    } catch (e, st) {
+      Logger.e('[Watchium] changeEpisode error: $e', error: e, stackTrace: st);
       return false;
     }
   }

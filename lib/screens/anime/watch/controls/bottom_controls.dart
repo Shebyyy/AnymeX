@@ -9,6 +9,7 @@ import 'package:anymex/screens/anime/watch/controls/widgets/progress_slider.dart
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
 import 'package:flutter/material.dart';
 import 'package:anymex/screens/anime/watch/widgets/watch_room/watch_room_bottom_sheet.dart';
+import 'package:anymex/services/watchium_service.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:get/get.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
@@ -318,7 +319,24 @@ class BottomControls extends StatelessWidget {
       ),
       'watch_together': ControlButton(
         icon: Symbols.group_rounded,
-        onPressed: () => WatchRoomBottomSheet.show(context),
+        onPressed: () => WatchRoomBottomSheet.show(
+          context,
+          animeId: controller.anilistData.id.toString(),
+          animeTitle: controller.anilistData.title,
+          episodeNumber: int.tryParse(controller.currentEpisode.value.number) ?? 1,
+          videoUrl: controller.selectedVideo.value?.url ?? '',
+          videoUrls: controller.episodeTracks.value
+              .where((t) => t.url?.isNotEmpty ?? false)
+              .map((t) => WatchiumVideoUrl(
+                    url: t.url ?? '',
+                    quality: t.quality ?? '',
+                    originalUrl: t.originalUrl,
+                  ))
+              .toList(),
+          sourceId: controller.selectedVideo.value?.quality,
+          anilistId: controller.anilistData.id.toString(),
+          malId: controller.anilistData.idMal.isNotEmpty ? controller.anilistData.idMal : null,
+        ),
         tooltip: 'Watch Together',
         compact: true,
         isPrimary: true,
