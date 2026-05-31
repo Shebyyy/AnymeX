@@ -21,6 +21,8 @@ class WatchRoomBottomSheet extends StatefulWidget {
   final String? videoUrl;
   final List<WatchiumVideoUrl>? videoUrls;
   final String? sourceId;
+  final String? animeImage;
+  final String? animeDescription;
   final String? anilistId;
   final String? malId;
   final String? simklId;
@@ -29,6 +31,8 @@ class WatchRoomBottomSheet extends StatefulWidget {
     super.key,
     this.animeId,
     this.animeTitle,
+    this.animeImage,
+    this.animeDescription,
     this.episodeNumber,
     this.videoUrl,
     this.videoUrls,
@@ -43,6 +47,8 @@ class WatchRoomBottomSheet extends StatefulWidget {
     BuildContext context, {
     String? animeId,
     String? animeTitle,
+    String? animeImage,
+    String? animeDescription,
     int? episodeNumber,
     String? videoUrl,
     List<WatchiumVideoUrl>? videoUrls,
@@ -58,6 +64,8 @@ class WatchRoomBottomSheet extends StatefulWidget {
       builder: (_) => WatchRoomBottomSheet(
         animeId: animeId,
         animeTitle: animeTitle,
+        animeImage: animeImage,
+        animeDescription: animeDescription,
         episodeNumber: episodeNumber,
         videoUrl: videoUrl,
         videoUrls: videoUrls,
@@ -307,6 +315,8 @@ class _WatchRoomBottomSheetState extends State<WatchRoomBottomSheet>
     final anilistId = widget.anilistId ?? room?.anilistId;
     final malId = widget.malId ?? room?.malId;
     final simklId = widget.simklId ?? room?.simklId;
+    final animeImage = widget.animeImage ?? room?.animeImage;
+    final animeDescription = widget.animeDescription ?? room?.animeDescription;
 
     final success = await service.createRoom(
       title: title,
@@ -319,6 +329,8 @@ class _WatchRoomBottomSheetState extends State<WatchRoomBottomSheet>
       anilistId: anilistId,
       malId: malId,
       simklId: simklId,
+      animeImage: animeImage,
+      animeDescription: animeDescription,
       isPublic: _isPublic,
     );
 
@@ -337,138 +349,190 @@ class _WatchRoomBottomSheetState extends State<WatchRoomBottomSheet>
     final cs = context.theme.colorScheme;
     final tt = context.theme.textTheme;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Room code
-          Text('Room Code', style: tt.labelMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
-          )),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _roomCodeController,
-            style: tt.bodyLarge?.copyWith(
-              color: cs.onSurface,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 2,
-            ),
-            textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(
-              hintText: 'e.g. ABCD-1234',
-              hintStyle: tt.bodyLarge?.copyWith(
-                color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
-                letterSpacing: 2,
-              ),
-              prefixIcon: Icon(
-                Symbols.tag_rounded,
-                color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
-              ),
-              filled: true,
-              fillColor: cs.surfaceContainerHigh.opaque(0.5, iReallyMeanIt: true),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.outline.opaque(0.2, iReallyMeanIt: true),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.outline.opaque(0.2, iReallyMeanIt: true),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.primary.opaque(0.5, iReallyMeanIt: true),
-                  width: 1.5,
-                ),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Optional access key
-          Text('Access Key (optional)', style: tt.labelMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
-          )),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _accessKeyController,
-            obscureText: true,
-            style: tt.bodyLarge?.copyWith(color: cs.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Required for private rooms',
-              hintStyle: tt.bodyLarge?.copyWith(
-                color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
-              ),
-              prefixIcon: Icon(
-                Symbols.key_rounded,
-                color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
-              ),
-              filled: true,
-              fillColor: cs.surfaceContainerHigh.opaque(0.5, iReallyMeanIt: true),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.outline.opaque(0.2, iReallyMeanIt: true),
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.outline.opaque(0.2, iReallyMeanIt: true),
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: cs.primary.opaque(0.5, iReallyMeanIt: true),
-                  width: 1.5,
-                ),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Join button
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : _handleJoinRoom,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Icon(Symbols.login_rounded, size: 20),
-              label: Text(
-                _isLoading ? 'Joining...' : 'Join Room',
+    return Column(
+      children: [
+        // Manual join section
+        SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Room code
+              Text('Room Code', style: tt.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
+              )),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _roomCodeController,
                 style: tt.bodyLarge?.copyWith(
+                  color: cs.onSurface,
                   fontWeight: FontWeight.w600,
+                  letterSpacing: 2,
+                ),
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  hintText: 'e.g. ABCD-1234',
+                  hintStyle: tt.bodyLarge?.copyWith(
+                    color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
+                    letterSpacing: 2,
+                  ),
+                  prefixIcon: Icon(
+                    Symbols.tag_rounded,
+                    color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                  ),
+                  filled: true,
+                  fillColor: cs.surfaceContainerHigh.opaque(0.5, iReallyMeanIt: true),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.outline.opaque(0.2, iReallyMeanIt: true),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.outline.opaque(0.2, iReallyMeanIt: true),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.primary.opaque(0.5, iReallyMeanIt: true),
+                      width: 1.5,
+                    ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 20),
+
+              // Optional access key
+              Text('Access Key (optional)', style: tt.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
+              )),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _accessKeyController,
+                obscureText: true,
+                style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Required for private rooms',
+                  hintStyle: tt.bodyLarge?.copyWith(
+                    color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
+                  ),
+                  prefixIcon: Icon(
+                    Symbols.key_rounded,
+                    color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                  ),
+                  filled: true,
+                  fillColor: cs.surfaceContainerHigh.opaque(0.5, iReallyMeanIt: true),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.outline.opaque(0.2, iReallyMeanIt: true),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.outline.opaque(0.2, iReallyMeanIt: true),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: cs.primary.opaque(0.5, iReallyMeanIt: true),
+                      width: 1.5,
+                    ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
-            ),
+              const SizedBox(height: 16),
+
+              // Join button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _handleJoinRoom,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Icon(Symbols.login_rounded, size: 20),
+                  label: Text(
+                    _isLoading ? 'Joining...' : 'Join Room',
+                    style: tt.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
-        ],
-      ),
+        ),
+
+        // Divider
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: Divider(
+                  color: cs.outline.opaque(0.15, iReallyMeanIt: true),
+                  thickness: 1,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Symbols.explore_rounded,
+                      size: 16,
+                      color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Public Rooms',
+                      style: tt.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Divider(
+                  color: cs.outline.opaque(0.15, iReallyMeanIt: true),
+                  thickness: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Public rooms list
+        _PublicRoomsList(service: _service),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -920,73 +984,116 @@ class _RoomHeaderCard extends StatelessWidget {
           width: 0.5,
         ),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  room.title ?? '',
-                  style: tt.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: cs.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Chip(
-                avatar: Icon(
-                  room.isPublic == true
-                      ? Symbols.public_rounded
-                      : Symbols.lock_rounded,
-                  size: 14,
-                  color: cs.onSurface.opaque(0.6, iReallyMeanIt: true),
-                ),
-                label: Text(
-                  room.isPublic == true ? 'Public' : 'Private',
-                  style: tt.labelSmall?.copyWith(
-                    color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
-                    fontWeight: FontWeight.w500,
+          // Anime poster
+          if (room.animeImage != null && room.animeImage!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: CachedNetworkImage(
+                imageUrl: room.animeImage!,
+                width: 56,
+                height: 78,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  width: 56,
+                  height: 78,
+                  color: cs.surfaceVariant.opaque(0.3, iReallyMeanIt: true),
+                  child: Icon(
+                    Symbols.tv_rounded,
+                    size: 24,
+                    color: cs.onSurface.opaque(0.2, iReallyMeanIt: true),
                   ),
                 ),
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                side: BorderSide.none,
-                backgroundColor: cs.surfaceVariant.opaque(0.5, iReallyMeanIt: true),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Symbols.tv_rounded,
-                size: 16,
-                color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                room.animeTitle ?? '',
-                style: tt.bodyMedium?.copyWith(
-                  color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'E${room.episodeNumber}',
-                style: tt.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                  backgroundColor:
-                      cs.primary.opaque(0.1, iReallyMeanIt: true),
+                errorWidget: (_, __, ___) => Container(
+                  width: 56,
+                  height: 78,
+                  color: cs.surfaceVariant.opaque(0.3, iReallyMeanIt: true),
+                  child: Icon(
+                    Symbols.tv_rounded,
+                    size: 24,
+                    color: cs.onSurface.opaque(0.2, iReallyMeanIt: true),
+                  ),
                 ),
               ),
-            ],
+            ),
+          if (room.animeImage != null && room.animeImage!.isNotEmpty)
+            const SizedBox(width: 14),
+          // Info column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        room.title ?? '',
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Chip(
+                      avatar: Icon(
+                        room.isPublic == true
+                            ? Symbols.public_rounded
+                            : Symbols.lock_rounded,
+                        size: 14,
+                        color: cs.onSurface.opaque(0.6, iReallyMeanIt: true),
+                      ),
+                      label: Text(
+                        room.isPublic == true ? 'Public' : 'Private',
+                        style: tt.labelSmall?.copyWith(
+                          color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      side: BorderSide.none,
+                      backgroundColor: cs.surfaceVariant.opaque(0.5, iReallyMeanIt: true),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      Symbols.tv_rounded,
+                      size: 14,
+                      color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        room.animeTitle ?? '',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurface.opaque(0.7, iReallyMeanIt: true),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'E${room.episodeNumber}',
+                      style: tt.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                        backgroundColor:
+                            cs.primary.opaque(0.1, iReallyMeanIt: true),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1781,6 +1888,299 @@ class _IconButton extends StatelessWidget {
             ),
           ),
           child: Icon(icon, size: 18, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _PublicRoomsList extends StatefulWidget {
+  final WatchiumService? service;
+
+  const _PublicRoomsList({required this.service});
+
+  @override
+  State<_PublicRoomsList> createState() => _PublicRoomsListState();
+}
+
+class _PublicRoomsListState extends State<_PublicRoomsList> {
+  List<WatchiumRoom> _rooms = [];
+  bool _isLoading = false;
+  bool _hasLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPublicRooms();
+  }
+
+  Future<void> _loadPublicRooms() async {
+    if (widget.service == null) return;
+    setState(() => _isLoading = true);
+
+    final result = await widget.service!.listPublicRooms();
+    if (result.success && result.data != null) {
+      setState(() {
+        _rooms = result.data!;
+        _hasLoaded = true;
+      });
+    } else {
+      setState(() => _hasLoaded = true);
+    }
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _joinRoom(WatchiumRoom room) async {
+    final service = widget.service;
+    if (service == null) return;
+
+    final success = await service.joinRoom(
+      room.roomId ?? '',
+    );
+
+    if (success.success && mounted) {
+      successSnackBar('Joined room!');
+      // Switch parent tab controller to Room tab (index 2)
+      try {
+        final parentState = context.findAncestorStateOfType<_WatchRoomBottomSheetState>();
+        parentState?._tabController.animateTo(2);
+      } catch (_) {}
+    } else if (mounted) {
+      errorSnackBar(service.error.value.isNotEmpty
+          ? service.error.value
+          : 'Failed to join room');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final tt = context.theme.textTheme;
+
+    if (widget.service == null) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: Text(
+            'Service unavailable',
+            style: tt.bodySmall?.copyWith(
+              color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      );
+    }
+
+    if (_hasLoaded && _rooms.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Symbols.explore_off_rounded,
+                size: 32,
+                color: cs.onSurface.opaque(0.2, iReallyMeanIt: true),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'No public rooms yet',
+                style: tt.bodySmall?.copyWith(
+                  color: cs.onSurface.opaque(0.4, iReallyMeanIt: true),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Create one to get started!',
+                style: tt.bodySmall?.copyWith(
+                  color: cs.onSurface.opaque(0.3, iReallyMeanIt: true),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 200,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        scrollDirection: Axis.horizontal,
+        itemCount: _rooms.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, index) {
+          final room = _rooms[index];
+          return _PublicRoomCard(
+            room: room,
+            onJoin: () => _joinRoom(room),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PublicRoomCard extends StatelessWidget {
+  final WatchiumRoom room;
+  final VoidCallback onJoin;
+
+  const _PublicRoomCard({
+    required this.room,
+    required this.onJoin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.theme.colorScheme;
+    final tt = context.theme.textTheme;
+
+    return GestureDetector(
+      onTap: onJoin,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 160,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh.opaque(0.5, iReallyMeanIt: true),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: cs.outline.opaque(0.15, iReallyMeanIt: true),
+            width: 0.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Anime poster or placeholder
+              Expanded(
+                flex: 3,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (room.animeImage != null && room.animeImage!.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: room.animeImage!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(
+                          color: cs.surfaceVariant.opaque(0.3, iReallyMeanIt: true),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          color: cs.surfaceVariant.opaque(0.3, iReallyMeanIt: true),
+                          child: Center(
+                            child: Icon(
+                              Symbols.tv_rounded,
+                              size: 32,
+                              color: cs.onSurface.opaque(0.15, iReallyMeanIt: true),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        color: cs.surfaceVariant.opaque(0.3, iReallyMeanIt: true),
+                        child: Center(
+                          child: Icon(
+                            Symbols.tv_rounded,
+                            size: 32,
+                            color: cs.onSurface.opaque(0.15, iReallyMeanIt: true),
+                          ),
+                        ),
+                      ),
+                    // Member count badge
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Symbols.group_rounded,
+                              size: 12,
+                              color: Colors.white70,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${room.memberCount ?? 1}',
+                              style: tt.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Info
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        room.animeTitle ?? 'Unknown',
+                        style: tt.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Symbols.play_circle_rounded,
+                            size: 12,
+                            color: cs.onSurface.opaque(0.5, iReallyMeanIt: true),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'EP ${room.episodeNumber ?? '?'}',
+                            style: tt.labelSmall?.copyWith(
+                              color: cs.primary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 10,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Symbols.login_rounded,
+                            size: 14,
+                            color: cs.primary.opaque(0.7, iReallyMeanIt: true),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

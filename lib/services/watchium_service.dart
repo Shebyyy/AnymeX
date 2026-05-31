@@ -45,6 +45,8 @@ class WatchiumRoom {
   final String? title;
   final String? animeId;
   final String? animeTitle;
+  final String? animeImage;
+  final String? animeDescription;
   final int? episodeNumber;
   final String? videoUrl;
   final List<WatchiumVideoUrl> videoUrls;
@@ -69,6 +71,8 @@ class WatchiumRoom {
     this.title,
     this.animeId,
     this.animeTitle,
+    this.animeImage,
+    this.animeDescription,
     this.episodeNumber,
     this.videoUrl,
     this.videoUrls = const [],
@@ -95,6 +99,8 @@ class WatchiumRoom {
       title: json['title']?.toString(),
       animeId: json['anime_id']?.toString(),
       animeTitle: json['anime_title']?.toString(),
+      animeImage: json['anime_image']?.toString(),
+      animeDescription: json['anime_description']?.toString(),
       episodeNumber: (json['episode_number'] as num?)?.toInt(),
       videoUrl: json['video_url']?.toString(),
       videoUrls: (json['video_urls'] as List<dynamic>?)
@@ -124,6 +130,8 @@ class WatchiumRoom {
         if (title != null) 'title': title,
         if (animeId != null) 'anime_id': animeId,
         if (animeTitle != null) 'anime_title': animeTitle,
+        if (animeImage != null) 'anime_image': animeImage,
+        if (animeDescription != null) 'anime_description': animeDescription,
         if (episodeNumber != null) 'episode_number': episodeNumber,
         if (videoUrl != null) 'video_url': videoUrl,
         if (videoUrls.isNotEmpty) 'video_urls': videoUrls.map((e) => e.toJson()).toList(),
@@ -149,6 +157,8 @@ class WatchiumRoom {
     String? title,
     String? animeId,
     String? animeTitle,
+    String? animeImage,
+    String? animeDescription,
     int? episodeNumber,
     String? videoUrl,
     List<WatchiumVideoUrl>? videoUrls,
@@ -173,6 +183,8 @@ class WatchiumRoom {
       title: title ?? this.title,
       animeId: animeId ?? this.animeId,
       animeTitle: animeTitle ?? this.animeTitle,
+      animeImage: animeImage ?? this.animeImage,
+      animeDescription: animeDescription ?? this.animeDescription,
       episodeNumber: episodeNumber ?? this.episodeNumber,
       videoUrl: videoUrl ?? this.videoUrl,
       videoUrls: videoUrls ?? this.videoUrls,
@@ -455,7 +467,9 @@ class WatchiumService extends GetxController {
           .post(uri, headers: _jsonHeaders, body: json.encode(body ?? {}));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final data = json.decode(response.body) as Map<String, dynamic>;
+        final raw = json.decode(response.body) as Map<String, dynamic>;
+        // Backend wraps in {"success": true, "data": {...}}
+        final data = raw['data'] as Map<String, dynamic>? ?? raw;
         return data;
       } else {
         final msg = _tryExtractErrorMessage(response.body);
@@ -487,7 +501,10 @@ class WatchiumService extends GetxController {
       final response = await http.get(uri, headers: _jsonHeaders);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return json.decode(response.body) as Map<String, dynamic>;
+        final raw = json.decode(response.body) as Map<String, dynamic>;
+        // Backend wraps in {"success": true, "data": {...}}
+        final data = raw['data'] as Map<String, dynamic>? ?? raw;
+        return data;
       } else {
         final msg = _tryExtractErrorMessage(response.body);
         final message =
@@ -516,7 +533,10 @@ class WatchiumService extends GetxController {
           headers: _jsonHeaders, body: json.encode(body ?? {}));
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return json.decode(response.body) as Map<String, dynamic>;
+        final raw = json.decode(response.body) as Map<String, dynamic>;
+        // Backend wraps in {"success": true, "data": {...}}
+        final data = raw['data'] as Map<String, dynamic>? ?? raw;
+        return data;
       } else {
         final msg = _tryExtractErrorMessage(response.body);
         final message =
@@ -577,6 +597,8 @@ class WatchiumService extends GetxController {
     required String title,
     required String animeId,
     required String animeTitle,
+    String? animeImage,
+    String? animeDescription,
     required int episodeNumber,
     required String videoUrl,
     List<WatchiumVideoUrl>? videoUrls,
@@ -594,6 +616,10 @@ class WatchiumService extends GetxController {
         'title': title,
         'anime_id': animeId,
         'anime_title': animeTitle,
+        if (animeImage != null && animeImage.isNotEmpty)
+          'anime_image': animeImage,
+        if (animeDescription != null && animeDescription.isNotEmpty)
+          'anime_description': animeDescription,
         'episode_number': episodeNumber,
         'video_url': videoUrl,
         'host_user_id': _userId,
@@ -878,6 +904,8 @@ class WatchiumService extends GetxController {
     String? sourceId,
     String? title,
     String? animeTitle,
+    String? animeImage,
+    String? animeDescription,
   }) async {
     if (!isInRoom.value) {
       error.value = 'Not in a room';
@@ -917,6 +945,12 @@ class WatchiumService extends GetxController {
       if (animeTitle != null) {
         body['anime_title'] = animeTitle;
       }
+      if (animeImage != null && animeImage.isNotEmpty) {
+        body['anime_image'] = animeImage;
+      }
+      if (animeDescription != null && animeDescription.isNotEmpty) {
+        body['anime_description'] = animeDescription;
+      }
 
       final data = await _post('sync-control', body: body);
       if (data == null) return false;
@@ -932,6 +966,8 @@ class WatchiumService extends GetxController {
           videoUrl: roomJson['video_url']?.toString() ?? videoUrl,
           videoUrls: newVideoUrls ?? videoUrls ?? currentRoom.value?.videoUrls,
           sourceId: roomJson['source_id']?.toString() ?? sourceId,
+          animeImage: roomJson['anime_image']?.toString() ?? animeImage,
+          animeDescription: roomJson['anime_description']?.toString() ?? animeDescription,
           currentTime: 0.0,
           isPlaying: false,
         );
@@ -941,6 +977,8 @@ class WatchiumService extends GetxController {
           videoUrl: videoUrl,
           videoUrls: videoUrls ?? currentRoom.value?.videoUrls,
           sourceId: sourceId,
+          animeImage: animeImage,
+          animeDescription: animeDescription,
           currentTime: 0.0,
           isPlaying: false,
         );

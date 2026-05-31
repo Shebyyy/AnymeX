@@ -6,6 +6,7 @@ import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/screens/local_source/local_source_view.dart';
 import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/screens/settings/settings.dart';
+import 'package:anymex/screens/watch_together/watch_together_page.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
@@ -416,6 +417,14 @@ class SettingsSheet extends StatelessWidget {
         onTap: () {
           Get.back();
           navigate(() => const WatchOffline());
+        },
+      ),
+      _SheetMenuItem(
+        icon: HugeIcons.strokeRoundedGroup,
+        label: 'Watch Together',
+        onTap: () {
+          Get.back();
+          navigate(() => const WatchTogetherPage());
         },
       ),
       _SheetMenuItem(
