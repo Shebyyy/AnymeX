@@ -420,7 +420,7 @@ class SettingsSheet extends StatelessWidget {
         },
       ),
       _SheetMenuItem(
-        icon: HugeIcons.strokeRoundedGroup,
+        icon: HugeIcons.strokeRoundedUserGroup,
         label: 'Watch Together',
         onTap: () {
           Get.back();

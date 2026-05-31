@@ -1,5 +1,4 @@
 import 'package:anymex/services/watchium_service.dart';
-import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
@@ -7,9 +6,8 @@ import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:material_symbols_icons/material_symbols_icons.dart';
-import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:anymex/screens/other_features.dart';
 
 class WatchTogetherPage extends StatefulWidget {
   const WatchTogetherPage({super.key});
