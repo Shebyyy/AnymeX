@@ -214,6 +214,7 @@ class CommentSectionController extends GetxController
       );
 
       if (newComment != null) {
+        replyingToCommentId.value = '';
         await backgroundRefresh();
         snackBar('Reply posted successfully');
       } else {

@@ -24,12 +24,14 @@ class DiscordMarkdown extends StatelessWidget {
     required this.colorScheme,
     required this.baseStyle,
     this.fontSize = 16,
+    this.maxLines,
   });
 
   final String text;
   final ColorScheme colorScheme;
   final TextStyle baseStyle;
   final double fontSize;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +44,25 @@ class DiscordMarkdown extends StatelessWidget {
     }
 
     final nonEmptyLines = lines.where((l) => l.trim().isNotEmpty).toList();
+
+    if (maxLines != null) {
+      final spans = <InlineSpan>[];
+      for (var i = 0; i < nonEmptyLines.length; i++) {
+        if (i > 0) spans.add(const TextSpan(text: '\n'));
+        spans.addAll(_parseInlineSpans(nonEmptyLines[i], context));
+      }
+      return RichText(
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        text: TextSpan(
+          style: baseStyle.copyWith(
+            color: colorScheme.onSurface,
+            fontSize: fontSize,
+          ),
+          children: spans,
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
