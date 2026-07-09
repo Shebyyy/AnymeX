@@ -10,6 +10,7 @@ import 'package:anymex/screens/settings/sub_settings/settings_storage_manager.da
 import 'package:anymex/screens/settings/sub_settings/settings_theme.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_ui.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_downloads.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_faq.dart';
 import 'package:anymex/screens/settings/search/settings_search_metadata.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -96,6 +97,7 @@ final categoryRoutes = <String, Widget Function()>{
   'Extensions': () => const SettingsExtensions(),
   'Downloads': () => const SettingsDownloads(),
   'Logs': () => const SettingsLogs(),
+  'FAQ': () => const SettingsFaq(),
   'About': () => const AboutPage(),
 };
 

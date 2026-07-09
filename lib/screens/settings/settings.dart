@@ -9,6 +9,7 @@ import 'package:anymex/screens/settings/sub_settings/settings_common.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_downloads.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_extensions.dart';
 import 'package:anymex/database/data_keys/keys.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_faq.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_logs.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_player.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_reader.dart';
@@ -311,6 +312,12 @@ class _SettingsPageState extends State<SettingsPage> {
           title: "Logs",
           description: "Manage log capture and share saved logs",
           destination: () => const SettingsLogs(),
+          addDividerAbove: true),
+      _CategoryItem(
+          icon: Icons.help_outline_rounded,
+          title: "FAQ",
+          description: "Frequently asked questions and answers",
+          destination: () => const SettingsFaq(),
           addDividerAbove: true),
       _CategoryItem(
           icon: HugeIcons.strokeRoundedInformationCircle,

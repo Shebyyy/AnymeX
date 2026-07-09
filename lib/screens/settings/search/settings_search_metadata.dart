@@ -34,6 +34,7 @@ const settingsSearchCategoryIcons = <String, IconData>{
   'Theme': HugeIcons.strokeRoundedPaintBrush01,
   'Extensions': Icons.extension_rounded,
   'Logs': HugeIcons.strokeRoundedFile01,
+  'FAQ': Icons.help_outline_rounded,
   'About': HugeIcons.strokeRoundedInformationCircle,
 };
 
@@ -192,6 +193,27 @@ const settingsSearchIndex = <String, Map<String?, List<String>>>{
   'Logs': {
     null: ['Write log to a file', 'Share logs', 'Log directory'],
   },
+  'FAQ': {
+    null: [
+      'Episodes or chapters not showing',
+      'How to stream/read',
+      'Install AnymeX IPA on iOS',
+      'Switch between tracking services',
+      'Watch local videos',
+      'Extension marked as obsolete',
+      'Contribute to AnymeX',
+      'Install AnymeX on Linux',
+      'Hardsub or Softsub',
+      'Source not loading',
+      'Xiaomi Devices Fixes',
+      'Sync Progress across devices',
+      'Share Logs',
+      'Submit a Custom Theme',
+      'Community Recommendations',
+      'Apply Custom Player Themes',
+      'Change Card Styles',
+    ],
+  },
   'About': {
     null: [
       'Telegram',
@@ -345,6 +367,23 @@ const settingsSearchTitleIcons = <String, IconData>{
   'Ko-fi': HugeIcons.strokeRoundedCoffee01,
   'Features/Issues': Icons.bug_report,
   'Forks': Icons.call_split_rounded,
+  'Episodes or chapters not showing': Icons.sync_problem_rounded,
+  'How to stream/read': Icons.play_circle_outline_rounded,
+  'Install AnymeX IPA on iOS': Icons.phone_iphone_rounded,
+  'Switch between tracking services': Icons.swap_horiz_rounded,
+  'Watch local videos': Icons.video_file_outlined,
+  'Extension marked as obsolete': Icons.extension_off_rounded,
+  'Contribute to AnymeX': Icons.volunteer_activism_rounded,
+  'Install AnymeX on Linux': Icons.desktop_windows_rounded,
+  'Hardsub or Softsub': Icons.subtitles_outlined,
+  'Source not loading': Icons.cloud_off_rounded,
+  'Xiaomi Devices Fixes': Icons.phone_android_rounded,
+  'Sync Progress across devices': Icons.sync_rounded,
+  'Share Logs': HugeIcons.strokeRoundedShare08,
+  'Submit a Custom Theme': HugeIcons.strokeRoundedPaintBrush01,
+  'Community Recommendations': Icons.people_outline_rounded,
+  'Apply Custom Player Themes': HugeIcons.strokeRoundedPlaySquare,
+  'Change Card Styles': Icons.style_rounded,
 };
 
 const settingsSearchTitleAssetIcons = <String, String>{
