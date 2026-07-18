@@ -34,6 +34,7 @@ import 'package:anymex/utils/register_protocol/register_protocol.dart';
 import 'package:anymex/widgets/animation/more_page_transitions.dart';
 import 'package:anymex/widgets/common/glow.dart';
 import 'package:anymex/widgets/common/navbar.dart';
+import 'package:anymex/widgets/common/fps_meter.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_image.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_splash_screen.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_titlebar.dart';
@@ -49,12 +50,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iconly/iconly.dart';
+import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:isar_community/isar.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:anymex/utils/torrent/torrent_stream_resolver.dart';
 import 'package:provider/provider.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:window_manager/window_manager.dart';
@@ -119,7 +119,8 @@ void initDeepLinkListener(List<String> args) async {
   );
 }
 
-Future<void> safeCall(FutureOr<void> Function() function, {String? errorMessage}) async {
+Future<void> safeCall(FutureOr<void> Function() function,
+    {String? errorMessage}) async {
   try {
     await function();
   } catch (e) {
@@ -134,7 +135,7 @@ Future<void> safeCall(FutureOr<void> Function() function, {String? errorMessage}
 void main(List<String> args) async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
     await safeCall(() async {
       if (!Platform.isLinux) {
         if (Platform.isWindows || Platform.isMacOS) {
@@ -155,9 +156,10 @@ void main(List<String> args) async {
         errorMessage: 'Failed to load .env file');
 
     if (!Platform.isLinux) {
-      await safeCall(() => Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
-          ),
+      await safeCall(
+          () => Firebase.initializeApp(
+                options: DefaultFirebaseOptions.currentPlatform,
+              ),
           errorMessage: 'Failed to initialize Firebase');
     }
 
@@ -195,9 +197,7 @@ void main(List<String> args) async {
     await safeCall(() async {
       if (!Platform.isAndroid && !Platform.isIOS) {
         await windowManager.ensureInitialized();
-        if (Platform.isWindows) {
-          await AnymexTitleBar.initialize();
-        }
+        await AnymexTitleBar.initialize();
       } else {
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
         SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -260,14 +260,6 @@ void _initializeGetxController() async {
 
   await safeCall(() => StorageManagerService().enforceImageCacheLimit(),
       errorMessage: 'Failed to enforce image cache limit');
-
-  await safeCall(() {
-    TorrentStreamResolver.initialize().then((_) {
-      debugPrint('Torrent engine initialized');
-    }).catchError((e) {
-      debugPrint('Torrent engine init failed (non-critical): $e');
-    });
-  }, errorMessage: 'Failed to initialize Torrent engine');
 }
 
 class MainApp extends StatefulWidget {
@@ -376,10 +368,16 @@ class _MainAppState extends State<MainApp> {
                     child: AnymexTitleBar.titleBar(),
                   ),
                 ),
+                const FpsMeter(),
               ],
             );
           }
-          return child!;
+          return Stack(
+            children: [
+              child!,
+              const FpsMeter(),
+            ],
+          );
         },
         enableLog: true,
         logWriterCallback: (text, {isError = false}) async {
@@ -449,19 +447,17 @@ class _FilterScreenState extends State<FilterScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = Get.put(ServiceHandler());
-    final isSimkl =
-        Get.find<ServiceHandler>().serviceType.value == ServicesType.simkl;
     return Glow(
       child: PlatformBuilder(
         strictMode: false,
-        desktopBuilder: _buildDesktopLayout(context, authService, isSimkl),
-        androidBuilder: _buildAndroidLayout(isSimkl),
+        desktopBuilder: _buildDesktopLayout(context, authService),
+        androidBuilder: _buildAndroidLayout(authService),
       ),
     );
   }
 
   Scaffold _buildDesktopLayout(
-      BuildContext context, ServiceHandler authService, bool isSimkl) {
+      BuildContext context, ServiceHandler authService) {
     return Scaffold(
       extendBody: true,
       backgroundColor: Provider.of<ThemeProvider>(context).isOled
@@ -470,14 +466,17 @@ class _FilterScreenState extends State<FilterScreen> {
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Obx(() => SizedBox(
+          Obx(() {
+            final isSimkl = authService.serviceType.value == ServicesType.simkl;
+            return SizedBox(
               width: 120,
               child: SuperListView(
                 children: [
                   ResponsiveNavBar(
                     isDesktop: true,
                     currentIndex: _selectedIndex,
-                    margin: const EdgeInsets.fromLTRB(20, 30, 15, 10),
+                    margin: const EdgeInsets.fromLTRB(20, 18, 15, 10),
+                    borderRadius: BorderRadius.circular(50),
                     items: [
                       NavItem(
                           unselectedIcon: IconlyBold.profile,
@@ -515,14 +514,14 @@ class _FilterScreenState extends State<FilterScreen> {
                         unselectedIcon: Icons.movie_filter_outlined,
                         selectedIcon: Icons.movie_filter_rounded,
                         onTap: _onItemTapped,
-                        label: 'Anime',
+                        label: isSimkl ? 'Movies' : 'Anime',
                       ),
                       NavItem(
                         unselectedIcon:
                             isSimkl ? Iconsax.monitor : Iconsax.book,
                         selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
                         onTap: _onItemTapped,
-                        label: 'Manga',
+                        label: isSimkl ? 'Series' : 'Manga',
                       ),
                       NavItem(
                         unselectedIcon: HugeIcons.strokeRoundedLibrary,
@@ -539,54 +538,59 @@ class _FilterScreenState extends State<FilterScreen> {
                     ],
                   ),
                 ],
-              ))),
+              ));
+          }),
           Expanded(
-              child: SmoothPageEntrance(
-                  style: PageEntranceStyle.slideUpGentle,
-                  key: Key(_selectedIndex.toString()),
-                  child: routes[_selectedIndex])),
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: routes,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Scaffold _buildAndroidLayout(bool isSimkl) {
+  Scaffold _buildAndroidLayout(ServiceHandler authService) {
     return Scaffold(
-        body: SmoothPageEntrance(
-            style: PageEntranceStyle.slideUpGentle,
-            key: Key(_mobileSelectedIndex.toString()),
-            child: mobileRoutes[_mobileSelectedIndex]),
+        body: IndexedStack(
+          index: _mobileSelectedIndex,
+          children: mobileRoutes,
+        ),
         extendBody: true,
-        bottomNavigationBar: ResponsiveNavBar(
-          isDesktop: false,
-          currentIndex: _mobileSelectedIndex,
-          margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 40),
-          items: [
-            NavItem(
-              unselectedIcon: IconlyBold.home,
-              selectedIcon: IconlyBold.home,
-              onTap: _onMobileItemTapped,
-              label: 'Home',
-            ),
-            NavItem(
-              unselectedIcon: Icons.movie_filter_rounded,
-              selectedIcon: Icons.movie_filter_rounded,
-              onTap: _onMobileItemTapped,
-              label: 'Anime',
-            ),
-            NavItem(
-              unselectedIcon: isSimkl ? Iconsax.monitor : Iconsax.book,
-              selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
-              onTap: _onMobileItemTapped,
-              label: 'Manga',
-            ),
-            NavItem(
-              unselectedIcon: HugeIcons.strokeRoundedLibrary,
-              selectedIcon: HugeIcons.strokeRoundedLibrary,
-              onTap: _onMobileItemTapped,
-              label: 'Library',
-            ),
-          ],
-        ));
+        bottomNavigationBar: Obx(() {
+          final isSimkl = authService.serviceType.value == ServicesType.simkl;
+          return ResponsiveNavBar(
+            isDesktop: false,
+            currentIndex: _mobileSelectedIndex,
+            margin: const EdgeInsets.symmetric(vertical: 30, horizontal: 32),
+            items: [
+              NavItem(
+                unselectedIcon: IconlyBold.home,
+                selectedIcon: IconlyBold.home,
+                onTap: _onMobileItemTapped,
+                label: 'Home',
+              ),
+              NavItem(
+                unselectedIcon: Icons.movie_filter_rounded,
+                selectedIcon: Icons.movie_filter_rounded,
+                onTap: _onMobileItemTapped,
+                label: isSimkl ? 'Movies' : 'Anime',
+              ),
+              NavItem(
+                unselectedIcon: isSimkl ? Iconsax.monitor : Iconsax.book,
+                selectedIcon: isSimkl ? Iconsax.monitor5 : Iconsax.book,
+                onTap: _onMobileItemTapped,
+                label: isSimkl ? 'Series' : 'Manga',
+              ),
+              NavItem(
+                unselectedIcon: HugeIcons.strokeRoundedLibrary,
+                selectedIcon: HugeIcons.strokeRoundedLibrary,
+                onTap: _onMobileItemTapped,
+                label: 'Library',
+              ),
+            ],
+          );
+        }));
   }
 }

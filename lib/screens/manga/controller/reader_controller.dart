@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:anymex/controllers/discord/discord_rpc.dart';
+import 'package:anymex/controllers/services/storage/anymex_cache_manager.dart';
 import 'package:anymex/controllers/offline/offline_storage_controller.dart';
 import 'package:anymex/controllers/service_handler/params.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
@@ -18,7 +19,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:photo_view/photo_view.dart';
-import 'package:preload_page_view/preload_page_view.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:vibration/vibration.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -98,6 +98,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
   final RxInt currentPageIndex = 1.obs;
   final RxDouble pageWidthMultiplier = 1.0.obs;
   final RxDouble scrollSpeedMultiplier = 1.0.obs;
+  final Map<String, double> pageAspectRatios = {};
   ItemScrollController? itemScrollController;
   ScrollOffsetController? scrollOffsetController;
   ItemPositionsListener? itemPositionsListener;
@@ -113,7 +114,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
   final RxBool activeTapIsVertical = false.obs;
   ScrollOffsetListener? scrollOffsetListener;
   PhotoViewController? photoViewController;
-  PreloadPageController? pageController;
+  PageController? pageController;
   final RxBool spacedPages = false.obs;
   final RxBool overscrollToChapter = true.obs;
   final defaultWidth = 400.obs;
@@ -125,6 +126,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
       MangaPageViewDirection.down.obs;
   final Rx<DualPageMode> dualPageMode = DualPageMode.off.obs;
   final RxBool cropImages = false.obs;
+  final RxBool fitToScreen = false.obs;
   final RxBool volumeKeysEnabled = false.obs;
   final RxBool invertVolumeKeys = false.obs;
   final RxBool autoScrollEnabled = false.obs;
@@ -700,7 +702,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
     scrollOffsetController = ScrollOffsetController();
     itemPositionsListener = ItemPositionsListener.create();
     scrollOffsetListener = ScrollOffsetListener.create();
-    pageController = PreloadPageController(initialPage: 0);
+    pageController = PageController(initialPage: 0);
     _setupPositionListener();
     _setupScrollListener();
   }
@@ -719,6 +721,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
     autoScrollEnabled.value = ReaderKeys.autoScrollEnabled.get<bool>(false);
     autoScrollSpeed.value = ReaderKeys.autoScrollSpeed.get<double>(3.0);
     cropImages.value = ReaderKeys.cropImages.get<bool>(false);
+    fitToScreen.value = ReaderKeys.fitToScreen.get<bool>(false);
     volumeKeysEnabled.value = ReaderKeys.volumeKeysEnabled.get<bool>(false);
     invertVolumeKeys.value = ReaderKeys.invertVolumeKeys.get<bool>(false);
 
@@ -777,6 +780,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
     ReaderKeys.autoScrollEnabled.set(autoScrollEnabled.value);
     ReaderKeys.autoScrollSpeed.set(autoScrollSpeed.value);
     ReaderKeys.cropImages.set(cropImages.value);
+    ReaderKeys.fitToScreen.set(fitToScreen.value);
     ReaderKeys.volumeKeysEnabled.set(volumeKeysEnabled.value);
     ReaderKeys.invertVolumeKeys.set(invertVolumeKeys.value);
     ReaderKeys.dualPageMode.set(dualPageMode.value.index);
@@ -1149,6 +1153,30 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
     _safelyUpdateTotalPages(pageList.length);
   }
 
+  void preloadNextPages(int currentIndex) {
+    final limit = preloadPages.value;
+    if (limit <= 0 || pageList.isEmpty) return;
+
+    final sourceController = Get.find<SourceController>();
+
+    for (int i = 1; i <= limit; i++) {
+      final nextIndex = currentIndex + i;
+      if (nextIndex < 0 || nextIndex >= pageList.length) break;
+
+      final page = pageList[nextIndex];
+      final url = page.url;
+      if (url.startsWith('http')) {
+        final headers = (page.headers?.isEmpty ?? true)
+            ? {
+                'Referer': sourceController.activeMangaSource.value?.baseUrl ?? ''
+              }
+            : page.headers;
+
+        AnymeXCacheManager.instance.getSingleFile(url, headers: headers).then((_) {}, onError: (_) {});
+      }
+    }
+  }
+
   Future<void> init(Media data, List<Chapter> chList, Chapter curCh) async {
     media = data;
     chapterList = chList;
@@ -1156,6 +1184,10 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
     serviceHandler = data.serviceType;
     _initializeControllers();
     _getPreferences();
+
+    ever(currentPageIndex, (indexVal) {
+      preloadNextPages(indexVal - 1);
+    });
 
     pagedProfile.value = _tapRepo.getPagedLayout();
     pagedVerticalProfile.value = _tapRepo.getPagedVerticalLayout();
@@ -1271,6 +1303,11 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
 
   void toggleCropImages() {
     cropImages.value = !cropImages.value;
+    savePreferences();
+  }
+
+  void toggleFitToScreen() {
+    fitToScreen.value = !fitToScreen.value;
     savePreferences();
   }
 
@@ -1492,6 +1529,7 @@ class ReaderController extends GetxController with WidgetsBindingObserver {
         _safelyUpdateTotalPages(pageList.length);
 
         _initTracking();
+        preloadNextPages(currentPageIndex.value - 1);
 
         final saved = savedChapter.value;
         if (saved != null &&

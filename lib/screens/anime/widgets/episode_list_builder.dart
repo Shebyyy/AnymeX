@@ -23,6 +23,7 @@ import 'package:anymex/widgets/custom_widgets/anymex_button.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_chip.dart';
 import 'package:anymex/widgets/custom_widgets/anymex_image.dart';
 import 'package:anymex/widgets/custom_widgets/custom_text.dart';
+import 'package:anymex/widgets/custom_widgets/anymex_bottomsheet.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
@@ -726,44 +727,34 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
       });
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final theme = context.colors;
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    AnymexSheet.custom(
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(context.colors),
+          const Divider(height: 1, thickness: 0.5),
+          Flexible(
+            child: Obx(() {
+              if (isServerStreamLoading.value && streamList.isEmpty) {
+                return _buildScrapingLoadingState(videoStream != null);
+              } else if (streamError.value != null) {
+                return _buildErrorState(streamError.value!);
+              } else if (streamList.isEmpty &&
+                  !isServerStreamLoading.value) {
+                return _buildEmptyState();
+              } else {
+                return _buildServerList(
+                  bypassDialog,
+                  showBottomLoader: isServerStreamLoading.value,
+                );
+              }
+            }),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHandle(theme),
-              _buildHeader(theme),
-              const Divider(height: 1, thickness: 0.5),
-              Flexible(
-                child: Obx(() {
-                  if (isServerStreamLoading.value && streamList.isEmpty) {
-                    return _buildScrapingLoadingState(videoStream != null);
-                  } else if (streamError.value != null) {
-                    return _buildErrorState(streamError.value!);
-                  } else if (streamList.isEmpty && !isServerStreamLoading.value) {
-                    return _buildEmptyState();
-                  } else {
-                    return _buildServerList(
-                      bypassDialog,
-                      showBottomLoader: isServerStreamLoading.value,
-                    );
-                  }
-                }),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
+          const SizedBox(height: 12),
+        ],
+      ),
+      context,
+      showDragHandle: true,
     ).whenComplete(() {
       streamSubscription?.cancel();
       sourceController.activeSource.value?.cancelRequest(scrapeToken);
@@ -777,16 +768,6 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
           title: "Tracking Preference Applied");
     }
   }
-
-  Widget _buildHandle(ColorScheme theme) => Container(
-        width: 40,
-        height: 4,
-        margin: const EdgeInsets.only(top: 12, bottom: 8),
-        decoration: BoxDecoration(
-          color: theme.onSurface.opaque(0.2),
-          borderRadius: BorderRadius.circular(4),
-        ),
-      );
 
   Widget _buildHeader(ColorScheme theme) {
     return Padding(
@@ -834,7 +815,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
       padding: EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: [
+        children: const [
           ExpressiveLoadingIndicator(),
           SizedBox(height: 16),
           Text(
@@ -846,14 +827,6 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
             'This may take up to 30 seconds',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
-          10.height(),
-          if (!fromSrc)
-            AnymexChip(
-              showCheck: false,
-              isSelected: true,
-              label: 'Using Universal Scrapper',
-              onSelected: (v) {},
-            ),
         ],
       ),
     );
@@ -940,8 +913,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
 
           final video = streamList[index];
           final quality = video.quality?.toUpperCase() ?? "UNKNOWN";
-          final linkType =
-              detectLinkType(video.url ?? video.originalUrl ?? '');
+          final linkType = detectLinkType(video.url ?? video.originalUrl ?? '');
           final isHls = linkType == VideoLinkType.hls;
 
           return Padding(
@@ -982,10 +954,10 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
                   });
                   return;
                 }
-                final shouldTrack = widget.anilistData?.serviceType ==
-                        ServicesType.extensions
-                    ? false
-                    : await showTrackingDialog(context, dbId: dbId);
+                final shouldTrack =
+                    widget.anilistData?.serviceType == ServicesType.extensions
+                        ? false
+                        : await showTrackingDialog(context, dbId: dbId);
 
                 if (shouldTrack != null) {
                   await navigate(() => WatchScreen(
@@ -1032,6 +1004,7 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
                             text: quality,
                             variant: TextVariant.bold,
                             size: 14,
+                            maxLines: 10,
                           ),
                           const SizedBox(height: 2),
                           AnymexText(
@@ -1051,8 +1024,8 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                              color: Colors.orange.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.3)),
                         ),
                         child: const Text('HLS',
                             style: TextStyle(
@@ -1067,8 +1040,8 @@ class _EpisodeListBuilderState extends State<EpisodeListBuilder> {
                         decoration: BoxDecoration(
                           color: Colors.green.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                              color: Colors.green.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.green.withOpacity(0.3)),
                         ),
                         child: const Text('Direct',
                             style: TextStyle(

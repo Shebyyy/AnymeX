@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/manga/controller/reader_controller.dart';
+import 'package:anymex/screens/manga/widgets/reader/continuous_reader.dart';
 import 'package:anymex/screens/manga/widgets/reader/display_refresh_host.dart';
 import 'package:anymex/screens/manga/widgets/reader/reader_chapter_transition.dart';
 import 'package:anymex/screens/manga/widgets/reader/reader_color_overlay.dart';
@@ -20,7 +20,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'package:preload_page_view/preload_page_view.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 class ReaderView extends StatefulWidget {
@@ -286,7 +285,7 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildContentView(BuildContext context) {
+   Widget _buildContentView(BuildContext context) {
     return Obx(() {
       final Color bgColor = switch (widget.controller.readerTheme.value) {
         0 => Colors.white,
@@ -295,12 +294,14 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
         _ => Colors.black,
       };
 
+      final isContinuous =
+          widget.controller.readingLayout.value == MangaPageViewMode.continuous;
+
       return Stack(
         children: [
           Container(color: bgColor),
-          PhotoViewGallery.builder(
-            itemCount: 1,
-            builder: (_, e) => PhotoViewGalleryPageOptions.customChild(
+          if (isContinuous)
+            PhotoView.customChild(
               controller: _photoViewController,
               scaleStateController: _photoViewScaleStateController,
               basePosition: _scalePosition,
@@ -308,6 +309,7 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
               maxScale: PhotoViewComputedScale.covered * 5.0,
               onScaleEnd: _onScaleEnd,
               gestureDetectorBehavior: HitTestBehavior.translucent,
+              backgroundDecoration: const BoxDecoration(color: Colors.transparent),
               child: GestureDetector(
                 onTapDown: (details) =>
                     _lastTapPosition = details.globalPosition,
@@ -325,17 +327,11 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                   _toggleScale(details.globalPosition);
                 },
                 onDoubleTap: () {},
-                child: widget.controller.readingLayout.value ==
-                        MangaPageViewMode.continuous
-                    ? _buildContinuousView()
-                    : _buildPagedView(),
+                child: ContinuousReaderView(controller: widget.controller),
               ),
-            ),
-            scrollPhysics: const NeverScrollableScrollPhysics(),
-            enableRotation: false,
-            backgroundDecoration:
-                const BoxDecoration(color: Colors.transparent),
-          ),
+            )
+          else
+            _buildPagedView(),
           ReaderContentOverlay(controller: widget.controller),
           if (widget.controller.grayscaleEnabled.value ||
               widget.controller.invertColorsEnabled.value)
@@ -415,30 +411,12 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
     });
   }
 
-  Widget _buildContinuousView() {
-    return ScrollablePositionedList.builder(
-      itemCount: widget.controller.spreads.length,
-      itemScrollController: widget.controller.itemScrollController,
-      scrollOffsetController: widget.controller.scrollOffsetController,
-      itemPositionsListener: widget.controller.itemPositionsListener,
-      scrollOffsetListener: widget.controller.scrollOffsetListener,
-      initialScrollIndex: (widget.controller.currentPageIndex.value - 1)
-          .clamp(0, widget.controller.spreads.length - 1),
-      physics: const ClampingScrollPhysics(),
-      scrollDirection: widget.controller.readingDirection.value.axis,
-      reverse: widget.controller.readingDirection.value.reversed,
-      itemBuilder: (context, index) {
-        return _buildSpread(context, widget.controller.spreads[index], index);
-      },
-    );
-  }
 
   Widget _buildPagedView() {
-    return PreloadPageView.builder(
+    return PhotoViewGallery.builder(
       itemCount: widget.controller.spreads.length,
-      controller: widget.controller.pageController,
-      preloadPagesCount: widget.controller.preloadPages.value,
-      physics: const ClampingScrollPhysics(),
+      pageController: widget.controller.pageController,
+      scrollPhysics: const ClampingScrollPhysics(),
       scrollDirection: widget.controller.readingDirection.value.axis,
       reverse: widget.controller.readingDirection.value.reversed,
       onPageChanged: (index) {
@@ -447,8 +425,26 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
           _displayRefreshHost.flash();
         }
       },
-      itemBuilder: (context, index) {
-        return _buildSpread(context, widget.controller.spreads[index], index);
+      backgroundDecoration: const BoxDecoration(color: Colors.transparent),
+      builder: (context, index) {
+        return PhotoViewGalleryPageOptions.customChild(
+          minScale: PhotoViewComputedScale.contained * 1.0,
+          maxScale: PhotoViewComputedScale.covered * 4.0,
+          child: GestureDetector(
+            onTapDown: (details) => _lastTapPosition = details.globalPosition,
+            onTap: () {
+              if (_lastTapPosition != null) {
+                widget.controller.handleTap(_lastTapPosition!);
+              }
+            },
+            onLongPressStart: (details) {
+              if (widget.controller.longPressPageActionsEnabled.value) {
+                showReaderPageActionsDialog(context, widget.controller);
+              }
+            },
+            child: _buildSpread(context, widget.controller.spreads[index], index),
+          ),
+        );
       },
     );
   }
@@ -480,7 +476,7 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
         _ => FilterQuality.medium,
       };
 
-      final continuousConstraints = isContinuous
+      final continuousConstraints = isContinuous && !widget.controller.fitToScreen.value
           ? BoxConstraints(
               maxWidth: 500 * widget.controller.pageWidthMultiplier.value)
           : null;
@@ -500,15 +496,19 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                   ''
                             }
                           : page.headers,
-                      fit: BoxFit.contain,
+                      fit: widget.controller.fitToScreen.value
+                          ? BoxFit.fitWidth
+                          : BoxFit.contain,
                       alignment: Alignment.center,
                       cropThreshold: 30,
                       placeholder:
-                          _buildPageLoadingWidget(context, pageIndex: index),
+                          _buildPageLoadingWidget(context, pageIndex: index, pageUrl: page.url),
                     )
                   : Image.file(
                       File(page.url),
-                      fit: BoxFit.contain,
+                      fit: widget.controller.fitToScreen.value
+                          ? BoxFit.fitWidth
+                          : BoxFit.contain,
                       alignment: Alignment.center,
                     ))
               : isLanczos
@@ -522,19 +522,23 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                       ''
                                 }
                               : page.headers,
-                          fit: BoxFit.contain,
+                          fit: widget.controller.fitToScreen.value
+                              ? BoxFit.fitWidth
+                              : BoxFit.contain,
                           alignment: Alignment.center,
                           constraints: continuousConstraints,
                           placeholder:
-                              _buildPageLoadingWidget(context, pageIndex: index),
+                              _buildPageLoadingWidget(context, pageIndex: index, pageUrl: page.url),
                         )
                       : LanczosFileImage(
                           path: page.url,
-                          fit: BoxFit.contain,
+                          fit: widget.controller.fitToScreen.value
+                              ? BoxFit.fitWidth
+                              : BoxFit.contain,
                           alignment: Alignment.center,
                           constraints: continuousConstraints,
                           placeholder:
-                              _buildPageLoadingWidget(context, pageIndex: index),
+                              _buildPageLoadingWidget(context, pageIndex: index, pageUrl: page.url),
                         ))
                   : (page.url.startsWith('http')
                       ? ExtendedImage.network(
@@ -550,7 +554,9 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                       ''
                                 }
                               : page.headers,
-                          fit: BoxFit.contain,
+                          fit: widget.controller.fitToScreen.value
+                              ? BoxFit.fitWidth
+                              : BoxFit.contain,
                           constraints: continuousConstraints,
                           cache: true,
                           alignment: Alignment.center,
@@ -562,6 +568,7 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                 return _buildPageLoadingWidget(
                                   context,
                                   pageIndex: index,
+                                  pageUrl: page.url,
                                   progress: _networkLoadProgress(state),
                                 );
 
@@ -569,28 +576,19 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                 final size = MediaQuery.of(context).size;
                                 return SizedBox(
                                   height: size.height,
-                                  child: Container(
-                                    color: Colors.grey.opaque(0.1),
+                                  child: Center(
                                     child: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Icon(
-                                          Icons.broken_image_outlined,
-                                          size: 48,
-                                          color: Colors.grey.opaque(0.7),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Failed to load page ${index + 1}',
-                                          style: const TextStyle(
-                                              color: Colors.grey),
+                                        const Text(
+                                          'Failed to load image',
+                                          style: TextStyle(
+                                              fontFamily: 'Poppins-Bold'),
                                         ),
                                         const SizedBox(height: 8),
                                         ElevatedButton.icon(
-                                          onPressed: () {
-                                            state.reLoadImage();
-                                          },
+                                          onPressed: () => state.reLoadImage(),
                                           icon: const Icon(Icons.refresh,
                                               size: 16),
                                           label: const Text('Retry'),
@@ -607,17 +605,34 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
                                 );
 
                               case LoadState.completed:
+                                final image = state.extendedImageInfo?.image;
+                                if (image != null) {
+                                  final aspect = image.width / image.height;
+                                  widget.controller.pageAspectRatios[page.url] = aspect;
+                                }
                                 return state.completedWidget;
                             }
                           },
                         )
                       : ExtendedImage.file(
                           File(page.url),
-                          fit: BoxFit.contain,
+                          fit: widget.controller.fitToScreen.value
+                              ? BoxFit.fitWidth
+                              : BoxFit.contain,
                           constraints: continuousConstraints,
                           alignment: Alignment.center,
                           filterQuality: filterQuality,
                           enableLoadState: true,
+                          loadStateChanged: (ExtendedImageState state) {
+                            if (state.extendedImageLoadState == LoadState.completed) {
+                              final image = state.extendedImageInfo?.image;
+                              if (image != null) {
+                                final aspect = image.width / image.height;
+                                widget.controller.pageAspectRatios[page.url] = aspect;
+                              }
+                            }
+                            return state.completedWidget;
+                          },
                         )),
         ),
       );
@@ -638,15 +653,16 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
   Widget _buildPageLoadingWidget(
     BuildContext context, {
     required int pageIndex,
+    required String pageUrl,
     double? progress,
   }) {
-    final size = MediaQuery.of(context).size;
     final progressText = progress != null
         ? ' (${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%)'
         : '';
+    final aspect = widget.controller.pageAspectRatios[pageUrl] ?? 0.65;
 
-    return SizedBox(
-      height: size.height,
+    return AspectRatio(
+      aspectRatio: aspect,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -660,3 +676,4 @@ class _ReaderViewState extends State<ReaderView> with TickerProviderStateMixin {
     );
   }
 }
+

@@ -44,7 +44,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iconly/iconly.dart';
+import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:anymex/controllers/services/community_service.dart';
 import 'package:anymex/widgets/non_widgets/recommend_button.dart';
@@ -96,6 +96,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   final sourceController = Get.find<SourceController>();
 
   final RxInt timeLeft = 0.obs;
+  Timer? _countdownTimer;
 
   String posterColor = '';
   int _sourceRequestVersion = 0;
@@ -213,6 +214,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     controller.dispose();
     _activeSourceWorker?.dispose();
 
@@ -259,12 +261,13 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
 
   Future<void> _fetchAnilistData() async {
     try {
-      Logger.i("Fetch Initiated for Media => ${widget.media.id}");
+      print(
+          "Fetch Initiated for Media => ${widget.media.id} with type -> ${widget.media.mediaType}");
 
       final service = widget.media.serviceType.service;
 
-      final tempData = await service
-          .fetchDetails(FetchDetailsParams(id: widget.media.id.toString()));
+      final tempData = await service.fetchDetails(FetchDetailsParams(
+          id: widget.media.id.toString(), type: ItemType.anime));
 
       final isExtensions = widget.media.serviceType == ServicesType.extensions;
 
@@ -520,11 +523,12 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
   }
 
   void startCountdown(int arrivingAt) {
+    _countdownTimer?.cancel();
     int currentTime = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     int difference = arrivingAt - currentTime;
     timeLeft.value = difference;
 
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (timeLeft.value > 0) {
         timeLeft.value--;
       } else {
@@ -1006,7 +1010,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
                     Get.back();
                   },
                   selectedIcon: Iconsax.back_square,
-                  unselectedIcon: IconlyBold.arrow_left,
+                  unselectedIcon: IconlyBold.arrowLeft,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1041,7 +1045,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage> {
     return Obx(() => ResponsiveNavBar(
             isDesktop: false,
             currentIndex: selectedPage.value,
-            margin: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
+            margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
             items: [
               NavItem(
                   onTap: _onPageSelected,

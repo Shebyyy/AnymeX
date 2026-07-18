@@ -42,7 +42,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iconly/iconly.dart';
+import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:anymex/controllers/services/community_service.dart';
 import 'package:anymex/widgets/non_widgets/recommend_button.dart';
@@ -180,12 +180,12 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
     try {
       Media tempData;
       try {
-        tempData = await mediaService.service
-            .fetchDetails(FetchDetailsParams(id: widget.media.id.toString()));
+        tempData = await mediaService.service.fetchDetails(FetchDetailsParams(
+            id: widget.media.id.toString(), type: ItemType.manga));
       } catch (e) {
         if (!e.toString().contains("dynamic")) rethrow;
-        tempData = await mediaService.service
-            .fetchDetails(FetchDetailsParams(id: widget.media.id.toString()));
+        tempData = await mediaService.service.fetchDetails(FetchDetailsParams(
+            id: widget.media.id.toString(), type: ItemType.manga));
       }
       final isExtensions = mediaService == ServicesType.extensions;
 
@@ -713,7 +713,7 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                     Get.back();
                   },
                   selectedIcon: Iconsax.back_square,
-                  unselectedIcon: IconlyBold.arrow_left,
+                  unselectedIcon: IconlyBold.arrowLeft,
                 ),
               ),
               const SizedBox(height: 10),
@@ -750,7 +750,7 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
     return Obx(() => ResponsiveNavBar(
             isDesktop: false,
             currentIndex: selectedPage.value,
-            margin: const EdgeInsets.symmetric(horizontal: 80, vertical: 40),
+            margin: const EdgeInsets.symmetric(horizontal: 60, vertical: 30),
             items: [
               NavItem(
                   onTap: _onPageSelected,
@@ -761,7 +761,7 @@ class _MangaDetailsPageState extends State<MangaDetailsPage> {
                   onTap: _onPageSelected,
                   selectedIcon: Iconsax.book,
                   unselectedIcon: Iconsax.book,
-                  label: "Watch"),
+                  label: "Read"),
               NavItem(
                   onTap: _onPageSelected,
                   selectedIcon: HugeIcons.strokeRoundedComment01,

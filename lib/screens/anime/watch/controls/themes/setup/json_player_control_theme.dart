@@ -732,12 +732,40 @@ class ThemeRenderer {
 
     if (isPlayPause) return _makePlayPauseButton(item, style, enabled);
 
-    final icon = _pickIcon(item.grabString('icon'), id);
-    if (icon == null) return null;
-
     final iconColor = _resolveColor(style.iconColor, fallback: Colors.white);
     final disabledColor = _resolveColor(style.disabledIconColor,
         fallback: Colors.white.withValues(alpha: 0.55));
+
+    if (id == 'orientation') {
+      return Obx(() {
+        final orientation = controller.physicalOrientation.value;
+        double angle = 0.0;
+        if (orientation == DeviceOrientation.landscapeLeft) {
+          angle = -1.57079632679;
+        } else if (orientation == DeviceOrientation.landscapeRight) {
+          angle = 1.57079632679;
+        } else if (orientation == DeviceOrientation.portraitDown) {
+          angle = 3.14159265359;
+        }
+        return _makeButtonShell(
+          style: style,
+          tooltip: item.grabString('tooltip') ?? _tooltipForId(id),
+          enabled: enabled,
+          onTap: enabled ? () => _doAction(id, item) : null,
+          guts: Transform.rotate(
+            angle: angle,
+            child: Icon(
+              Icons.smartphone_rounded,
+              size: style.iconSize,
+              color: enabled ? iconColor : disabledColor,
+            ),
+          ),
+        );
+      });
+    }
+
+    final icon = _pickIcon(item.grabString('icon'), id);
+    if (icon == null) return null;
 
     return _makeButtonShell(
       style: style,
@@ -2198,7 +2226,7 @@ class BottomZone {
           : parsedLocked,
       showProgress: _readBool(json['showProgress'], true),
       progressStyle: _toSliderStyle(_readString(json['progressStyle']),
-          fallback: SliderStyle.ios),
+          fallback: SliderStyle.defaultM3),
       progressPadding: _readEdgeInsets(
           json['progressPadding'], const EdgeInsets.symmetric(horizontal: 4)),
       progressActiveTrackColor: _readString(json['progressActiveTrackColor']),
@@ -2650,6 +2678,8 @@ Curve _parseCurve(String? raw, Curve fallback) {
 
 SliderStyle _toSliderStyle(String? raw, {required SliderStyle fallback}) {
   switch (raw) {
+    case 'default':
+      return SliderStyle.defaultM3;
     case 'ios':
       return SliderStyle.ios;
     case 'capsule':

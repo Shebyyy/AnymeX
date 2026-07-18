@@ -59,6 +59,7 @@ class CardData {
           id: data.id!,
           title: data.title ?? '??',
           poster: data.poster ?? '',
+          mediaType: data.type == 'MANGA' ? ItemType.manga : ItemType.anime,
           serviceType: data.servicesType),
     );
   }
@@ -132,13 +133,15 @@ class GridAnimeCard extends StatelessWidget {
                 AnymexOnTap(
                   margin: 0,
                   onTap: () {
+                    final heroTag = '${media.id}-${itemType.name}-grid-card';
                     navigate(() => isManga
-                        ? MangaDetailsPage(media: media.data, tag: media.title)
-                        : AnimeDetailsPage(
-                            media: media.data, tag: media.title));
+                        ? MangaDetailsPage(media: media.data, tag: heroTag)
+                        : AnimeDetailsPage(media: media.data, tag: heroTag));
                   },
                   child: Hero(
-                    tag: media.title,
+                    tag: '${media.id}-${itemType.name}-grid-card',
+                    transitionOnUserGestures: true,
+                    flightShuttleBuilder: AnymeXImage.heroFlightShuttleBuilder,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: AnymeXImage(
@@ -146,6 +149,8 @@ class GridAnimeCard extends StatelessWidget {
                         imageUrl: media.poster,
                         width: cardWidth,
                         height: 160,
+                        fadeInDuration: Duration.zero,
+                        fadeOutDuration: Duration.zero,
                         errorImage:
                             'https://s4.anilist.co/file/anilistcdn/character/large/default.jpg',
                       ),

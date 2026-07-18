@@ -7,6 +7,7 @@ import 'package:anymex/utils/player_core_visual_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'base_player.dart' as base;
 
@@ -74,18 +75,18 @@ class MediaKitPlayer extends base.BasePlayer {
   @override
   Future<void> initialize() async {
     final resolvedVo = switch (config.videoOutput) {
-      'gpu-next' => 'gpu-next',
+      'gpu-next' => Platform.isAndroid ? 'gpu-next' : null,
       'mediacodec_embed' => 'mediacodec_embed',
-      'gpu' => 'gpu',
-      'auto' => 'gpu',
-      _ => 'gpu',
+      'gpu' => Platform.isAndroid ? 'gpu' : null,
+      'auto' => Platform.isAndroid ? 'gpu' : null,
+      _ => null,
     };
+
+    final bufferSize = config.bufferSize;
 
     _player = Player(
       configuration: PlayerConfiguration(
-          bufferSize: config.bufferSize,
-          libass: config.useLibass,
-          vo: resolvedVo),
+          bufferSize: bufferSize, libass: config.useLibass, vo: resolvedVo),
     );
 
     _videoController = VideoController(
@@ -98,6 +99,31 @@ class MediaKitPlayer extends base.BasePlayer {
     );
 
     _setupListeners();
+
+    try {
+      final mpv = _player.platform as dynamic;
+      final tempDir = await getTemporaryDirectory();
+      await mpv.setProperty("demuxer-cache-dir", tempDir.path);
+      await mpv.setProperty("af", "scaletempo2=max-speed=8");
+      final currentAo = config.audioOutput;
+      if (currentAo != 'auto') {
+        await mpv.setProperty("ao", currentAo);
+      }
+      if (Platform.isAndroid) {
+        await mpv.setProperty("volume-max", "100");
+        if (currentAo == 'auto') {
+          await mpv.setProperty("ao", "audiotrack");
+        }
+      }
+      await mpv.setProperty("hwdec", config.hwdec);
+      await mpv.setProperty("vd-lavc-fast", "yes");
+      await mpv.setProperty("vd-lavc-skiploopfilter", "nonkey");
+      await mpv.setProperty("vd-lavc-threads", "4");
+      await mpv.setProperty("cache", "yes");
+    } catch (e) {
+      print('Error setting MPV optimization properties: $e');
+    }
+
     await PlayerCoreVisualSettings.applyMpvCoreSettings(_player);
     await PlayerCoreVisualSettings.applyMpvVisualSettings(_player);
   }
