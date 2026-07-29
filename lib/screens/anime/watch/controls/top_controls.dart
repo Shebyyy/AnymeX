@@ -461,7 +461,7 @@ class TopControls extends StatelessWidget {
                 compact: true,
               ),
               const SizedBox(width: 8),
-              if (Platform.isAndroid || Platform.isIOS)
+              if (Platform.isAndroid || Platform.isIOS || Platform.isWindows || Platform.isLinux || Platform.isMacOS)
                 ControlButton(
                   icon: Icons.picture_in_picture_rounded,
                   onPressed: () => controller.enterPip(),

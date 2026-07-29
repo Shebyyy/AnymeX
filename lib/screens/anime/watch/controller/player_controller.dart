@@ -547,6 +547,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
     PipController.setAutoEnter(enabled: false);
+    PipController.exitPip();
     _accelerometerSub?.cancel();
     delete();
     super.onClose();
@@ -2417,9 +2418,19 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> enterPip() async {
+    if (isPipMode.value) {
+      await PipController.exitPip();
+      isPipMode.value = false;
+      return;
+    }
     isPipMode.value = true;
     await Future.delayed(const Duration(milliseconds: 100));
-    await PipController.enter();
+    final videoUrl = selectedVideo.value?.url;
+    final headers = selectedVideo.value?.headers;
+    await PipController.enter(
+      videoUrl: videoUrl,
+      headers: headers,
+    );
   }
 
   Future<void> launchExternalPlayer() async {

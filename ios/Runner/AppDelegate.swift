@@ -1,9 +1,16 @@
 import Flutter
 import UIKit
 import AVFoundation
+import AVKit
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
+  private var pipChannel: FlutterMethodChannel?
+  private var pipController: AVPictureInPictureController?
+  private var pipPlayer: AVPlayer?
+  private var pipPlayerLayer: AVPlayerLayer?
+  private var pipPlayerView: UIView?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -11,11 +18,11 @@ import AVFoundation
     GeneratedPluginRegistrant.register(with: self)
 
     let controller = window?.rootViewController as! FlutterViewController
-    let channel = FlutterMethodChannel(name: "com.anymex.app/thumbnail", binaryMessenger: controller.binaryMessenger)
 
+    let thumbnailChannel = FlutterMethodChannel(name: "com.anymex.app/thumbnail", binaryMessenger: controller.binaryMessenger)
     cleanupOldThumbnails()
 
-    channel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+    thumbnailChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
       if call.method == "getVideoThumbnail" {
         guard let args = call.arguments as? [String: Any],
               let videoPath = args["videoPath"] as? String else {
@@ -28,7 +35,88 @@ import AVFoundation
       }
     }
 
+    let pipCh = FlutterMethodChannel(name: "com.ryan.anymex/pip", binaryMessenger: controller.binaryMessenger)
+    self.pipChannel = pipCh
+
+    pipCh.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+      switch call.method {
+      case "isPipAvailable":
+        result(AVPictureInPictureController.isPictureInPictureSupported())
+      case "isPipActive":
+        result(self.pipController?.isPictureInPictureActive ?? false)
+      case "enterPip":
+        guard let args = call.arguments as? [String: Any] else {
+          result(false)
+          return
+        }
+        let urlString = args["url"] as? String ?? ""
+        let headers = args["headers"] as? [String: String] ?? [:]
+        self.startPip(urlString: urlString, headers: headers, result: result)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  private func startPip(urlString: String, headers: [String: String], result: @escaping FlutterResult) {
+    guard let url = URL(string: urlString), !urlString.isEmpty else {
+      result(false)
+      return
+    }
+
+    var asset: AVURLAsset
+    if !headers.isEmpty {
+      asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+    } else {
+      asset = AVURLAsset(url: url)
+    }
+
+    let playerItem = AVPlayerItem(asset: asset)
+    if pipPlayer == nil {
+      pipPlayer = AVPlayer(playerItem: playerItem)
+    } else {
+      pipPlayer?.replaceCurrentItem(with: playerItem)
+    }
+
+    if pipPlayerLayer == nil {
+      pipPlayerLayer = AVPlayerLayer(player: pipPlayer)
+      pipPlayerLayer?.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+      pipPlayerLayer?.videoGravity = .resizeAspect
+    }
+
+    if pipPlayerView == nil {
+      pipPlayerView = UIView(frame: CGRect(x: -1, y: -1, width: 1, height: 1))
+      pipPlayerView?.layer.addSublayer(pipPlayerLayer!)
+      pipPlayerView?.alpha = 0
+      if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+        window.addSubview(pipPlayerView!)
+      }
+    }
+
+    pipPlayer?.play()
+
+    if pipController == nil {
+      pipController = AVPictureInPictureController(playerLayer: pipPlayerLayer!)
+    }
+
+    pipController?.delegate = self
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+      self.pipController?.startPictureInPicture()
+      result(true)
+    }
+  }
+
+  private func stopPip() {
+    pipController?.stopPictureInPicture()
+    pipPlayer?.pause()
+    pipPlayerView?.removeFromSuperview()
+    pipPlayer = nil
+    pipPlayerLayer = nil
+    pipPlayerView = nil
+    pipController = nil
   }
 
   private func extractThumbnail(videoPath: String, result: @escaping FlutterResult) {
@@ -87,5 +175,25 @@ import AVFoundation
         }
       }
     }
+  }
+}
+
+extension AppDelegate: AVPictureInPictureControllerDelegate {
+  func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    pipChannel?.invokeMethod("onPipModeChanged", arguments: true)
+  }
+
+  func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    pipChannel?.invokeMethod("onPipModeChanged", arguments: false)
+    stopPip()
+  }
+
+  func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, failedToStartPictureInPictureWithError error: Error) {
+    pipChannel?.invokeMethod("onPipModeChanged", arguments: false)
+  }
+
+  func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    pipPlayer?.pause()
+    pipChannel?.invokeMethod("onPipPause", arguments: nil)
   }
 }
