@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -156,8 +155,8 @@ class PipController {
       await windowManager.setAlwaysOnTop(true);
       await windowManager.setSkipTaskbar(true);
       await windowManager.setResizable(false);
-      await windowManager.setMinSize(Size(pipWidth, pipHeight));
-      await windowManager.setMaxSize(Size(pipWidth, pipHeight));
+      await windowManager.setMinimumSize(Size(pipWidth, pipHeight));
+      await windowManager.setMaximumSize(Size(pipWidth, pipHeight));
 
       _isDesktopPipActive = true;
       onPipModeChanged?.call(true);
@@ -178,7 +177,7 @@ class PipController {
       await windowManager.setAlwaysOnTop(_savedAlwaysOnTop);
       await windowManager.setSkipTaskbar(_savedSkipTaskbar);
       await windowManager.setResizable(true);
-      await windowManager.setMinSize(const Size(400, 300));
+      await windowManager.setMinimumSize(const Size(400, 300));
 
       _isDesktopPipActive = false;
       onPipModeChanged?.call(false);
