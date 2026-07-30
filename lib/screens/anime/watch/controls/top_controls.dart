@@ -391,6 +391,13 @@ class TopControls extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               ControlButton(
+                icon: Icons.picture_in_picture_rounded,
+                onPressed: () => controller.enterPip(),
+                tooltip: 'Picture in Picture',
+                compact: true,
+              ),
+              const SizedBox(width: 8),
+              ControlButton(
                 icon: Icons.settings_rounded,
                 onPressed: () {
                   Get.find<PlayerController>().showSheetWithPause(
