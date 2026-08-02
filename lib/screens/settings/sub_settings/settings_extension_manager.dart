@@ -382,7 +382,7 @@ class _SettingsExtensionManagerState extends State<SettingsExtensionManager> {
                                       )
                                     : null,
                               ),
-                              if (Platform.isAndroid || Platform.isIOS) ...[
+                              if (Platform.isAndroid) ...[
                                 Divider(
                                     height: 1,
                                     color: colors.outlineVariant
@@ -390,9 +390,8 @@ class _SettingsExtensionManagerState extends State<SettingsExtensionManager> {
                                 CustomTile(
                                   icon: Icons.install_mobile_rounded,
                                   title: 'Load Plugin APK from Storage',
-                                  description: Platform.isAndroid
-                                      ? 'Select a runtime APK from local storage to manually install'
-                                      : 'Select a runtime JAR from local storage to manually install',
+                                  description:
+                                      'Select a runtime APK from local storage to manually install',
                                   onTap:
                                       _isSyncingLocalApk ? null : _syncLocalApk,
                                   postFix: _isSyncingLocalApk

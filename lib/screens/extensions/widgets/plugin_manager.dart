@@ -20,6 +20,9 @@ class PluginManager {
   String get installedReleaseTitle => AnymeXRuntimeBridge.installedReleaseTitle;
 
   Future<void> ensurePluginLoaded(BuildContext context) async {
+    // On iOS the JVM is embedded in the app — nothing to download.
+    if (Platform.isIOS) return;
+
     final isLoaded = await AnymeXRuntimeBridge.isLoaded();
     if (isLoaded) return;
 
@@ -37,6 +40,15 @@ class PluginManager {
     BuildContext context, {
     bool showIfUpToDate = false,
   }) async {
+    // On iOS the runtime is baked into the app binary — updates
+    // come via app store updates, not plugin downloads.
+    if (Platform.isIOS) {
+      if (showIfUpToDate) {
+        print('Plugin is embedded in app (iOS).');
+      }
+      return;
+    }
+
     final release = await fetchLatestRelease();
     if (release == null) {
       errorSnackBar('Failed to check plugin updates.');
