@@ -13,14 +13,13 @@ import 'package:http/http.dart' as http;
 
 class PluginManager {
   static const String _latestReleaseUrl =
-      'https://api.github.com/repos/RyanYuuki/AnymeXExtensionRuntimeBridge/releases/latest';
+      'https://api.github.com/repos/Shebyyy/AnymeXExtensionRuntimeBridge/releases/latest';
 
   String get installedVersion => AnymeXRuntimeBridge.installedVersion;
 
   String get installedReleaseTitle => AnymeXRuntimeBridge.installedReleaseTitle;
 
   Future<void> ensurePluginLoaded(BuildContext context) async {
-    if (Platform.isIOS) return;
     final isLoaded = await AnymeXRuntimeBridge.isLoaded();
     if (isLoaded) return;
 
@@ -38,7 +37,6 @@ class PluginManager {
     BuildContext context, {
     bool showIfUpToDate = false,
   }) async {
-    if (Platform.isIOS) return;
     final release = await fetchLatestRelease();
     if (release == null) {
       errorSnackBar('Failed to check plugin updates.');
@@ -163,7 +161,7 @@ class PluginManager {
   Future<List<PluginRelease>> fetchReleases() async {
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/repos/RyanYuuki/AnymeXExtensionRuntimeBridge/releases'),
+        Uri.parse('https://api.github.com/repos/Shebyyy/AnymeXExtensionRuntimeBridge/releases'),
         headers: const {'Accept': 'application/vnd.github+json'},
       );
       if (response.statusCode != 200) return [];
