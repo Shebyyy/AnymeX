@@ -14,6 +14,8 @@ import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/track/track_binding_controller.dart';
 import 'package:anymex/controllers/stats/stats_tracker.dart';
 import 'package:anymex/screens/stats/user_stats_page.dart';
+import 'package:anymex/controllers/tracker_addon/tracker_addon_manager.dart';
+import 'package:anymex/controllers/tracker_addon/tracker_registry.dart';
 import 'package:anymex/controllers/services/anilist/anilist_auth.dart';
 import 'package:anymex/controllers/services/anilist/anilist_data.dart';
 import 'package:anymex/controllers/services/mal/mal_service.dart';
@@ -271,6 +273,11 @@ void _initializeGetxController() async {
     if (!Get.isRegistered<SourceController>()) {
       Get.put(SourceController());
     }
+    // ── Tracker Add-on System ─────────────────────────────────────
+    // Registry must be registered BEFORE ServiceHandler and AddonManager
+    Get.put(TrackerRegistry());
+    Get.put(TrackerAddonManager(registry: Get.find<TrackerRegistry>()));
+    // ── End Tracker Add-on System ──────────────────────────────────
     Get.put(ServiceHandler());
     Get.put(TrackBindingController());
     Get.put(GreetingController());

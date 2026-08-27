@@ -5,6 +5,8 @@ import 'package:anymex/controllers/services/anilist/anilist_data.dart';
 import 'package:anymex/controllers/services/mal/mal_service.dart';
 import 'package:anymex/controllers/services/simkl/simkl_service.dart';
 import 'package:anymex/controllers/track/track_binding.dart';
+import 'package:anymex/controllers/tracker_addon/generic_tracker_service.dart';
+import 'package:anymex/controllers/tracker_addon/tracker_addon_manager.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -78,10 +80,47 @@ class TrackBindingController extends GetxController {
     }
   }
 
+  /// Get the OnlineService for an addon tracker by its ID.
+  OnlineService? _onlineAddon(String addonId) {
+    try {
+      return Get.find<TrackerAddonManager>().getService(addonId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get the OnlineService for any binding (built-in or addon).
+  OnlineService? _serviceForBinding(TrackBinding b) {
+    if (b.isAddon) {
+      return _onlineAddon(b.addonTrackerId!);
+    }
+    return _online(b.tracker);
+  }
+
   bool isLoggedIn(Tracker t) => _online(t).isLoggedIn.value;
+
+  /// Check if an addon tracker is logged in.
+  bool isAddonLoggedIn(String addonId) {
+    final service = _onlineAddon(addonId);
+    return service?.isLoggedIn.value ?? false;
+  }
 
   List<Tracker> loggedInTrackers() =>
       Tracker.values.where(isLoggedIn).toList();
+
+  /// Get all logged-in tracker IDs (built-in names + addon IDs).
+  List<String> allLoggedInTrackerIds() {
+    final ids = <String>[];
+    for (final t in Tracker.values) {
+      if (isLoggedIn(t)) ids.add(t.name);
+    }
+    try {
+      for (final s in Get.find<TrackerAddonManager>().loggedInServices) {
+        ids.add(s.manifest.id);
+      }
+    } catch (_) {}
+    return ids;
+  }
 
   Future<List<Media>> searchOn(Tracker t, SearchParams params) {
     if (params.args is! bool) {
@@ -121,9 +160,8 @@ class TrackBindingController extends GetxController {
     if (bindings.isEmpty) return;
 
     await Future.wait(bindings.map((b) async {
-      final tracker = b.tracker;
-      final service = _online(tracker);
-      if (!service.isLoggedIn.value) return;
+      final service = _serviceForBinding(b);
+      if (service == null || !service.isLoggedIn.value) return;
       try {
         await service.updateListEntry(UpdateListEntryParams(
           listId: b.remoteId,
@@ -134,7 +172,7 @@ class TrackBindingController extends GetxController {
         b.progress = progress;
         if (status != null) b.status = status;
       } catch (e) {
-        Logger.e('Track sync failed for ${tracker.label} ($mediaId): $e');
+        Logger.e('Track sync failed for ${b.trackerName} ($mediaId): $e');
       }
     }));
 
@@ -192,8 +230,8 @@ class TrackBindingController extends GetxController {
     final newScore = score ?? binding.score;
     final newPrivate = isPrivate ?? binding.private;
 
-    final service = _online(binding.tracker);
-    if (service.isLoggedIn.value) {
+    final service = _serviceForBinding(binding);
+    if (service != null && service.isLoggedIn.value) {
       try {
         await service.updateListEntry(UpdateListEntryParams(
           listId: binding.remoteId,
@@ -205,7 +243,7 @@ class TrackBindingController extends GetxController {
         ));
       } catch (e) {
         Logger.e(
-            'Track remote update failed for ${binding.tracker.label} ($mediaId): $e — keeping local update only');
+            'Track remote update failed for ${binding.trackerName} ($mediaId): $e — keeping local update only');
       }
     }
 
@@ -221,5 +259,39 @@ class TrackBindingController extends GetxController {
     _cache[mediaId] = list;
     _persist(mediaId, list);
     bindingsVersion.value++;
+  }
+
+  /// Search on an addon tracker.
+  Future<List<Media>> searchOnAddon(
+    String addonId,
+    String query, {
+    bool isManga = false,
+  }) async {
+    final service = _onlineAddon(addonId);
+    if (service == null) return [];
+    if (service is GenericTrackerService) {
+      return service.search(query, isManga: isManga);
+    }
+    return [];
+  }
+
+  /// Create a binding from an addon tracker search result.
+  TrackBinding bindingFromAddonSearchResult({
+    required String addonId,
+    required int trackerIndex,
+    required Media result,
+    required bool isAnime,
+  }) {
+    return TrackBinding.forAddon(
+      addonId: addonId,
+      trackerIndex: trackerIndex,
+      remoteId: result.id,
+      title: result.title,
+      poster: result.poster,
+      totalEpisodes: result.totalEpisodes,
+      isAnime: isAnime,
+      status: 'CURRENT',
+      progress: 0,
+    );
   }
 }

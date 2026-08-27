@@ -4,7 +4,10 @@ import 'package:anymex/controllers/services/anilist/anilist_data.dart';
 import 'package:anymex/controllers/services/mal/mal_service.dart';
 import 'package:anymex/controllers/services/simkl/simkl_service.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
+import 'package:anymex/controllers/tracker_addon/tracker_addon_manager.dart';
+import 'package:anymex/controllers/tracker_addon/tracker_registry.dart';
 import 'package:anymex/database/data_keys/keys.dart';
+import 'package:anymex/database/kv_helper.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -61,6 +64,37 @@ class ServiceHandler extends GetxController {
   final simklService = Get.find<SimklService>();
   final extensionService = Get.find<SourceController>();
 
+  // ── Add-on Tracker Support ─────────────────────────────────────
+  /// ID of the currently active addon tracker (null if using built-in).
+  final Rxn<String> activeAddonId = Rxn<String>(null);
+
+  /// The add-on manager (registered in main.dart).
+  TrackerAddonManager get addonManager {
+    if (Get.isRegistered<TrackerAddonManager>()) {
+      return Get.find<TrackerAddonManager>();
+    }
+    // Fallback: not yet available (early init)
+    throw StateError('TrackerAddonManager not yet registered');
+  }
+
+  /// Registry shortcut.
+  TrackerRegistry get registry {
+    if (Get.isRegistered<TrackerRegistry>()) {
+      return Get.find<TrackerRegistry>();
+    }
+    throw StateError('TrackerRegistry not yet registered');
+  }
+
+  /// Check if the current service is an add-on tracker.
+  bool get isAddonActive => activeAddonId.value != null;
+
+  /// Get the active addon's OnlineService, if any.
+  OnlineService? get activeAddonService {
+    final id = activeAddonId.value;
+    if (id == null) return null;
+    return addonManager.getService(id);
+  }
+
   BaseService get service {
     switch (serviceType.value) {
       case ServicesType.anilist:
@@ -88,7 +122,16 @@ class ServiceHandler extends GetxController {
   }
 
   OnlineService? get activeOrLoggedInOnlineService {
+    // If an addon is active, return it
+    final addon = activeAddonService;
+    if (addon != null && addon.isLoggedIn.value) return addon;
+
     if (serviceType.value == ServicesType.extensions) {
+      // Check addon services first
+      for (final s in addonManager.loggedInOnlineServices) {
+        return s;
+      }
+      // Fall back to built-in
       if (anilistService.isLoggedIn.value) return anilistService;
       if (malService.isLoggedIn.value) return malService;
       if (simklService.isLoggedIn.value) return simklService;
@@ -98,6 +141,11 @@ class ServiceHandler extends GetxController {
   }
 
   Rx<Profile> get profileData {
+    // If addon active, use its profile
+    final addon = activeAddonService;
+    if (addon != null && addon.isLoggedIn.value) {
+      return addon.profileData;
+    }
     if (serviceType.value == ServicesType.extensions) {
       final activeService = activeOrLoggedInOnlineService;
       if (activeService != null) {
@@ -108,12 +156,27 @@ class ServiceHandler extends GetxController {
     return onlineService.profileData;
   }
 
-  RxList<TrackedMedia> get animeList => onlineService.animeList;
-  RxList<TrackedMedia> get mangaList => onlineService.mangaList;
+  RxList<TrackedMedia> get animeList {
+    final addon = activeAddonService;
+    if (addon != null) return addon.animeList;
+    return onlineService.animeList;
+  }
 
-  Rx<TrackedMedia> get currentMedia => onlineService.currentMedia;
+  RxList<TrackedMedia> get mangaList {
+    final addon = activeAddonService;
+    if (addon != null) return addon.mangaList;
+    return onlineService.mangaList;
+  }
+
+  Rx<TrackedMedia> get currentMedia {
+    final addon = activeAddonService;
+    if (addon != null) return addon.currentMedia;
+    return onlineService.currentMedia;
+  }
 
   RxBool get isLoggedIn {
+    final addon = activeAddonService;
+    if (addon != null) return addon.isLoggedIn;
     if (serviceType.value == ServicesType.extensions) {
       return (activeOrLoggedInOnlineService != null).obs;
     }
@@ -121,20 +184,51 @@ class ServiceHandler extends GetxController {
   }
 
   // Online Services Method
-  Future<void> login(BuildContext context) => onlineService.login(context);
-  Future<void> logout() => onlineService.logout();
-  Future<void> autoLogin() => Future.wait([
-        malService.autoLogin(),
-        anilistService.autoLogin(),
-        simklService.autoLogin(),
-      ]);
+  Future<void> login(BuildContext context) {
+    final addon = activeAddonService;
+    if (addon != null) return addon.login(context);
+    return onlineService.login(context);
+  }
+
+  Future<void> logout() {
+    final addon = activeAddonService;
+    if (addon != null) {
+      activeAddonId.value = null;
+      return addon.logout();
+    }
+    return onlineService.logout();
+  }
+
+  Future<void> autoLogin() async {
+    // Also auto-login addon services (if manager is available)
+    List<Future<void>> addonFutures = [];
+    try {
+      addonFutures = addonManager.allServices
+          .where((s) => s.hasToken)
+          .map((s) => s.autoLogin())
+          .toList();
+    } catch (_) {
+      // TrackerAddonManager not yet registered — skip
+    }
+    await Future.wait([
+      ...addonFutures,
+      malService.autoLogin(),
+      anilistService.autoLogin(),
+      simklService.autoLogin(),
+    ]);
+  }
   @override
   Future<void> refresh() => onlineService.refresh();
 
   Future<void> updateListEntry(
     UpdateListEntryParams params,
-  ) async =>
-      await onlineService.updateListEntry(params);
+  ) async {
+    final addon = activeAddonService;
+    if (addon != null && addon.isLoggedIn.value) {
+      return addon.updateListEntry(params);
+    }
+    return await onlineService.updateListEntry(params);
+  }
 
   RxList<Widget> animeWidgets(BuildContext context) =>
       service.animeWidgets(context);
@@ -154,13 +248,6 @@ class ServiceHandler extends GetxController {
       );
     }
     return null;
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    serviceType.value =
-        ServicesType.values[ServiceKeys.serviceType.get<int>(0)];
   }
 
   @override
@@ -191,10 +278,42 @@ class ServiceHandler extends GetxController {
   void clearState() => service.clearState();
 
   void changeService(ServicesType type) {
+    activeAddonId.value = null; // Deactivate any addon
     ServiceKeys.serviceType.set(type.index);
     serviceType.value = type;
     if (!service.isDataLoaded) {
       fetchHomePage();
+    }
+  }
+
+  /// Switch to an add-on tracker as the active tracking service.
+  /// The content browsing remains on the current ServicesType,
+  /// but tracking operations (update progress, list) go through the addon.
+  void changeToAddonTracker(String addonId) {
+    if (!addonManager.hasService(addonId)) {
+      Logger.w('Cannot switch to unknown addon: $addonId');
+      return;
+    }
+    activeAddonId.value = addonId;
+    KvHelper.set('activeAddonServiceId', addonId);
+    Logger.i('Switched tracking to addon: $addonId');
+  }
+
+  /// Remove the addon tracker and go back to built-in tracking.
+  void clearAddonTracker() {
+    activeAddonId.value = null;
+    KvHelper.remove('activeAddonServiceId');
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    serviceType.value =
+        ServicesType.values[ServiceKeys.serviceType.get<int>(0)];
+    // Restore active addon from storage
+    final savedAddon = KvHelper.get<String>('activeAddonServiceId');
+    if (savedAddon != null && savedAddon.isNotEmpty) {
+      activeAddonId.value = savedAddon;
     }
   }
 }

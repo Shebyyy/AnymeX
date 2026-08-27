@@ -306,3 +306,9 @@ enum DownloadKeys {
   hlsParallelSegments,
   enableJxlCompression,
 }
+
+/// Global (non-keyed) storage keys for tracker add-on system.
+enum AddonGlobalKeys {
+  installedAddons,
+  activeAddonServiceId;
+}
