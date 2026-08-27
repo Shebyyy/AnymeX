@@ -116,7 +116,9 @@ class TrackBindingController extends GetxController {
     }
     try {
       for (final s in Get.find<TrackerAddonManager>().loggedInServices) {
-        ids.add(s.manifest.id);
+        if (s is GenericTrackerService) {
+          ids.add(s.manifest.id);
+        }
       }
     } catch (_) {}
     return ids;

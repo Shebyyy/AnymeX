@@ -6,29 +6,27 @@ import 'package:anymex/utils/logger.dart';
 /// Storage keys for per-addon auth tokens.
 /// Each key stores values keyed by addon ID.
 class AddonKeys {
+  AddonKeys._();
+
   static const _prefix = 'addon_';
 
-  /// Access token: stored as `addon_auth_token_{addonId}` → String
-  static final _authToken = _AddonKey('auth_token');
-  static _AddonKey get authToken => _authToken;
+  /// Access token
+  static const authToken = AddonKey('auth_token');
 
-  /// Refresh token: `addon_auth_refresh_token_{addonId}` → String
-  static final _authRefreshToken = _AddonKey('auth_refresh_token');
-  static _AddonKey get authRefreshToken => _authRefreshToken;
+  /// Refresh token
+  static const authRefreshToken = AddonKey('auth_refresh_token');
 
-  /// User ID: `addon_auth_user_id_{addonId}` → String
-  static final _authUserId = _AddonKey('auth_user_id');
-  static _AddonKey get authUserId => _authUserId;
+  /// User ID
+  static const authUserId = AddonKey('auth_user_id');
 
-  /// Cached user data JSON: `addon_auth_user_data_{addonId}` → String (JSON)
-  static final _authUserData = _AddonKey('auth_user_data');
-  static _AddonKey get authUserData => _authUserData;
+  /// Cached user data JSON
+  static const authUserData = AddonKey('auth_user_data');
 }
 
 /// Helper for per-addon key-value storage.
-class _AddonKey {
+class AddonKey {
   final String suffix;
-  const _AddonKey(this.suffix);
+  const AddonKey(this.suffix);
 
   String _key(String addonId) => '${AddonKeys._prefix}${suffix}_$addonId';
 
@@ -100,7 +98,7 @@ class TrackerRegistry {
   void _load() {
     try {
       final raw = KvHelper.get<String>(_registryKey);
-      if (raw != null && raw.isNotEmpty) {
+      if (raw.isNotEmpty) {
         final decoded = jsonDecode(raw) as Map<String, dynamic>;
         _entries = decoded.map((k, v) {
           final map = v as Map;

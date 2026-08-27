@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:anymex/controllers/discord/discord_login.dart';
 import 'package:anymex/controllers/discord/discord_rpc.dart';
@@ -11,13 +10,11 @@ import 'package:anymex/controllers/tracker_addon/tracker_manifest.dart';
 import 'package:anymex/controllers/tracker_addon/tracker_registry.dart';
 import 'package:anymex/models/Service/online_service.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_anilist_api.dart';
-import 'package:anymex/screens/other_features.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/common/anymex_scaffold.dart';
 import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_section_builder.dart';
-import 'package:anymex/widgets/anymex_widgets/anymex_tile.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/widgets/helper/scroll_wrapper.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';

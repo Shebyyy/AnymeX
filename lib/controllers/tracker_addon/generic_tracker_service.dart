@@ -121,7 +121,7 @@ class GenericTrackerService extends GetxController implements OnlineService {
       jsonEncode({
         'name': p.name,
         'avatar': p.avatar,
-        'banner': p.banner,
+        'cover': p.cover,
         'about': p.about,
         'stats': p.stats,
       }),
@@ -139,10 +139,10 @@ class GenericTrackerService extends GetxController implements OnlineService {
       case AuthType.apiKey:
         await _loginApiKey(context);
         break;
-      case AuthType.basicAuth:
+      case AuthType.basic:
         await _loginBasicAuth(context);
         break;
-      case AuthType.tokenOnly:
+      case AuthType.token:
         await _loginTokenOnly(context);
         break;
     }
@@ -547,7 +547,7 @@ class GenericTrackerService extends GetxController implements OnlineService {
     try {
       // Build status conversion (AnymeX internal → remote)
       final remoteStatus = params.status != null
-          ? (manifest.reverseStatusMap[params.status!] ??
+          ? (manifest.reverseStatusMap?[params.status!] ??
               params.status!)
           : null;
 
@@ -581,7 +581,7 @@ class GenericTrackerService extends GetxController implements OnlineService {
 
     try {
       final remoteStatus = params.status != null
-          ? (manifest.reverseStatusMap[params.status!] ?? params.status!)
+          ? (manifest.reverseStatusMap?[params.status!] ?? params.status!)
           : 'CURRENT';
 
       final bodyParams = <String, dynamic>{
@@ -657,11 +657,11 @@ class GenericTrackerService extends GetxController implements OnlineService {
       if (endpoint.queryParamMap != null) {
         if (isManga && endpoint.queryParamMap!.containsKey('type_manga')) {
           extraParams['type'] =
-              endpoint.queryParamMap!['type_manga']!;
+              endpoint.queryParamMap!['type_manga'] ?? '';
         } else if (!isManga &&
             endpoint.queryParamMap!.containsKey('type_anime')) {
           extraParams['type'] =
-              endpoint.queryParamMap!['type_anime']!;
+              endpoint.queryParamMap!['type_anime'] ?? '';
         }
       }
 
@@ -681,14 +681,13 @@ class GenericTrackerService extends GetxController implements OnlineService {
 
       return items.map((item) {
         return Media(
-          id: item['id']?.toString() ?? '',
-          title: (item['title'] as String?) ?? '',
-          poster: item['poster'] as String?,
+          id: item['id']?.toString() ?? '0',
+          title: (item['title'] as String?) ?? '?',
+          poster: item['poster'] as String? ?? '?',
           totalEpisodes:
               (item['total_episodes'] as num?)?.toString() ?? '?',
-          score: (item['score'] as num?)?.toDouble(),
-          description: item['description'] as String?,
-          status: item['status'] as String?,
+          rating: (item['score'] as num?)?.toString() ?? '?',
+          status: item['status'] as String? ?? 'UNKNOWN',
           serviceType: ServicesType.extensions,
         );
       }).toList();

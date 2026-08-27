@@ -126,7 +126,7 @@ class TrackerAddonManager extends GetxController {
   void _loadInstalled() {
     try {
       final raw = KvHelper.get<String>(_installedKey);
-      if (raw == null || raw.isEmpty) return;
+      if (raw.isEmpty) return;
 
       final decoded = jsonDecode(raw) as List<dynamic>;
       for (final entry in decoded) {

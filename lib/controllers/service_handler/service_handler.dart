@@ -7,7 +7,6 @@ import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/controllers/tracker_addon/tracker_addon_manager.dart';
 import 'package:anymex/controllers/tracker_addon/tracker_registry.dart';
 import 'package:anymex/database/data_keys/keys.dart';
-import 'package:anymex/database/kv_helper.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
 import 'package:anymex/models/Media/media.dart';
@@ -290,7 +289,7 @@ class ServiceHandler extends GetxController {
   /// The content browsing remains on the current ServicesType,
   /// but tracking operations (update progress, list) go through the addon.
   void changeToAddonTracker(String addonId) {
-    if (!addonManager.hasService(addonId)) {
+    if (addonManager.getService(addonId) == null) {
       Logger.w('Cannot switch to unknown addon: $addonId');
       return;
     }
@@ -312,7 +311,7 @@ class ServiceHandler extends GetxController {
         ServicesType.values[ServiceKeys.serviceType.get<int>(0)];
     // Restore active addon from storage
     final savedAddon = KvHelper.get<String>('activeAddonServiceId');
-    if (savedAddon != null && savedAddon.isNotEmpty) {
+    if (savedAddon.isNotEmpty) {
       activeAddonId.value = savedAddon;
     }
   }

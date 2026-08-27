@@ -18,7 +18,9 @@ class AuthConfig {
   final String? clientSecret;
   final String? scopes;
   final String? apiKeyHeader;
-  final Map<String, String>? tokenExchangeBody;
+  final String? usernamePlaceholder;
+  final String? passwordPlaceholder;
+  final Map<String, dynamic>? tokenExchangeBody;
 
   const AuthConfig({
     required this.type,
@@ -29,6 +31,8 @@ class AuthConfig {
     this.clientSecret,
     this.scopes,
     this.apiKeyHeader,
+    this.usernamePlaceholder,
+    this.passwordPlaceholder,
     this.tokenExchangeBody,
   });
 
@@ -42,6 +46,8 @@ class AuthConfig {
       clientSecret: json['client_secret'] as String?,
       scopes: json['scopes'] as String?,
       apiKeyHeader: json['api_key_header'] as String?,
+      usernamePlaceholder: json['username_placeholder'] as String?,
+      passwordPlaceholder: json['password_placeholder'] as String?,
       tokenExchangeBody: _mapFromStringDynamic(json['token_exchange_body']),
     );
   }
@@ -71,6 +77,10 @@ class AuthConfig {
         if (clientSecret != null) 'client_secret': clientSecret,
         if (scopes != null) 'scopes': scopes,
         if (apiKeyHeader != null) 'api_key_header': apiKeyHeader,
+        if (usernamePlaceholder != null)
+          'username_placeholder': usernamePlaceholder,
+        if (passwordPlaceholder != null)
+          'password_placeholder': passwordPlaceholder,
         if (tokenExchangeBody != null)
           'token_exchange_body': tokenExchangeBody,
       };
@@ -111,6 +121,7 @@ class EndpointConfig {
   final String? idPath;
   final Map<String, String>? mapping;
   final Map<String, String>? bodyTemplate;
+  final Map<String, String>? queryParamMap;
   final bool? isAnime;
 
   const EndpointConfig({
@@ -120,6 +131,7 @@ class EndpointConfig {
     this.idPath,
     this.mapping,
     this.bodyTemplate,
+    this.queryParamMap,
     this.isAnime,
   });
 
@@ -131,6 +143,7 @@ class EndpointConfig {
       idPath: json['id_path'] as String?,
       mapping: _mapFromString(json['mapping']),
       bodyTemplate: _mapFromString(json['body_template']),
+      queryParamMap: _mapFromString(json['query_param_map']),
       isAnime: json['is_anime'] as bool?,
     );
   }
@@ -142,6 +155,7 @@ class EndpointConfig {
         if (idPath != null) 'id_path': idPath,
         if (mapping != null) 'mapping': mapping,
         if (bodyTemplate != null) 'body_template': bodyTemplate,
+        if (queryParamMap != null) 'query_param_map': queryParamMap,
         if (isAnime != null) 'is_anime': isAnime,
       };
 }
@@ -191,23 +205,6 @@ class EndpointsConfig {
 }
 
 /// The top-level manifest that fully describes a tracker add-on.
-///
-/// Example JSON:
-/// ```json
-/// {
-///   "id": "kitsu",
-///   "name": "Kitsu",
-///   "version": "1.0.0",
-///   "description": "Track anime on Kitsu.io",
-///   "color": "#FD6585",
-///   "icon": "https://kitsu.io/favicon.ico",
-///   "capabilities": ["anime", "manga"],
-///   "auth": { ... },
-///   "api": { ... },
-///   "endpoints": { ... },
-///   "status_map": { ... }
-/// }
-/// ```
 class TrackerManifest {
   final String id;
   final String name;
@@ -247,8 +244,7 @@ class TrackerManifest {
         _mapFromString(json['status_map']) ?? <String, String>{};
     Map<String, String>? reverseStatusMap;
     if (json['reverse_status_map'] != null) {
-      reverseStatusMap =
-          _mapFromString(json['reverse_status_map']);
+      reverseStatusMap = _mapFromString(json['reverse_status_map']);
     }
 
     return TrackerManifest(
@@ -273,9 +269,7 @@ class TrackerManifest {
     );
   }
 
-  /// Build the reverse status map automatically if not provided.
-  static Map<String, String> _buildReverse(
-      Map<String, String> statusMap) {
+  static Map<String, String> _buildReverse(Map<String, String> statusMap) {
     final reverse = <String, String>{};
     for (final entry in statusMap.entries) {
       reverse[entry.value] = entry.key;
@@ -283,7 +277,6 @@ class TrackerManifest {
     return reverse;
   }
 
-  /// Serialize to a JSON string (for sharing/exporting manifests).
   String toJson() {
     return jsonEncode(toMap());
   }
@@ -303,7 +296,6 @@ class TrackerManifest {
         'reverse_status_map': reverseStatusMap,
       };
 
-  /// Parse a JSON string into a TrackerManifest.
   static TrackerManifest? tryParse(String jsonStr) {
     try {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
