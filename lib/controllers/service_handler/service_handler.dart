@@ -310,9 +310,13 @@ class ServiceHandler extends GetxController {
     serviceType.value =
         ServicesType.values[ServiceKeys.serviceType.get<int>(0)];
     // Restore active addon from storage
-    final savedAddon = KvHelper.get<String>('activeAddonServiceId');
-    if (savedAddon.isNotEmpty) {
-      activeAddonId.value = savedAddon;
+    try {
+      final savedAddon = KvHelper.get<String>('activeAddonServiceId');
+      if (savedAddon.isNotEmpty) {
+        activeAddonId.value = savedAddon;
+      }
+    } catch (_) {
+      // Key doesn't exist yet — first run after addon system added
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/tracker_addon/tracker_registry.dart';
+import 'package:get/get.dart';
 
 class TrackBinding {
   /// For built-in trackers: uses the Tracker enum index.
@@ -59,11 +60,11 @@ class TrackBinding {
   String get trackerName {
     if (isAddon) {
       try {
-        final registry = TrackerRegistry();
-        return registry.getTrackerName(addonTrackerId!);
-      } catch (_) {
-        return addonTrackerId!;
-      }
+        if (Get.isRegistered<TrackerRegistry>()) {
+          return Get.find<TrackerRegistry>().getTrackerName(addonTrackerId!);
+        }
+      } catch (_) {}
+      return addonTrackerId!;
     }
     return tracker.label;
   }
@@ -72,11 +73,11 @@ class TrackBinding {
   String get trackerColor {
     if (isAddon) {
       try {
-        final registry = TrackerRegistry();
-        return registry.getTrackerColor(addonTrackerId!);
-      } catch (_) {
-        return '#666666';
-      }
+        if (Get.isRegistered<TrackerRegistry>()) {
+          return Get.find<TrackerRegistry>().getTrackerColor(addonTrackerId!);
+        }
+      } catch (_) {}
+      return '#666666';
     }
     return '#${tracker.color.toRadixString(16).padLeft(8, '0').substring(2)}';
   }

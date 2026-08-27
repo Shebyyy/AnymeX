@@ -132,7 +132,7 @@ class _AddonTrackerSectionState extends State<_AddonTrackerSection> {
             if (service == null) return const SizedBox.shrink();
             final genericService = service as GenericTrackerService;
             final manifest = genericService.manifest;
-            final registry = TrackerRegistry();
+            final registry = Get.find<TrackerRegistry>();
             final isActive =
                 Get.find<ServiceHandler>().activeAddonId.value == id;
 

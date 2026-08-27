@@ -70,12 +70,21 @@ class GenericTrackerService extends GetxController implements OnlineService {
   // ── Auth Storage ─────────────────────────────────────────────────
 
   void _loadAuthFromStorage() {
-    _accessToken = AddonKeys.authToken.get<String>(manifest.id);
-    _refreshToken = AddonKeys.authRefreshToken.get<String>(manifest.id);
-    _userId = AddonKeys.authUserId.get<String>(manifest.id);
+    try {
+      _accessToken = AddonKeys.authToken.get<String>(manifest.id);
+    } catch (_) {}
+    try {
+      _refreshToken = AddonKeys.authRefreshToken.get<String>(manifest.id);
+    } catch (_) {}
+    try {
+      _userId = AddonKeys.authUserId.get<String>(manifest.id);
+    } catch (_) {}
 
     // Load cached profile data
-    final cachedProfile = AddonKeys.authUserData.get<String>(manifest.id);
+    String? cachedProfile;
+    try {
+      cachedProfile = AddonKeys.authUserData.get<String>(manifest.id);
+    } catch (_) {}
     if (cachedProfile != null && cachedProfile.isNotEmpty) {
       try {
         final map = jsonDecode(cachedProfile) as Map<String, dynamic>;
