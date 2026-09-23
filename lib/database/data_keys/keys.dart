@@ -146,7 +146,12 @@ enum LocalSourceKeys {
   watchOfflineDownloadPathHistory,
 }
 
-enum ServiceKeys { serviceType }
+enum ServiceKeys {
+  serviceType,
+  activeAddonId,
+  installedAddons,
+  trackerAddonRepos,
+}
 
 enum SyncKeys {
   gistGithubToken,
@@ -212,7 +217,10 @@ enum DynamicKeys {
   offlineVideoProgress,
   stickySource,
   stickyServer,
-  trackBindings;
+  trackBindings,
+  trackerAddonToken,
+  trackerAddonRefreshToken,
+  trackerAddonProfile;
 
   T get<T>(dynamic id, [T? defaultValue]) {
     return KvHelper.get<T>('${name}_$id', defaultVal: defaultValue);

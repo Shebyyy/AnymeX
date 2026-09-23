@@ -4,6 +4,8 @@ import 'package:anymex/controllers/services/anilist/anilist_data.dart';
 import 'package:anymex/controllers/services/mal/mal_service.dart';
 import 'package:anymex/controllers/services/simkl/simkl_service.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
+import 'package:anymex/controllers/tracker_addon/addon_manager.dart';
+import 'package:anymex/controllers/tracker_addon/addon_service.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
 import 'package:anymex/models/Anilist/anilist_profile.dart';
@@ -19,11 +21,13 @@ enum ServicesType {
   anilist,
   mal,
   simkl,
-  extensions;
+  extensions,
+  addon;
 
   bool get isMal => this == ServicesType.mal;
   bool get isAL => this == ServicesType.anilist;
   bool get isSimkl => this == ServicesType.simkl;
+  bool get isAddon => this == ServicesType.addon;
 
   BaseService get service {
     switch (this) {
@@ -35,6 +39,9 @@ enum ServicesType {
         return Get.find<SimklService>();
       case ServicesType.extensions:
         return Get.find<SourceController>();
+      case ServicesType.addon:
+        return Get.find<ServiceHandler>().currentAddonService ??
+            Get.find<AnilistData>();
     }
   }
 
@@ -46,6 +53,9 @@ enum ServicesType {
         return Get.find<MalService>();
       case ServicesType.simkl:
         return Get.find<SimklService>();
+      case ServicesType.addon:
+        return Get.find<ServiceHandler>().currentAddonService ??
+            Get.find<AnilistData>();
       default:
         return Get.find<AnilistData>();
     }
@@ -61,6 +71,28 @@ class ServiceHandler extends GetxController {
   final simklService = Get.find<SimklService>();
   final extensionService = Get.find<SourceController>();
 
+  final Map<String, AddonService> _addonServices = {};
+  final activeAddonId = ''.obs;
+
+  AddonService? get currentAddonService {
+    if (activeAddonId.value.isEmpty) return null;
+    return getOrInitAddonService(activeAddonId.value);
+  }
+
+  AddonService? getOrInitAddonService(String addonId) {
+    if (_addonServices.containsKey(addonId)) {
+      return _addonServices[addonId];
+    }
+    if (!Get.isRegistered<AddonManager>()) return null;
+    final manifest = AddonManager.to.getInstalled(addonId);
+    if (manifest != null) {
+      final s = AddonService(manifest: manifest);
+      _addonServices[addonId] = s;
+      return s;
+    }
+    return null;
+  }
+
   BaseService get service {
     switch (serviceType.value) {
       case ServicesType.anilist:
@@ -71,6 +103,8 @@ class ServiceHandler extends GetxController {
         return simklService;
       case ServicesType.extensions:
         return extensionService;
+      case ServicesType.addon:
+        return currentAddonService ?? anilistService;
     }
   }
 
@@ -82,6 +116,8 @@ class ServiceHandler extends GetxController {
         return malService;
       case ServicesType.simkl:
         return simklService;
+      case ServicesType.addon:
+        return currentAddonService ?? anilistService;
       default:
         return anilistService;
     }
@@ -123,11 +159,22 @@ class ServiceHandler extends GetxController {
   // Online Services Method
   Future<void> login(BuildContext context) => onlineService.login(context);
   Future<void> logout() => onlineService.logout();
-  Future<void> autoLogin() => Future.wait([
-        malService.autoLogin(),
-        anilistService.autoLogin(),
-        simklService.autoLogin(),
-      ]);
+
+  Future<void> autoLogin() async {
+    final futures = <Future<void>>[
+      malService.autoLogin(),
+      anilistService.autoLogin(),
+      simklService.autoLogin(),
+    ];
+    if (Get.isRegistered<AddonManager>()) {
+      for (final m in AddonManager.to.installedAddons) {
+        final s = getOrInitAddonService(m.id);
+        if (s != null) futures.add(s.autoLogin());
+      }
+    }
+    await Future.wait(futures);
+  }
+
   @override
   Future<void> refresh() => onlineService.refresh();
 
@@ -159,8 +206,11 @@ class ServiceHandler extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    serviceType.value =
-        ServicesType.values[ServiceKeys.serviceType.get<int>(0)];
+    final typeIdx = ServiceKeys.serviceType.get<int>(0);
+    if (typeIdx >= 0 && typeIdx < ServicesType.values.length) {
+      serviceType.value = ServicesType.values[typeIdx];
+    }
+    activeAddonId.value = ServiceKeys.activeAddonId.get<String>('');
   }
 
   @override
@@ -194,6 +244,18 @@ class ServiceHandler extends GetxController {
     ServiceKeys.serviceType.set(type.index);
     serviceType.value = type;
     if (!service.isDataLoaded) {
+      fetchHomePage();
+    }
+  }
+
+  void changeToAddon(String addonId) {
+    ServiceKeys.serviceType.set(ServicesType.addon.index);
+    ServiceKeys.activeAddonId.set(addonId);
+    activeAddonId.value = addonId;
+    serviceType.value = ServicesType.addon;
+    final addon = getOrInitAddonService(addonId);
+    addon?.autoLogin();
+    if (addon != null && !addon.isDataLoaded) {
       fetchHomePage();
     }
   }

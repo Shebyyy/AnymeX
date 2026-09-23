@@ -78,6 +78,15 @@ class TrackBindingController extends GetxController {
     }
   }
 
+  OnlineService? _onlineForBinding(TrackBinding b) {
+    if (b.isAddon) {
+      return Get.find<ServiceHandler>().getOrInitAddonService(b.addonId!);
+    }
+    final t = b.tracker;
+    if (t == null) return null;
+    return _online(t);
+  }
+
   bool isLoggedIn(Tracker t) => _online(t).isLoggedIn.value;
 
   List<Tracker> loggedInTrackers() =>
@@ -122,9 +131,8 @@ class TrackBindingController extends GetxController {
     if (bindings.isEmpty) return;
 
     await Future.wait(bindings.map((b) async {
-      final tracker = b.tracker;
-      final service = _online(tracker);
-      if (!service.isLoggedIn.value) return;
+      final service = _onlineForBinding(b);
+      if (service == null || !service.isLoggedIn.value) return;
       try {
         await service.updateListEntry(UpdateListEntryParams(
           listId: b.remoteId,
@@ -136,7 +144,7 @@ class TrackBindingController extends GetxController {
         b.progress = progress;
         if (status != null) b.status = status;
       } catch (e) {
-        Logger.e('Track sync failed for ${tracker.label} ($mediaId): $e');
+        Logger.e('Track sync failed for ${b.title} ($mediaId): $e');
       }
     }));
 
@@ -194,8 +202,8 @@ class TrackBindingController extends GetxController {
     final newScore = score ?? binding.score;
     final newPrivate = isPrivate ?? binding.private;
 
-    final service = _online(binding.tracker);
-    if (service.isLoggedIn.value) {
+    final service = _onlineForBinding(binding);
+    if (service != null && service.isLoggedIn.value) {
       try {
         await service.updateListEntry(UpdateListEntryParams(
           listId: binding.remoteId,
@@ -207,7 +215,7 @@ class TrackBindingController extends GetxController {
         ));
       } catch (e) {
         Logger.e(
-            'Track remote update failed for ${binding.tracker.label} ($mediaId): $e — keeping local update only');
+            'Track remote update failed for ${binding.title} ($mediaId): $e — keeping local update only');
       }
     }
 

@@ -1,18 +1,21 @@
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/services/storage/anymex_cache_manager.dart';
+import 'package:anymex/controllers/tracker_addon/addon_manager.dart';
 import 'package:anymex/models/Service/online_service.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_anilist_api.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_tracker_addons.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
-import 'package:anymex/widgets/common/anymex_scaffold.dart';
-import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_section_builder.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
+import 'package:anymex/widgets/anymex_widgets/anymex_tile.dart';
+import 'package:anymex/widgets/common/anymex_scaffold.dart';
+import 'package:anymex/widgets/common/custom_tiles.dart';
 import 'package:anymex/widgets/helper/scroll_wrapper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:get/get.dart';
 
 class SettingsAccounts extends StatefulWidget {
   const SettingsAccounts({super.key});
@@ -22,10 +25,11 @@ class SettingsAccounts extends StatefulWidget {
 }
 
 class _SettingsAccountsState extends State<SettingsAccounts> {
-
   @override
   Widget build(BuildContext context) {
     final serviceHandler = Get.find<ServiceHandler>();
+    final addonManager = Get.find<AddonManager>();
+
     final services = [
       {
         'serviceIcon': 'anilist.png',
@@ -53,38 +57,66 @@ class _SettingsAccountsState extends State<SettingsAccounts> {
       headerTitle: 'Accounts',
       body: Builder(
         builder: (ctx) => ScrollWrapper(
-                  comfortPadding: false,
-                  customPadding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 30.0),
-                  children: [
-                    SizedBox(height: AnymeXHeaderScope.of(ctx)),
-                    AnymeXSectionBuilder(
-                      title: 'Tracking Services',
-                      children: services
-                          .map((s) => TrackingServiceCard(
-                                serviceIcon: s['serviceIcon'] as String,
-                                service: s['service'] as OnlineService,
-                                title: s['title'] as String,
-                              ))
-                          .toList(),
-                    ),
-                  ],
-                )
+          comfortPadding: false,
+          customPadding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 30.0),
+          children: [
+            SizedBox(height: AnymeXHeaderScope.of(ctx)),
+            AnymeXSectionBuilder(
+              title: 'Tracking Services',
+              children: services
+                  .map((s) => TrackingServiceCard(
+                        serviceIcon: s['serviceIcon'] as String,
+                        service: s['service'] as OnlineService,
+                        title: s['title'] as String,
+                      ))
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            Obx(() {
+              final addons = addonManager.installedAddons;
+              return AnymeXSectionBuilder(
+                title: 'Tracker Add-ons',
+                children: [
+                  AnymeXTile(
+                    title: 'Manage Add-ons',
+                    subtitle: 'Browse, install, and update external trackers',
+                    icon: IconlyLight.folder,
+                    onTap: () => navigate(() => const SettingsTrackerAddons()),
+                  ),
+                  ...addons.map((manifest) {
+                    final addonService =
+                        serviceHandler.getOrInitAddonService(manifest.id);
+                    if (addonService == null) return const SizedBox.shrink();
+                    return TrackingServiceCard(
+                      serviceIcon: manifest.icon ?? '',
+                      service: addonService,
+                      title: manifest.name,
+                      isUrlIcon: manifest.icon != null &&
+                          manifest.icon!.startsWith('http'),
+                    );
+                  }),
+                ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
 }
 
-
 class TrackingServiceCard extends StatelessWidget {
   final String serviceIcon;
   final OnlineService service;
   final String title;
+  final bool isUrlIcon;
 
   const TrackingServiceCard({
     super.key,
     required this.serviceIcon,
     required this.service,
     required this.title,
+    this.isUrlIcon = false,
   });
 
   @override
@@ -134,12 +166,14 @@ class TrackingServiceCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AnymeXText(title,
+                          AnymeXText(
+                            title,
                             variant: TextVariant.semiBold,
                             size: 16,
                           ),
                           const SizedBox(height: 2),
-                          AnymeXText(isLogged
+                          AnymeXText(
+                            isLogged
                                 ? 'Connected as $username'
                                 : 'Not connected',
                             size: 12,
@@ -160,7 +194,8 @@ class TrackingServiceCard extends StatelessWidget {
                             : (colors.primary).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: AnymeXText(isLogged ? "Manage" : "Connect",
+                      child: AnymeXText(
+                        isLogged ? "Manage" : "Connect",
                         variant: TextVariant.bold,
                         size: 12,
                         color: isLogged ? colors.onSurface : (colors.primary),
@@ -182,13 +217,36 @@ class TrackingServiceCard extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            image: DecorationImage(
-                image: CachedNetworkImageProvider(
-                  avatarUrl,
-                  cacheManager: AnymeXCacheManager.instance,
-                ),
-                fit: BoxFit.cover)),
+          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: CachedNetworkImageProvider(
+              avatarUrl,
+              cacheManager: AnymeXCacheManager.instance,
+            ),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+
+    if (isUrlIcon && serviceIcon.isNotEmpty) {
+      return Container(
+        width: 44,
+        height: 44,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: CachedNetworkImage(
+          imageUrl: serviceIcon,
+          fit: BoxFit.contain,
+          errorWidget: (c, o, s) => AnymeXText(
+            title.isNotEmpty ? title[0] : 'T',
+            variant: TextVariant.bold,
+            size: 18,
+          ),
+        ),
       );
     }
 
@@ -202,7 +260,11 @@ class TrackingServiceCard extends StatelessWidget {
       ),
       child: Image.asset(
         'assets/icons/$serviceIcon',
-        errorBuilder: (c, o, s) => const Icon(IconlyBold.danger),
+        errorBuilder: (c, o, s) => AnymeXText(
+          title.isNotEmpty ? title[0] : 'T',
+          variant: TextVariant.bold,
+          size: 18,
+        ),
       ),
     );
   }

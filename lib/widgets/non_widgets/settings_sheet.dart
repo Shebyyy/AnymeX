@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:anymex/controllers/service_handler/service_handler.dart';
+import 'package:anymex/controllers/tracker_addon/addon_manager.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:anymex/screens/downloads/download_screen.dart';
 import 'package:anymex/screens/extensions/ExtensionScreen.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
@@ -37,32 +39,49 @@ class SettingsSheet extends StatelessWidget {
   void showServiceSelector(BuildContext context) {
     final theme = Theme.of(context);
 
-    final services = [
+    final services = <Map<String, dynamic>>[
       {
         'type': ServicesType.anilist,
         'name': "AniList",
         'icon': 'anilist-icon.png',
-        'desc': 'Track anime & manga'
+        'desc': 'Track anime & manga',
+        'isAddon': false,
       },
       {
         'type': ServicesType.mal,
         'name': "MyAnimeList",
         'icon': 'mal-icon.png',
-        'desc': 'The largest database of anime & manga'
+        'desc': 'The largest database of anime & manga',
+        'isAddon': false,
       },
       {
         'type': ServicesType.simkl,
         'name': "Simkl",
         'icon': 'simkl-icon.png',
-        'desc': 'for movies and series'
+        'desc': 'for movies and series',
+        'isAddon': false,
       },
       {
         'type': ServicesType.extensions,
         'name': "Extensions",
         'icon': null,
-        'desc': 'Third-party plugins'
+        'desc': 'Third-party plugins',
+        'isAddon': false,
       },
     ];
+
+    if (Get.isRegistered<AddonManager>()) {
+      for (final addon in AddonManager.to.installedAddons) {
+        services.add({
+          'type': ServicesType.addon,
+          'addonId': addon.id,
+          'name': addon.name,
+          'icon': addon.icon,
+          'desc': addon.description ?? 'Community Tracker Add-on',
+          'isAddon': true,
+        });
+      }
+    }
 
     AnymeXSheet.custom(
       ConstrainedBox(
@@ -105,8 +124,12 @@ class SettingsSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 25),
                 ...services.map((service) {
-                  final isSelected =
-                      serviceHandler.serviceType.value == service['type'];
+                  final isAddon = service['isAddon'] == true;
+                  final isSelected = isAddon
+                      ? (serviceHandler.serviceType.value == ServicesType.addon &&
+                          serviceHandler.activeAddonId.value ==
+                              service['addonId'])
+                      : serviceHandler.serviceType.value == service['type'];
                   final primaryColor = theme.colorScheme.primary;
 
                   return Padding(
@@ -116,9 +139,14 @@ class SettingsSheet extends StatelessWidget {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () {
-                          serviceHandler.changeService(
-                            service['type'] as ServicesType,
-                          );
+                          if (isAddon) {
+                            serviceHandler
+                                .changeToAddon(service['addonId'] as String);
+                          } else {
+                            serviceHandler.changeService(
+                              service['type'] as ServicesType,
+                            );
+                          }
                           Get.back();
                         },
                         child: AnimatedContainer(
@@ -151,22 +179,39 @@ class SettingsSheet extends StatelessWidget {
                                       : theme.colorScheme.surface,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: service['icon'] != null
-                                    ? Image.asset(
-                                        'assets/images/${service['icon']}',
-                                        width: 24,
-                                        height: 24,
-                                        color: isSelected
-                                            ? primaryColor
-                                            : theme.iconTheme.color,
-                                      )
-                                    : Icon(
-                                        Icons.extension_rounded,
-                                        size: 24,
-                                        color: isSelected
-                                            ? primaryColor
-                                            : theme.iconTheme.color,
-                                      ),
+                                child: isAddon
+                                    ? (service['icon'] != null &&
+                                            (service['icon'] as String)
+                                                .startsWith('http')
+                                        ? CachedNetworkImage(
+                                            imageUrl:
+                                                service['icon'] as String,
+                                            width: 24,
+                                            height: 24,
+                                            fit: BoxFit.contain,
+                                            errorWidget: (c, o, s) =>
+                                                const Icon(
+                                                    Icons.extension_rounded,
+                                                    size: 24),
+                                          )
+                                        : const Icon(Icons.extension_rounded,
+                                            size: 24))
+                                    : (service['icon'] != null
+                                        ? Image.asset(
+                                            'assets/images/${service['icon']}',
+                                            width: 24,
+                                            height: 24,
+                                            color: isSelected
+                                                ? primaryColor
+                                                : theme.iconTheme.color,
+                                          )
+                                        : Icon(
+                                            Icons.extension_rounded,
+                                            size: 24,
+                                            color: isSelected
+                                                ? primaryColor
+                                                : theme.iconTheme.color,
+                                          )),
                               ),
                               const SizedBox(width: 16),
                               Expanded(

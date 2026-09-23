@@ -22,6 +22,7 @@ import 'package:anymex/controllers/services/storage/storage_manager_service.dart
 import 'package:anymex/controllers/services/community_service.dart';
 import 'package:anymex/controllers/settings/settings.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
+import 'package:anymex/controllers/tracker_addon/addon_manager.dart';
 import 'package:anymex/controllers/sync/gist_sync_controller.dart';
 import 'package:anymex/controllers/theme.dart';
 import 'package:anymex/controllers/ui/greeting.dart';
@@ -271,6 +272,7 @@ void _initializeGetxController() async {
     if (!Get.isRegistered<SourceController>()) {
       Get.put(SourceController());
     }
+    Get.put(AddonManager());
     Get.put(ServiceHandler());
     Get.put(TrackBindingController());
     Get.put(GreetingController());

@@ -3,6 +3,7 @@ import 'package:anymex/controllers/service_handler/service_handler.dart';
 class TrackBinding {
   final int trackerId;
   final String remoteId;
+  final String? addonId;
 
   final String title;
   final String? poster;
@@ -20,6 +21,7 @@ class TrackBinding {
   TrackBinding({
     required this.trackerId,
     required this.remoteId,
+    this.addonId,
     required this.title,
     this.poster,
     this.totalEpisodes,
@@ -30,11 +32,19 @@ class TrackBinding {
     this.private = false,
   });
 
-  Tracker get tracker => Tracker.values[trackerId];
+  bool get isAddon => addonId != null && addonId!.isNotEmpty;
+
+  Tracker? get tracker {
+    if (isAddon || trackerId < 0 || trackerId >= Tracker.values.length) {
+      return null;
+    }
+    return Tracker.values[trackerId];
+  }
 
   Map<String, dynamic> toJson() => {
         'trackerId': trackerId,
         'remoteId': remoteId,
+        if (addonId != null) 'addonId': addonId,
         'title': title,
         'poster': poster,
         'totalEpisodes': totalEpisodes,
@@ -49,6 +59,7 @@ class TrackBinding {
     return TrackBinding(
       trackerId: (json['trackerId'] as num?)?.toInt() ?? 0,
       remoteId: json['remoteId']?.toString() ?? '',
+      addonId: json['addonId']?.toString(),
       title: json['title']?.toString() ?? '',
       poster: json['poster']?.toString(),
       totalEpisodes: json['totalEpisodes']?.toString(),
