@@ -273,13 +273,11 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
           height: 48,
           fit: BoxFit.cover,
           radius: 14,
-          errorWidget: Container(
+          errorWidget: AnymeXContainer(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(
-              color: brandColor.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
+            color: brandColor.withOpacity(0.18),
+            borderRadius: BorderRadius.circular(14),
             alignment: Alignment.center,
             child: AnymeXText(
               name.isNotEmpty ? name[0].toUpperCase() : 'T',
@@ -291,13 +289,11 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
         ),
       );
     }
-    return Container(
+    return AnymeXContainer(
       width: 48,
       height: 48,
-      decoration: BoxDecoration(
-        color: brandColor.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(14),
-      ),
+      color: brandColor.withOpacity(0.18),
+      borderRadius: BorderRadius.circular(14),
       alignment: Alignment.center,
       child: AnymeXText(
         name.isNotEmpty ? name[0].toUpperCase() : 'T',
@@ -318,19 +314,14 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
   }) {
     return Tooltip(
       message: tooltip,
-      child: Material(
+      child: AnymeXContainerButton(
+        onTap: onTap,
         color: color.withOpacity(0.7),
         borderRadius: borderRadius,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: borderRadius,
-          child: SizedBox(
-            height: 38,
-            width: 38,
-            child: Icon(icon, size: iconSize, color: Colors.black),
-          ),
-        ),
+        height: 38,
+        width: 38,
+        alignment: Alignment.center,
+        child: Icon(icon, size: iconSize, color: Colors.black),
       ),
     );
   }
@@ -387,15 +378,13 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                       runSpacing: 3,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
+                        AnymeXContainer(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.secondary,
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(8),
-                              right: Radius.circular(4),
-                            ),
+                          color: theme.secondary,
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(8),
+                            right: Radius.circular(4),
                           ),
                           child: AnymeXText(
                             manifest.capabilities.join(', ').toUpperCase(),
@@ -408,15 +397,13 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                             ),
                           ),
                         ),
-                        Container(
+                        AnymeXContainer(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.tertiary,
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(4),
-                              right: Radius.circular(8),
-                            ),
+                          color: theme.tertiary,
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(4),
+                            right: Radius.circular(8),
                           ),
                           child: AnymeXText(
                             'v${manifest.version}'.toUpperCase(),
@@ -430,13 +417,11 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                           ),
                         ),
                         if (isActive)
-                          Container(
+                          AnymeXContainer(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: brandColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            color: brandColor,
+                            borderRadius: BorderRadius.circular(8),
                             child: AnymeXText(
                               'ACTIVE',
                               style: TextStyle(
@@ -612,15 +597,13 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                       runSpacing: 3,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
+                        AnymeXContainer(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.secondary,
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(8),
-                              right: Radius.circular(4),
-                            ),
+                          color: theme.secondary,
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(8),
+                            right: Radius.circular(4),
                           ),
                           child: AnymeXText(
                             info.capabilities.join(', ').toUpperCase(),
@@ -633,15 +616,13 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                             ),
                           ),
                         ),
-                        Container(
+                        AnymeXContainer(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: hasUpdate ? theme.primary : theme.tertiary,
-                            borderRadius: const BorderRadius.horizontal(
-                              left: Radius.circular(4),
-                              right: Radius.circular(8),
-                            ),
+                          color: hasUpdate ? theme.primary : theme.tertiary,
+                          borderRadius: const BorderRadius.horizontal(
+                            left: Radius.circular(4),
+                            right: Radius.circular(8),
                           ),
                           child: AnymeXText(
                             hasUpdate
