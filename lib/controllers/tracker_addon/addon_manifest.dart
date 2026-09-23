@@ -222,6 +222,7 @@ class EndpointsConfig {
   final EndpointConfig? userLibrary;
   final EndpointConfig? updateEntry;
   final EndpointConfig? deleteEntry;
+  final EndpointConfig? calendar;
 
   const EndpointsConfig({
     this.homeSections = const [],
@@ -231,6 +232,7 @@ class EndpointsConfig {
     this.userLibrary,
     this.updateEntry,
     this.deleteEntry,
+    this.calendar,
   });
 
   factory EndpointsConfig.fromJson(Map<String, dynamic> json) {
@@ -248,6 +250,7 @@ class EndpointsConfig {
       userLibrary: _endpoint(json['user_library']),
       updateEntry: _endpoint(json['update_entry']),
       deleteEntry: _endpoint(json['delete_entry']),
+      calendar: _endpoint(json['calendar']),
     );
   }
 
@@ -264,6 +267,7 @@ class EndpointsConfig {
         if (userLibrary != null) 'user_library': userLibrary!.toJson(),
         if (updateEntry != null) 'update_entry': updateEntry!.toJson(),
         if (deleteEntry != null) 'delete_entry': deleteEntry!.toJson(),
+        if (calendar != null) 'calendar': calendar!.toJson(),
       };
 }
 

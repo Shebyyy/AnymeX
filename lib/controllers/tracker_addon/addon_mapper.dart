@@ -59,6 +59,19 @@ class AddonMapper {
     return node;
   }
 
+  /// Helper to resolve relative image URLs against add-on base URL
+  static String resolveImageUrl(String url, AddonManifest manifest) {
+    final clean = url.trim();
+    if (clean.isEmpty) return clean;
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    final base = Uri.tryParse(manifest.api.baseUrl);
+    if (base != null && base.hasScheme) {
+      final origin = '${base.scheme}://${base.host}';
+      return clean.startsWith('/') ? '$origin$clean' : '$origin/$clean';
+    }
+    return clean;
+  }
+
   /// Map a raw JSON object to AnymeX `Media` model.
   static Media mapToMedia(
     Map<String, dynamic> json,
@@ -91,9 +104,10 @@ class AddonMapper {
     final id = extract('id', '0');
     final title = extract('title', extract('canonicalTitle', 'Unknown'));
     final romajiTitle = extract('romajiTitle', extract('englishTitle', title));
-    final poster = extract('poster', extract('image', ''));
-    final largePoster = extract('largePoster', poster);
-    final cover = extract('cover', extract('banner', ''));
+    final poster = resolveImageUrl(extract('poster', extract('image', '')), manifest);
+    final largePoster = resolveImageUrl(extract('largePoster', poster), manifest);
+    final coverRaw = extract('cover', extract('banner', ''));
+    final cover = coverRaw.isNotEmpty ? resolveImageUrl(coverRaw, manifest) : null;
     final description = extract('description', extract('synopsis', ''));
     final totalEpisodes = extract('totalEpisodes', extract('episodeCount', '?'));
     final totalChapters = extract('totalChapters', extract('chapterCount', '?'));
@@ -104,8 +118,31 @@ class AddonMapper {
     final duration = extract('duration', '');
     final season = extract('season', '');
     final premiered = extract('premiered', extract('startDate', ''));
+    final aired = extract('aired', extract('aired_on', premiered));
     final genres = extractList('genres');
     final studios = extractList('studios');
+
+    final nextEpisodeStr = extract('episode', extract('nextEpisode', ''));
+    final airingAtStr = extract('airingAt', extract('airing_at', extract('next_episode_at', '')));
+    NextAiringEpisode? nextAiring;
+    if (airingAtStr.isNotEmpty) {
+      int? airingTimestamp;
+      final parsedDate = DateTime.tryParse(airingAtStr);
+      if (parsedDate != null) {
+        airingTimestamp = parsedDate.millisecondsSinceEpoch ~/ 1000;
+      } else {
+        airingTimestamp = int.tryParse(airingAtStr);
+      }
+      if (airingTimestamp != null) {
+        final epNum = int.tryParse(nextEpisodeStr) ?? 1;
+        final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        nextAiring = NextAiringEpisode(
+          airingAt: airingTimestamp,
+          episode: epNum,
+          timeUntilAiring: airingTimestamp - nowSeconds,
+        );
+      }
+    }
 
     final determinedMediaType = isAnime ? ItemType.anime : ItemType.manga;
 
@@ -115,7 +152,7 @@ class AddonMapper {
       romajiTitle: romajiTitle,
       poster: poster,
       largePoster: largePoster,
-      cover: cover.isNotEmpty ? cover : null,
+      cover: cover,
       description: description,
       totalEpisodes: totalEpisodes,
       totalChapters: totalChapters,
@@ -126,10 +163,12 @@ class AddonMapper {
       duration: duration,
       season: season,
       premiered: premiered,
+      aired: aired,
       genres: genres,
       studios: studios.isNotEmpty ? studios : null,
       mediaType: determinedMediaType,
       serviceType: ServicesType.addon,
+      nextAiringEpisode: nextAiring,
     );
   }
 
@@ -150,10 +189,11 @@ class AddonMapper {
     final id = extract('id', '0');
     final mediaId = extract('mediaId', id);
     final title = extract('title', 'Unknown');
-    final poster = extract('poster', extract('image', ''));
-    final rawStatus = extract('status', 'current').toLowerCase();
-    final canonicalStatus =
-        manifest.statusMap[rawStatus] ?? rawStatus.toUpperCase();
+    final poster = resolveImageUrl(extract('poster', extract('image', '')), manifest);
+    final rawStatus = extract('status', 'current').toLowerCase().trim();
+    final canonicalStatus = manifest.statusMap[rawStatus] ??
+        manifest.statusMap[rawStatus.toUpperCase()] ??
+        returnConvertedStatus(rawStatus);
 
     final progressStr =
         extract('progress', extract('episodeProgress', extract('chapterProgress', '0')));
@@ -193,14 +233,21 @@ class AddonMapper {
 
     final id = extract('id');
     final name = extract('name', 'User');
-    final avatar = extract('avatar');
-    final banner = extract('banner');
+    final avatarRaw = extract('avatar');
+    final bannerRaw = extract('banner');
+
+    final avatar = avatarRaw.isNotEmpty
+        ? resolveImageUrl(avatarRaw, manifest)
+        : null;
+    final banner = bannerRaw.isNotEmpty
+        ? resolveImageUrl(bannerRaw, manifest)
+        : null;
 
     return Profile(
       id: id.isNotEmpty ? id : null,
       name: name,
-      avatar: avatar.isNotEmpty ? avatar : null,
-      cover: banner.isNotEmpty ? banner : null,
+      avatar: avatar,
+      cover: banner,
     );
   }
 }

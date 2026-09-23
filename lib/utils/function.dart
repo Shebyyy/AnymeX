@@ -613,11 +613,17 @@ List<TrackedMedia> filterListByStatus(
   switch (status.toUpperCase()) {
     case 'WATCHING':
       return animeList
-          .where((anime) => anime.watchingStatus == 'CURRENT')
+          .where((anime) =>
+              anime.watchingStatus == 'CURRENT' ||
+              anime.watchingStatus == 'WATCHING' ||
+              anime.watchingStatus == 'CURRENTLY WATCHING')
           .toList();
     case 'READING':
       return animeList
-          .where((anime) => anime.watchingStatus == 'CURRENT')
+          .where((anime) =>
+              anime.watchingStatus == 'CURRENT' ||
+              anime.watchingStatus == 'READING' ||
+              anime.watchingStatus == 'CURRENTLY READING')
           .toList();
     case 'COMPLETED TV':
       return animeList
@@ -655,7 +661,10 @@ List<TrackedMedia> filterListByStatus(
           .toList();
     case 'PAUSED':
       return animeList
-          .where((anime) => anime.watchingStatus == 'PAUSED')
+          .where((anime) =>
+              anime.watchingStatus == 'PAUSED' ||
+              anime.watchingStatus == 'ON_HOLD' ||
+              anime.watchingStatus == 'HOLDING')
           .toList();
     case 'DROPPED':
       return animeList
@@ -663,15 +672,22 @@ List<TrackedMedia> filterListByStatus(
           .toList();
     case 'PLANNING':
       return animeList
-          .where((anime) => anime.watchingStatus == 'PLANNING')
+          .where((anime) =>
+              anime.watchingStatus == 'PLANNING' ||
+              anime.watchingStatus == 'PLAN_TO_WATCH' ||
+              anime.watchingStatus == 'PLAN_TO_READ')
           .toList();
     case 'REWATCHING':
       return animeList
-          .where((anime) => anime.watchingStatus == "REPEATING")
+          .where((anime) =>
+              anime.watchingStatus == "REPEATING" ||
+              anime.watchingStatus == "REWATCHING")
           .toList();
     case 'REREADING':
       return animeList
-          .where((anime) => anime.watchingStatus == "REPEATING")
+          .where((anime) =>
+              anime.watchingStatus == "REPEATING" ||
+              anime.watchingStatus == "REREADING")
           .toList();
     case 'COMPLETED MANGA':
       return animeList

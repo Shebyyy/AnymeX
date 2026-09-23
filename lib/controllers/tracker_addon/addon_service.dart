@@ -17,6 +17,11 @@ import 'package:anymex/utils/oauth_helper.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_dialog.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
+import 'package:anymex/screens/library/online/anime_list.dart';
+import 'package:anymex/screens/library/online/manga_list.dart';
+import 'package:anymex/screens/other_features.dart';
+import 'package:anymex/controllers/settings/methods.dart';
+import 'package:anymex/widgets/anymex_widgets/anymex_image_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
@@ -424,14 +429,25 @@ class AddonService extends GetxController
       final animeResults = <TrackedMedia>[];
       final mangaResults = <TrackedMedia>[];
 
+      String cleanUrl(String template, Map<String, String> vars) {
+        var interpolated = _interpolate(template, vars);
+        interpolated = interpolated
+            .replaceAll(RegExp(r'[?&]status=\{status\}'), '')
+            .replaceAll(RegExp(r'[?&]status='), '')
+            .replaceAll('{status}', '');
+        interpolated = interpolated
+            .replaceAll('?&', '?')
+            .replaceAll(RegExp(r'[?&]$'), '');
+        return _buildFullUrl(interpolated);
+      }
+
       // Fetch for anime
       if (manifest.supportsAnime) {
-        final url = _buildFullUrl(_interpolate(endpoint.url, {
+        final url = cleanUrl(endpoint.url, {
           'userId': userId,
           'type': 'anime',
-          'status': 'current',
           'targetType': 'Anime',
-        }));
+        });
 
         final resp = await _client.get(Uri.parse(url), headers: _headers);
         if (resp.statusCode == 200) {
@@ -462,12 +478,11 @@ class AddonService extends GetxController
 
       // Fetch for manga
       if (manifest.supportsManga) {
-        final url = _buildFullUrl(_interpolate(endpoint.url, {
+        final url = cleanUrl(endpoint.url, {
           'userId': userId,
           'type': 'manga',
-          'status': 'current',
           'targetType': 'Manga',
-        }));
+        });
 
         final resp = await _client.get(Uri.parse(url), headers: _headers);
         if (resp.statusCode == 200) {
@@ -500,6 +515,48 @@ class AddonService extends GetxController
       mangaList.value = mangaResults;
     } catch (e) {
       Logger.e('Failed to fetch user library for ${manifest.name}: $e');
+    }
+  }
+
+  /// Fetch airing calendar / schedule from add-on server.
+  Future<void> fetchCalendar(RxList<Media> callbackData) async {
+    final endpoint = manifest.endpoints.calendar;
+    if (endpoint == null) return;
+
+    try {
+      final url = _buildFullUrl(endpoint.url);
+      final resp = await _client.get(Uri.parse(url), headers: _headers);
+
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        final rawItems =
+            (endpoint.itemsPath != null && endpoint.itemsPath != '\$')
+                ? AddonMapper.getPath(decoded, endpoint.itemsPath!)
+                : decoded;
+
+        if (rawItems is List) {
+          final List<Media> items = [];
+          for (final item in rawItems) {
+            if (item is Map) {
+              final media = AddonMapper.mapToMedia(
+                Map<String, dynamic>.from(item),
+                manifest,
+                isAnime: true,
+                customMapping: endpoint.mapping,
+              );
+              items.add(media);
+            }
+          }
+          callbackData.addAll(items);
+          Logger.i('Fetched ${items.length} calendar items from ${manifest.name}');
+        }
+      } else {
+        throw Exception(
+            'Failed to load ${manifest.name} calendar: ${resp.statusCode}');
+      }
+    } catch (e) {
+      Logger.e('Error fetching calendar for ${manifest.name}: $e');
+      rethrow;
     }
   }
 
@@ -760,7 +817,165 @@ class AddonService extends GetxController
 
   @override
   RxList<Widget> homeWidgets(BuildContext context) {
-    return _buildSections(manifest.endpoints.homeSections);
+    return [
+      if (isLoggedIn.value)
+        Obx(() {
+          animeList.length;
+          mangaList.length;
+          for (final list in sectionData.values) {
+            list.length;
+          }
+          final hasAnime = manifest.supportsAnime;
+          final hasManga = manifest.supportsManga;
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth > 600;
+              final buttonHeight = !isDesktop ? 70.0 : 90.0;
+              final double itemWidth = isDesktop ? 300.0 : constraints.maxWidth;
+
+              final animeCover = _findCover(isAnime: true);
+              final mangaCover = _findCover(isAnime: false);
+              final otherCover = _findAnyCover();
+
+              final buttons = <Widget>[];
+
+              if (hasAnime && hasManga) {
+                buttons.add(
+                  SizedBox(
+                    width: itemWidth * 2 + 15,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ImageButton(
+                            height: buttonHeight,
+                            tagIcon: Icons.movie_filter_outlined,
+                            subText: '${animeList.length} items',
+                            buttonText: "ANIME LIST",
+                            backgroundImage: animeCover,
+                            borderRadius: 16.multiplyRadius(),
+                            onPressed: () => navigate(
+                              () => AnimeList(data: animeList.removeDupes()),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: ImageButton(
+                            height: buttonHeight,
+                            tagIcon: Icons.book_outlined,
+                            subText: '${mangaList.length} items',
+                            buttonText: "MANGA LIST",
+                            backgroundImage: mangaCover,
+                            borderRadius: 16.multiplyRadius(),
+                            onPressed: () => navigate(
+                              () => AnilistMangaList(data: mangaList.removeDupes()),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              } else if (hasAnime) {
+                buttons.add(
+                  SizedBox(
+                    width: itemWidth,
+                    child: ImageButton(
+                      height: buttonHeight,
+                      tagIcon: Icons.movie_filter_outlined,
+                      subText: '${animeList.length} items',
+                      buttonText: "ANIME LIST",
+                      backgroundImage: animeCover,
+                      borderRadius: 16.multiplyRadius(),
+                      onPressed: () => navigate(
+                        () => AnimeList(data: animeList.removeDupes()),
+                      ),
+                    ),
+                  ),
+                );
+              } else if (hasManga) {
+                buttons.add(
+                  SizedBox(
+                    width: itemWidth,
+                    child: ImageButton(
+                      height: buttonHeight,
+                      tagIcon: Icons.book_outlined,
+                      subText: '${mangaList.length} items',
+                      buttonText: "MANGA LIST",
+                      backgroundImage: mangaCover,
+                      borderRadius: 16.multiplyRadius(),
+                      onPressed: () => navigate(
+                        () => AnilistMangaList(data: mangaList.removeDupes()),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              buttons.add(
+                SizedBox(
+                  width: (hasAnime && hasManga)
+                      ? (constraints.maxWidth > (itemWidth * 3)
+                          ? itemWidth
+                          : itemWidth * 2 + 15)
+                      : itemWidth,
+                  child: ImageButton(
+                    height: buttonHeight,
+                    subText: 'Calendar, AI Picks and more',
+                    buttonText: "OTHER",
+                    borderRadius: 16.multiplyRadius(),
+                    backgroundImage: otherCover,
+                    onPressed: () => navigate(() => const OtherFeaturesPage()),
+                    imageProportion: 0.5,
+                  ),
+                ),
+              );
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20,
+                  runSpacing: 10,
+                  children: buttons,
+                ),
+              );
+            },
+          );
+        }),
+      ..._buildSections(manifest.endpoints.homeSections),
+    ].obs;
+  }
+
+  String _findCover({bool isAnime = true}) {
+    final list = isAnime ? animeList : mangaList;
+    for (final item in list) {
+      if (item.poster != null && item.poster!.isNotEmpty) return item.poster!;
+    }
+    for (final sec in sectionData.values) {
+      for (final m in sec) {
+        if (m.cover != null && m.cover!.isNotEmpty) return m.cover!;
+        if (m.poster.isNotEmpty) return m.poster;
+      }
+    }
+    return '';
+  }
+
+  String _findAnyCover() {
+    for (final sec in sectionData.values) {
+      for (final m in sec) {
+        if (m.cover != null && m.cover!.isNotEmpty) return m.cover!;
+        if (m.poster.isNotEmpty) return m.poster;
+      }
+    }
+    for (final item in animeList) {
+      if (item.poster != null && item.poster!.isNotEmpty) return item.poster!;
+    }
+    for (final item in mangaList) {
+      if (item.poster != null && item.poster!.isNotEmpty) return item.poster!;
+    }
+    return '';
   }
 
   @override

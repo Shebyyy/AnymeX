@@ -55,6 +55,7 @@ class _CalendarState extends State<Calendar>
 
   bool get isAnilist => serviceHandler.serviceType.value == ServicesType.anilist;
   bool get isSimkl => serviceHandler.serviceType.value == ServicesType.simkl;
+  bool get isAddon => serviceHandler.serviceType.value == ServicesType.addon;
 
   @override
   void initState() {
@@ -82,17 +83,64 @@ class _CalendarState extends State<Calendar>
       listData.clear();
     });
 
-    final ids = serviceHandler.animeList.map((e) => e.id).toSet().toList();
+    final ids = serviceHandler.animeList
+        .map((e) => e.id)
+        .where((id) => id != null && id.isNotEmpty)
+        .toSet();
+    final idMals = serviceHandler.animeList
+        .map((e) => e.idMal)
+        .where((id) => id != null && id.isNotEmpty)
+        .toSet();
+    final titles = serviceHandler.animeList
+        .map((e) => e.title?.toLowerCase().trim())
+        .where((t) => t != null && t.isNotEmpty)
+        .toSet();
 
-    if (isSimkl) {
+    bool matchesUserList(Media e) {
+      if (ids.contains(e.id)) return true;
+      if (e.idMal != '0' &&
+          (ids.contains(e.idMal) || idMals.contains(e.idMal))) {
+        return true;
+      }
+      final t = e.title.toLowerCase().trim();
+      if (titles.contains(t)) return true;
+      final r = e.romajiTitle.toLowerCase().trim();
+      if (titles.contains(r)) return true;
+      return false;
+    }
+
+    final currentAddon = serviceHandler.currentAddonService;
+    final hasAddonCalendar =
+        isAddon && currentAddon?.manifest.endpoints.calendar != null;
+
+    if (hasAddonCalendar) {
+      currentAddon!.fetchCalendar(calendarData).then((_) {
+        if (!mounted) return;
+        setState(() {
+          rawData.value = calendarData.map((e) => e).toList();
+          listData.value = calendarData.where(matchesUserList).toList();
+          isLoading = false;
+          hasError = false;
+        });
+      }).catchError((e) {
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+          hasError = true;
+          final raw = e.toString().replaceFirst('Exception: ', '').trim();
+          errorMessage = raw.isNotEmpty
+              ? raw
+              : 'Failed to load ${currentAddon.manifest.name} calendar data';
+        });
+      });
+    } else if (isSimkl) {
       fetchSimklCalendarData(calendarData, isMovies: true).then((_) {
         return fetchSimklCalendarData(calendarData, isMovies: false);
       }).then((_) {
         if (!mounted) return;
         setState(() {
           rawData.value = calendarData.map((e) => e).toList();
-          listData.value =
-              calendarData.where((e) => ids.contains(e.id)).toList();
+          listData.value = calendarData.where(matchesUserList).toList();
           isLoading = false;
           hasError = false;
         });
@@ -111,8 +159,7 @@ class _CalendarState extends State<Calendar>
         if (!mounted) return;
         setState(() {
           rawData.value = calendarData.map((e) => e).toList();
-          listData.value =
-              calendarData.where((e) => ids.contains(e.id)).toList();
+          listData.value = calendarData.where(matchesUserList).toList();
           isLoading = false;
           hasError = false;
         });
