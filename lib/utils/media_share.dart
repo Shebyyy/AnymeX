@@ -116,6 +116,8 @@ class MediaShare {
         return 'Simkl';
       case ServicesType.extensions:
         return 'Tracking';
+      case ServicesType.addon:
+        return serviceHandler.currentAddonService?.manifest.name ?? 'Add-on';
     }
   }
 
@@ -150,6 +152,7 @@ class MediaShare {
                 : 'anime';
         return 'https://simkl.com/$path/$id';
       case ServicesType.extensions:
+      case ServicesType.addon:
         return null;
     }
   }
@@ -185,6 +188,7 @@ class MediaShare {
                 : 'anime';
         return 'anymex://simkl/$path/$id';
       case ServicesType.extensions:
+      case ServicesType.addon:
         return null;
     }
   }
