@@ -273,19 +273,6 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
           height: 48,
           fit: BoxFit.cover,
           radius: 14,
-          errorWidget: AnymeXContainer(
-            width: 48,
-            height: 48,
-            color: brandColor.withOpacity(0.18),
-            borderRadius: BorderRadius.circular(14),
-            alignment: Alignment.center,
-            child: AnymeXText(
-              name.isNotEmpty ? name[0].toUpperCase() : 'T',
-              size: 20,
-              variant: TextVariant.bold,
-              color: brandColor,
-            ),
-          ),
         ),
       );
     }
@@ -450,7 +437,7 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                       tooltip: 'Update to v${remoteInfo.version}',
                       onTap: () async {
                         final ok = await _manager
-                            .installFromUrl(remoteInfo.manifestUrl);
+                            .installFromUrl(remoteInfo!.manifestUrl);
                         Get.snackbar(
                           ok ? 'Updated' : 'Error',
                           ok

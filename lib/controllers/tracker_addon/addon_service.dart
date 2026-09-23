@@ -631,7 +631,7 @@ class AddonService extends GetxController
   Future<void> fetchHomePage() async {
     final sections = manifest.endpoints.homeSections;
     if (sections.isEmpty) {
-      _isDataLoaded = true;
+      _isDataLoaded.value = true;
       return;
     }
 
@@ -664,7 +664,7 @@ class AddonService extends GetxController
       }
     }));
 
-    _isDataLoaded = true;
+    _isDataLoaded.value = true;
   }
 
   @override
@@ -795,7 +795,7 @@ class AddonService extends GetxController
             rxList.toList(),
             variant: variant,
             type: sec.isAnime ? ItemType.anime : ItemType.manga,
-            isLoading: !_isDataLoaded && rxList.isEmpty,
+            isLoading: !_isDataLoaded.value && rxList.isEmpty,
           )));
     }
     return list;
@@ -804,6 +804,6 @@ class AddonService extends GetxController
   @override
   void clearState() {
     sectionData.clear();
-    _isDataLoaded = false;
+    _isDataLoaded.value = false;
   }
 }
