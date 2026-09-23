@@ -5,12 +5,14 @@ import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_button.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_container.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_dialog.dart';
+import 'package:anymex/widgets/anymex_widgets/anymex_image.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/widgets/common/anymex_scaffold.dart';
 import 'package:anymex/widgets/helper/scroll_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:get/get.dart';
+import 'package:iconsax/iconsax.dart';
 
 class SettingsTrackerAddons extends StatefulWidget {
   const SettingsTrackerAddons({super.key});
@@ -261,9 +263,82 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
     });
   }
 
+  Widget _buildAddonIcon(String? iconUrl, Color brandColor, String name) {
+    if (iconUrl != null && iconUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AnymeXImage(
+          imageUrl: iconUrl,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          radius: 14,
+          errorWidget: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: brandColor.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: AnymeXText(
+              name.isNotEmpty ? name[0].toUpperCase() : 'T',
+              size: 20,
+              variant: TextVariant.bold,
+              color: brandColor,
+            ),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: brandColor.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      alignment: Alignment.center,
+      child: AnymeXText(
+        name.isNotEmpty ? name[0].toUpperCase() : 'T',
+        size: 20,
+        variant: TextVariant.bold,
+        color: brandColor,
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+    double iconSize = 19,
+    required BorderRadius borderRadius,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color.withOpacity(0.7),
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: borderRadius,
+          child: SizedBox(
+            height: 38,
+            width: 38,
+            child: Icon(icon, size: iconSize, color: Colors.black),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInstalledCard(AddonManifest manifest) {
     final sh = Get.find<ServiceHandler>();
     final brandColor = _parseColor(manifest.color);
+    final theme = context.colors;
 
     return Obx(() {
       final isActive = sh.serviceType.value == ServicesType.addon &&
@@ -280,107 +355,117 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
           remoteInfo != null && remoteInfo.version != manifest.version;
 
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
         child: AnymeXContainer(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          radius: 18,
+          color: theme.surfaceContainerHighest.withOpacity(0.35),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: brandColor.withOpacity(0.2),
-                    child: AnymeXText(
-                      manifest.name.isNotEmpty ? manifest.name[0] : 'T',
-                      color: brandColor,
-                      variant: TextVariant.bold,
+              _buildAddonIcon(manifest.icon, brandColor, manifest.name),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnymeXText(
+                      manifest.name,
+                      style: TextStyle(
+                        color: theme.onSurface,
+                        fontFamily: 'Linotte',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 3,
+                      runSpacing: 3,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Row(
-                          children: [
-                            AnymeXText(
-                              manifest.name,
-                              size: 16,
-                              variant: TextVariant.bold,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: theme.secondary,
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(8),
+                              right: Radius.circular(4),
                             ),
-                            const SizedBox(width: 8),
-                            AnymeXText(
-                              'v${manifest.version}',
-                              size: 11,
-                              color: Colors.grey,
+                          ),
+                          child: AnymeXText(
+                            manifest.capabilities.join(', ').toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Linotte',
+                              fontSize: 10.0,
+                              color: theme.secondary.computeLuminance() > 0.5
+                                  ? Colors.black
+                                  : Colors.white,
                             ),
-                          ],
+                          ),
                         ),
-                        if (manifest.author != null)
-                          AnymeXText(
-                            'by ${manifest.author}',
-                            size: 11,
-                            color: Colors.grey,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: theme.tertiary,
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(4),
+                              right: Radius.circular(8),
+                            ),
+                          ),
+                          child: AnymeXText(
+                            'v${manifest.version}'.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Linotte',
+                              fontSize: 10.0,
+                              color: theme.tertiary.computeLuminance() > 0.5
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
+                        if (isActive)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: brandColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: AnymeXText(
+                              'ACTIVE',
+                              style: TextStyle(
+                                fontFamily: 'Linotte',
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10.0,
+                                color: brandColor.computeLuminance() > 0.5
+                                    ? Colors.black
+                                    : Colors.white,
+                              ),
+                            ),
                           ),
                       ],
                     ),
-                  ),
-                  if (isActive)
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: brandColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: brandColor),
-                      ),
-                      child: AnymeXText(
-                        'ACTIVE',
-                        size: 10,
-                        variant: TextVariant.bold,
-                        color: brandColor,
-                      ),
-                    ),
-                ],
-              ),
-              if (manifest.description != null) ...[
-                const SizedBox(height: 8),
-                AnymeXText(
-                  manifest.description!,
-                  size: 12,
-                  maxLines: 2,
-                  color: Colors.grey,
+                  ],
                 ),
-              ],
-              const SizedBox(height: 12),
+              ),
+              const SizedBox(width: 12),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Wrap(
-                    spacing: 6,
-                    children: manifest.capabilities
-                        .map((c) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: AnymeXText(
-                                c.toUpperCase(),
-                                size: 9,
-                                variant: TextVariant.semiBold,
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                  const Spacer(),
                   if (hasUpdate) ...[
-                    AnymeXButton(
-                      variant: ButtonVariant.simple,
-                      height: 32,
-                      width: 90,
+                    _actionButton(
+                      icon: Icons.refresh_rounded,
+                      color: theme.tertiary,
+                      tooltip: 'Update to v${remoteInfo.version}',
                       onTap: () async {
-                        final ok = await _manager.installFromUrl(remoteInfo.manifestUrl);
+                        final ok = await _manager
+                            .installFromUrl(remoteInfo.manifestUrl);
                         Get.snackbar(
                           ok ? 'Updated' : 'Error',
                           ok
@@ -388,15 +473,18 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                               : 'Failed to update ${manifest.name}.',
                         );
                       },
-                      child: const AnymeXText('Update', size: 12),
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(16),
+                        right: Radius.circular(5),
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 2),
                   ],
-                  if (!isActive)
-                    AnymeXButton(
-                      variant: ButtonVariant.outline,
-                      height: 32,
-                      width: 90,
+                  if (!isActive) ...[
+                    _actionButton(
+                      icon: Iconsax.tick_circle,
+                      color: theme.secondary,
+                      tooltip: 'Set Active',
                       onTap: () {
                         sh.changeToAddon(manifest.id);
                         Get.snackbar(
@@ -404,20 +492,35 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                           '${manifest.name} is now your active tracker.',
                         );
                       },
-                      child: const AnymeXText('Set Active', size: 12),
+                      borderRadius: BorderRadius.circular(hasUpdate ? 5 : 16),
                     ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(IconlyLight.delete, size: 20),
-                    color: Colors.redAccent,
+                    const SizedBox(width: 2),
+                  ],
+                  _actionButton(
+                    icon: Iconsax.trash,
+                    color: theme.error,
                     tooltip: 'Uninstall',
-                    onPressed: () async {
-                      if (isActive) {
-                        sh.changeService(ServicesType.anilist);
-                      }
-                      await _manager.uninstallAddon(manifest.id);
-                      Get.snackbar('Uninstalled', '${manifest.name} removed.');
+                    onTap: () {
+                      AnymeXDialog(
+                        title: 'Uninstall Add-on',
+                        message:
+                            'Are you sure you want to uninstall ${manifest.name}?',
+                        confirmText: 'Uninstall',
+                        cancelText: 'Cancel',
+                        onConfirm: () async {
+                          if (isActive) {
+                            sh.changeService(ServicesType.anilist);
+                          }
+                          await _manager.uninstallAddon(manifest.id);
+                          Get.snackbar(
+                              'Uninstalled', '${manifest.name} removed.');
+                        },
+                      ).show(context);
                     },
+                    borderRadius: BorderRadius.horizontal(
+                      left: Radius.circular((!isActive || hasUpdate) ? 5 : 16),
+                      right: const Radius.circular(16),
+                    ),
                   ),
                 ],
               ),
@@ -463,6 +566,7 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
 
   Widget _buildRemoteCard(RemoteAddonInfo info) {
     final brandColor = _parseColor(info.color);
+    final theme = context.colors;
 
     return Obx(() {
       AddonManifest? installed;
@@ -476,95 +580,142 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
       final hasUpdate = isInstalled && installed.version != info.version;
 
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
         child: AnymeXContainer(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          radius: 18,
+          color: theme.surfaceContainerHighest.withOpacity(0.35),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: brandColor.withOpacity(0.2),
-                    child: AnymeXText(
-                      info.name.isNotEmpty ? info.name[0] : 'T',
-                      color: brandColor,
-                      variant: TextVariant.bold,
+              _buildAddonIcon(info.icon, brandColor, info.name),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnymeXText(
+                      info.name,
+                      style: TextStyle(
+                        color: theme.onSurface,
+                        fontFamily: 'Linotte',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 3,
+                      runSpacing: 3,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Row(
-                          children: [
-                            AnymeXText(
-                              info.name,
-                              size: 16,
-                              variant: TextVariant.bold,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: theme.secondary,
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(8),
+                              right: Radius.circular(4),
                             ),
-                            const SizedBox(width: 8),
-                            AnymeXText(
-                              hasUpdate
-                                  ? 'v${installed.version} → v${info.version}'
-                                  : 'v${info.version}',
-                              size: 11,
-                              color: hasUpdate
-                                  ? context.colors.primary
-                                  : Colors.grey,
-                              variant: hasUpdate
-                                  ? TextVariant.bold
-                                  : TextVariant.regular,
-                            ),
-                          ],
-                        ),
-                        if (info.author != null)
-                          AnymeXText(
-                            'by ${info.author}',
-                            size: 11,
-                            color: Colors.grey,
                           ),
+                          child: AnymeXText(
+                            info.capabilities.join(', ').toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Linotte',
+                              fontSize: 10.0,
+                              color: theme.secondary.computeLuminance() > 0.5
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: hasUpdate ? theme.primary : theme.tertiary,
+                            borderRadius: const BorderRadius.horizontal(
+                              left: Radius.circular(4),
+                              right: Radius.circular(8),
+                            ),
+                          ),
+                          child: AnymeXText(
+                            hasUpdate
+                                ? 'v${installed.version} → v${info.version}'
+                                : 'v${info.version}'.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'Linotte',
+                              fontSize: 10.0,
+                              color: (hasUpdate ? theme.primary : theme.tertiary)
+                                          .computeLuminance() >
+                                      0.5
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  AnymeXButton(
-                    variant: hasUpdate
-                        ? ButtonVariant.simple
-                        : (isInstalled
-                            ? ButtonVariant.outline
-                            : ButtonVariant.simple),
-                    height: 34,
-                    width: 90,
-                    onTap: () async {
-                      if (!isInstalled || hasUpdate) {
-                        final ok =
-                            await _manager.installFromUrl(info.manifestUrl);
-                        Get.snackbar(
-                          ok ? (hasUpdate ? 'Updated' : 'Installed') : 'Error',
-                          ok
-                              ? '${info.name} ${hasUpdate ? 'updated to v${info.version}' : 'installed'} successfully!'
-                              : 'Failed to download manifest for ${info.name}.',
-                        );
-                      }
-                    },
-                    child: AnymeXText(
-                      hasUpdate
-                          ? 'Update'
-                          : (isInstalled ? 'Installed' : 'Install'),
-                      size: 12,
-                    ),
-                  ),
-                ],
-              ),
-              if (info.description != null) ...[
-                const SizedBox(height: 8),
-                AnymeXText(
-                  info.description!,
-                  size: 12,
-                  color: Colors.grey,
+                    if (info.description != null &&
+                        info.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      AnymeXText(
+                        info.description!,
+                        size: 11,
+                        maxLines: 2,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              if (!isInstalled)
+                _actionButton(
+                  icon: Icons.download_rounded,
+                  color: theme.primary,
+                  tooltip: 'Install',
+                  onTap: () async {
+                    final ok =
+                        await _manager.installFromUrl(info.manifestUrl);
+                    Get.snackbar(
+                      ok ? 'Installed' : 'Error',
+                      ok
+                          ? '${info.name} installed successfully!'
+                          : 'Failed to download manifest for ${info.name}.',
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                )
+              else if (hasUpdate)
+                _actionButton(
+                  icon: Icons.refresh_rounded,
+                  color: theme.tertiary,
+                  tooltip: 'Update',
+                  onTap: () async {
+                    final ok =
+                        await _manager.installFromUrl(info.manifestUrl);
+                    Get.snackbar(
+                      ok ? 'Updated' : 'Error',
+                      ok
+                          ? '${info.name} updated to v${info.version}!'
+                          : 'Failed to download manifest for ${info.name}.',
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                )
+              else
+                _actionButton(
+                  icon: Icons.check_rounded,
+                  color: theme.secondary,
+                  tooltip: 'Installed',
+                  onTap: () {},
+                  borderRadius: BorderRadius.circular(16),
+                ),
             ],
           ),
         ),

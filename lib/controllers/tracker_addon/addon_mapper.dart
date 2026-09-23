@@ -193,7 +193,11 @@ class AddonMapper {
 
     final id = extract('id', '');
     final name = extract('name', extract('username', 'User'));
-    final avatar = extract('avatar', extract('avatarUrl', extract('image', '')));
+    final rawAvatar =
+        extract('avatar', extract('avatarUrl', extract('image', '')));
+    final avatar = rawAvatar.isNotEmpty
+        ? rawAvatar
+        : 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=${manifest.color.replaceAll('#', '')}&color=fff';
     final banner = extract('banner', extract('bannerUrl', ''));
 
     return Profile(
