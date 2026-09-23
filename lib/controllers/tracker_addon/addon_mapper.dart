@@ -191,20 +191,16 @@ class AddonMapper {
       return val?.toString() ?? fallback;
     }
 
-    final id = extract('id', '');
-    final name = extract('name', extract('username', 'User'));
-    final rawAvatar =
-        extract('avatar', extract('avatarUrl', extract('image', '')));
-    final avatar = rawAvatar.isNotEmpty
-        ? rawAvatar
-        : 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=${manifest.color.replaceAll('#', '')}&color=fff';
-    final banner = extract('banner', extract('bannerUrl', ''));
+    final id = extract('id');
+    final name = extract('name', 'User');
+    final avatar = extract('avatar');
+    final banner = extract('banner');
 
     return Profile(
       id: id.isNotEmpty ? id : null,
       name: name,
-      avatar: avatar,
-      cover: banner,
+      avatar: avatar.isNotEmpty ? avatar : null,
+      cover: banner.isNotEmpty ? banner : null,
     );
   }
 }
