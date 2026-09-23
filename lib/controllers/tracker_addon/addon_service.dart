@@ -176,16 +176,29 @@ class AddonService extends GetxController
     final tokenUrl = manifest.auth.tokenUrl;
     if (tokenUrl == null || tokenUrl.isEmpty) return null;
 
+    final defaultCallback =
+        dotenv.env['CALLBACK_SCHEME'] ?? 'anymex://callback';
+    final redirectUri = (manifest.auth.redirectUri?.isNotEmpty ?? false)
+        ? manifest.auth.redirectUri!
+        : defaultCallback;
+
     try {
+      final userAgent =
+          manifest.api.headers?['User-Agent'] ?? 'AnymeX-Client';
       final resp = await _client.post(
         Uri.parse(tokenUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': userAgent,
+        },
         body: jsonEncode({
           'grant_type': 'authorization_code',
-          'client_id': manifest.auth.clientId,
-          'client_secret': manifest.auth.clientSecret,
+          if (manifest.auth.clientId != null)
+            'client_id': manifest.auth.clientId,
+          if (manifest.auth.clientSecret != null)
+            'client_secret': manifest.auth.clientSecret,
           'code': code,
-          'redirect_uri': manifest.auth.redirectUri,
+          'redirect_uri': redirectUri,
         }),
       );
 
