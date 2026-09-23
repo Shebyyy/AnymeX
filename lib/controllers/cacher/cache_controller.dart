@@ -12,6 +12,7 @@ class CacheController extends GetxController {
   RxList<String> cachedAnilistData = <String>[].obs;
   RxList<String> cachedMalData = <String>[].obs;
   RxList<String> cachedSimklData = <String>[].obs;
+  RxList<String> cachedAddonData = <String>[].obs;
   RxList<String> cachedExtensionData = <String>[].obs;
 
   RxString detailsData = ''.obs;
@@ -80,6 +81,8 @@ class CacheController extends GetxController {
         final dynamic marker = parsedMap['__isMovie'];
         final bool isMovie = marker is bool ? marker : true;
         return Media.fromSimkl(parsedMap, isMovie);
+      case ServicesType.addon:
+        return Media.fromJson(parsedMap);
       default:
         parsedMap['status'] = parseStatusToInt(parsedMap['status']);
         return Media.froDMedia(
@@ -99,6 +102,8 @@ class CacheController extends GetxController {
         return cachedMalData;
       case ServicesType.simkl:
         return cachedSimklData;
+      case ServicesType.addon:
+        return cachedAddonData;
       default:
         return cachedExtensionData;
     }

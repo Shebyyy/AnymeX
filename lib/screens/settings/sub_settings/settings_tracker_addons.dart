@@ -269,6 +269,16 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
       final isActive = sh.serviceType.value == ServicesType.addon &&
           sh.activeAddonId.value == manifest.id;
 
+      RemoteAddonInfo? remoteInfo;
+      for (final r in _manager.availableAddons) {
+        if (r.id == manifest.id) {
+          remoteInfo = r;
+          break;
+        }
+      }
+      final hasUpdate =
+          remoteInfo != null && remoteInfo.version != manifest.version;
+
       return Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
         child: AnymeXContainer(
@@ -364,6 +374,24 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                         .toList(),
                   ),
                   const Spacer(),
+                  if (hasUpdate) ...[
+                    AnymeXButton(
+                      variant: ButtonVariant.simple,
+                      height: 32,
+                      width: 90,
+                      onTap: () async {
+                        final ok = await _manager.installFromUrl(remoteInfo.manifestUrl);
+                        Get.snackbar(
+                          ok ? 'Updated' : 'Error',
+                          ok
+                              ? '${manifest.name} updated to v${remoteInfo.version}!'
+                              : 'Failed to update ${manifest.name}.',
+                        );
+                      },
+                      child: const AnymeXText('Update', size: 12),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   if (!isActive)
                     AnymeXButton(
                       variant: ButtonVariant.outline,
@@ -437,7 +465,15 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
     final brandColor = _parseColor(info.color);
 
     return Obx(() {
-      final isInstalled = _manager.isInstalled(info.id);
+      AddonManifest? installed;
+      for (final a in _manager.installedAddons) {
+        if (a.id == info.id) {
+          installed = a;
+          break;
+        }
+      }
+      final isInstalled = installed != null;
+      final hasUpdate = isInstalled && installed.version != info.version;
 
       return Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
@@ -470,9 +506,16 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                             ),
                             const SizedBox(width: 8),
                             AnymeXText(
-                              'v${info.version}',
+                              hasUpdate
+                                  ? 'v${installed.version} → v${info.version}'
+                                  : 'v${info.version}',
                               size: 11,
-                              color: Colors.grey,
+                              color: hasUpdate
+                                  ? context.colors.primary
+                                  : Colors.grey,
+                              variant: hasUpdate
+                                  ? TextVariant.bold
+                                  : TextVariant.regular,
                             ),
                           ],
                         ),
@@ -486,24 +529,29 @@ class _SettingsTrackerAddonsState extends State<SettingsTrackerAddons>
                     ),
                   ),
                   AnymeXButton(
-                    variant: isInstalled
-                        ? ButtonVariant.outline
-                        : ButtonVariant.simple,
+                    variant: hasUpdate
+                        ? ButtonVariant.simple
+                        : (isInstalled
+                            ? ButtonVariant.outline
+                            : ButtonVariant.simple),
                     height: 34,
                     width: 90,
                     onTap: () async {
-                      if (!isInstalled) {
-                        final ok = await _manager.installFromUrl(info.manifestUrl);
+                      if (!isInstalled || hasUpdate) {
+                        final ok =
+                            await _manager.installFromUrl(info.manifestUrl);
                         Get.snackbar(
-                          ok ? 'Installed' : 'Error',
+                          ok ? (hasUpdate ? 'Updated' : 'Installed') : 'Error',
                           ok
-                              ? '${info.name} installed successfully!'
+                              ? '${info.name} ${hasUpdate ? 'updated to v${info.version}' : 'installed'} successfully!'
                               : 'Failed to download manifest for ${info.name}.',
                         );
                       }
                     },
                     child: AnymeXText(
-                      isInstalled ? 'Installed' : 'Install',
+                      hasUpdate
+                          ? 'Update'
+                          : (isInstalled ? 'Installed' : 'Install'),
                       size: 12,
                     ),
                   ),

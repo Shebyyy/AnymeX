@@ -129,7 +129,7 @@ class AddonMapper {
       genres: genres,
       studios: studios.isNotEmpty ? studios : null,
       mediaType: determinedMediaType,
-      serviceType: ServicesType.anilist, // fallback base; dynamic addon sets this
+      serviceType: ServicesType.addon,
     );
   }
 
@@ -174,7 +174,7 @@ class AddonMapper {
       score: scoreStr,
       rating: scoreStr,
       type: isAnime ? 'ANIME' : 'MANGA',
-      servicesType: ServicesType.anilist,
+      servicesType: ServicesType.addon,
     );
   }
 
@@ -191,11 +191,13 @@ class AddonMapper {
       return val?.toString() ?? fallback;
     }
 
+    final id = extract('id', '');
     final name = extract('name', extract('username', 'User'));
     final avatar = extract('avatar', extract('avatarUrl', extract('image', '')));
     final banner = extract('banner', extract('bannerUrl', ''));
 
     return Profile(
+      id: id.isNotEmpty ? id : null,
       name: name,
       avatar: avatar,
       cover: banner,

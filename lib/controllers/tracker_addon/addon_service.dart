@@ -50,10 +50,10 @@ class AddonService extends GetxController
 
   // ── BaseService State ────────────────────────────────────────────
   final Map<String, RxList<Media>> sectionData = {};
-  bool _isDataLoaded = false;
+  final RxBool _isDataLoaded = false.obs;
 
   @override
-  bool get isDataLoaded => _isDataLoaded;
+  bool get isDataLoaded => _isDataLoaded.value;
 
   String? get token =>
       DynamicKeys.trackerAddonToken.get<String>(manifest.id);
@@ -101,14 +101,14 @@ class AddonService extends GetxController
         try {
           final decoded = jsonDecode(rawProfile) as Map<String, dynamic>;
           profileData.value = Profile(
+            id: decoded['id']?.toString(),
             name: decoded['name']?.toString() ?? 'User',
             avatar: decoded['avatar']?.toString() ?? '',
             cover: decoded['cover']?.toString() ?? '',
           );
         } catch (_) {}
       }
-      fetchProfile();
-      fetchLibrary();
+      fetchProfile().then((_) => fetchLibrary());
     }
   }
 
@@ -347,8 +347,9 @@ class AddonService extends GetxController
   void _setToken(String newToken) {
     DynamicKeys.trackerAddonToken.set(manifest.id, newToken);
     isLoggedIn.value = true;
-    fetchProfile();
-    fetchLibrary();
+    fetchProfile().then((_) => fetchLibrary());
+    fetchHomePage();
+    serviceHandler.changeToAddon(manifest.id);
   }
 
   @override
@@ -395,6 +396,7 @@ class AddonService extends GetxController
           DynamicKeys.trackerAddonProfile.set(
             manifest.id,
             jsonEncode({
+              if (profile.id != null) 'id': profile.id,
               'name': profile.name,
               'avatar': profile.avatar,
               'cover': profile.cover,
@@ -411,8 +413,14 @@ class AddonService extends GetxController
     final endpoint = manifest.endpoints.userLibrary;
     if (endpoint == null || token == null) return;
 
+    if (profileData.value.id == null || profileData.value.id!.isEmpty) {
+      await fetchProfile();
+    }
+
     try {
-      final userId = profileData.value.name ?? 'me';
+      final userId = (profileData.value.id?.isNotEmpty == true)
+          ? profileData.value.id!
+          : (profileData.value.name ?? 'me');
       final animeResults = <TrackedMedia>[];
       final mangaResults = <TrackedMedia>[];
 
@@ -421,7 +429,7 @@ class AddonService extends GetxController
         final url = _buildFullUrl(_interpolate(endpoint.url, {
           'userId': userId,
           'type': 'anime',
-          'status': 'all',
+          'status': 'current',
           'targetType': 'Anime',
         }));
 
@@ -432,10 +440,18 @@ class AddonService extends GetxController
                   ? AddonMapper.getPath(decoded, endpoint.itemsPath!)
                   : decoded) as List<dynamic>? ??
               [];
+          final included = (decoded is Map && decoded['included'] is List)
+              ? (decoded['included'] as List)
+              : [];
+
           for (final item in items) {
             if (item is Map) {
-              animeResults.add(AddonMapper.mapToTrackedMedia(
+              final map = _resolveJsonApi(
                 Map<String, dynamic>.from(item),
+                included,
+              );
+              animeResults.add(AddonMapper.mapToTrackedMedia(
+                map,
                 manifest,
                 isAnime: true,
               ));
@@ -449,7 +465,7 @@ class AddonService extends GetxController
         final url = _buildFullUrl(_interpolate(endpoint.url, {
           'userId': userId,
           'type': 'manga',
-          'status': 'all',
+          'status': 'current',
           'targetType': 'Manga',
         }));
 
@@ -460,10 +476,18 @@ class AddonService extends GetxController
                   ? AddonMapper.getPath(decoded, endpoint.itemsPath!)
                   : decoded) as List<dynamic>? ??
               [];
+          final included = (decoded is Map && decoded['included'] is List)
+              ? (decoded['included'] as List)
+              : [];
+
           for (final item in items) {
             if (item is Map) {
-              mangaResults.add(AddonMapper.mapToTrackedMedia(
+              final map = _resolveJsonApi(
                 Map<String, dynamic>.from(item),
+                included,
+              );
+              mangaResults.add(AddonMapper.mapToTrackedMedia(
+                map,
                 manifest,
                 isAnime: false,
               ));
@@ -477,6 +501,41 @@ class AddonService extends GetxController
     } catch (e) {
       Logger.e('Failed to fetch user library for ${manifest.name}: $e');
     }
+  }
+
+  /// Generic JSON:API relationship resolution for compound documents.
+  Map<String, dynamic> _resolveJsonApi(
+    Map<String, dynamic> item,
+    List<dynamic> included,
+  ) {
+    if (included.isEmpty || item['relationships'] is! Map) return item;
+    final map = Map<String, dynamic>.from(item);
+    final relationships =
+        Map<String, dynamic>.from(item['relationships'] as Map);
+
+    relationships.forEach((relKey, relVal) {
+      if (relVal is Map && relVal['data'] is Map) {
+        final relData = Map<String, dynamic>.from(relVal['data'] as Map);
+        final relId = relData['id']?.toString();
+        final relType = relData['type']?.toString();
+        if (relId != null) {
+          final match = included.firstWhere(
+            (inc) =>
+                inc is Map &&
+                inc['id']?.toString() == relId &&
+                (relType == null || inc['type']?.toString() == relType),
+            orElse: () => null,
+          );
+          if (match is Map) {
+            relData['attributes'] = match['attributes'];
+            relationships[relKey] = {'data': relData};
+          }
+        }
+      }
+    });
+
+    map['relationships'] = relationships;
+    return map;
   }
 
   @override
