@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:anymex/controllers/network/network_manager.dart';
+import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/controllers/tracker_addon/addon_manifest.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/utils/logger.dart';

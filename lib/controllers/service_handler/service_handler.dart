@@ -5,6 +5,7 @@ import 'package:anymex/controllers/services/mal/mal_service.dart';
 import 'package:anymex/controllers/services/simkl/simkl_service.dart';
 import 'package:anymex/controllers/source/source_controller.dart';
 import 'package:anymex/controllers/tracker_addon/addon_manager.dart';
+import 'package:anymex/controllers/tracker_addon/addon_manifest.dart';
 import 'package:anymex/controllers/tracker_addon/addon_service.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/models/Anilist/anilist_media_user.dart';
