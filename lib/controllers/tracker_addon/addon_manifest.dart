@@ -220,6 +220,7 @@ class EndpointsConfig {
   final EndpointConfig? details;
   final EndpointConfig? userProfile;
   final EndpointConfig? userLibrary;
+  final EndpointConfig? createEntry;
   final EndpointConfig? updateEntry;
   final EndpointConfig? deleteEntry;
   final EndpointConfig? calendar;
@@ -230,6 +231,7 @@ class EndpointsConfig {
     this.details,
     this.userProfile,
     this.userLibrary,
+    this.createEntry,
     this.updateEntry,
     this.deleteEntry,
     this.calendar,
@@ -248,6 +250,7 @@ class EndpointsConfig {
       details: _endpoint(json['details']),
       userProfile: _endpoint(json['user_profile']),
       userLibrary: _endpoint(json['user_library']),
+      createEntry: _endpoint(json['create_entry']),
       updateEntry: _endpoint(json['update_entry']),
       deleteEntry: _endpoint(json['delete_entry']),
       calendar: _endpoint(json['calendar']),
@@ -265,6 +268,7 @@ class EndpointsConfig {
         if (details != null) 'details': details!.toJson(),
         if (userProfile != null) 'user_profile': userProfile!.toJson(),
         if (userLibrary != null) 'user_library': userLibrary!.toJson(),
+        if (createEntry != null) 'create_entry': createEntry!.toJson(),
         if (updateEntry != null) 'update_entry': updateEntry!.toJson(),
         if (deleteEntry != null) 'delete_entry': deleteEntry!.toJson(),
         if (calendar != null) 'calendar': calendar!.toJson(),

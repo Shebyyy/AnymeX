@@ -426,8 +426,6 @@ class AddonService extends GetxController
       final userId = (profileData.value.id?.isNotEmpty == true)
           ? profileData.value.id!
           : (profileData.value.name ?? 'me');
-      final animeResults = <TrackedMedia>[];
-      final mangaResults = <TrackedMedia>[];
 
       String cleanUrl(String template, Map<String, String> vars) {
         var interpolated = _interpolate(template, vars);
@@ -441,16 +439,28 @@ class AddonService extends GetxController
         return _buildFullUrl(interpolated);
       }
 
-      // Fetch for anime
-      if (manifest.supportsAnime) {
-        final url = cleanUrl(endpoint.url, {
+      Future<List<TrackedMedia>> fetchForMedia({required bool isAnime}) async {
+        final results = <TrackedMedia>[];
+        final typeStr = isAnime ? 'anime' : 'manga';
+        final targetTypeStr = isAnime ? 'Anime' : 'Manga';
+
+        String? nextUrl = cleanUrl(endpoint.url, {
           'userId': userId,
-          'type': 'anime',
-          'targetType': 'Anime',
+          'type': typeStr,
+          'targetType': targetTypeStr,
         });
 
-        final resp = await _client.get(Uri.parse(url), headers: _headers);
-        if (resp.statusCode == 200) {
+        int pagesFetched = 0;
+        const maxPages = 15;
+
+        while (nextUrl != null && pagesFetched < maxPages) {
+          pagesFetched++;
+          final resp = await _client.get(Uri.parse(nextUrl), headers: _headers);
+          if (resp.statusCode != 200) {
+            Logger.e('Failed to fetch library page $pagesFetched: ${resp.statusCode}');
+            break;
+          }
+
           final decoded = jsonDecode(resp.body);
           final items = (endpoint.itemsPath != null
                   ? AddonMapper.getPath(decoded, endpoint.itemsPath!)
@@ -466,53 +476,40 @@ class AddonService extends GetxController
                 Map<String, dynamic>.from(item),
                 included,
               );
-              animeResults.add(AddonMapper.mapToTrackedMedia(
+              results.add(AddonMapper.mapToTrackedMedia(
                 map,
                 manifest,
-                isAnime: true,
+                isAnime: isAnime,
               ));
             }
           }
-        }
-      }
 
-      // Fetch for manga
-      if (manifest.supportsManga) {
-        final url = cleanUrl(endpoint.url, {
-          'userId': userId,
-          'type': 'manga',
-          'targetType': 'Manga',
-        });
-
-        final resp = await _client.get(Uri.parse(url), headers: _headers);
-        if (resp.statusCode == 200) {
-          final decoded = jsonDecode(resp.body);
-          final items = (endpoint.itemsPath != null
-                  ? AddonMapper.getPath(decoded, endpoint.itemsPath!)
-                  : decoded) as List<dynamic>? ??
-              [];
-          final included = (decoded is Map && decoded['included'] is List)
-              ? (decoded['included'] as List)
-              : [];
-
-          for (final item in items) {
-            if (item is Map) {
-              final map = _resolveJsonApi(
-                Map<String, dynamic>.from(item),
-                included,
-              );
-              mangaResults.add(AddonMapper.mapToTrackedMedia(
-                map,
-                manifest,
-                isAnime: false,
-              ));
-            }
+          final nextFromPagination =
+              (decoded is Map && decoded['pagination'] is Map)
+                  ? decoded['pagination']['next']?.toString()
+                  : null;
+          final nextFromLinks = (decoded is Map && decoded['links'] is Map)
+              ? decoded['links']['next']?.toString()
+              : null;
+          final resolvedNext = nextFromLinks ?? nextFromPagination;
+          if (resolvedNext != null &&
+              resolvedNext.isNotEmpty &&
+              resolvedNext != 'null') {
+            nextUrl = _buildFullUrl(resolvedNext);
+          } else {
+            nextUrl = null;
           }
         }
+
+        return results;
       }
 
-      animeList.value = animeResults;
-      mangaList.value = mangaResults;
+      await Future.wait([
+        if (manifest.supportsAnime)
+          fetchForMedia(isAnime: true).then((res) => animeList.value = res),
+        if (manifest.supportsManga)
+          fetchForMedia(isAnime: false).then((res) => mangaList.value = res),
+      ]);
     } catch (e) {
       Logger.e('Failed to fetch user library for ${manifest.name}: $e');
     }
@@ -609,32 +606,76 @@ class AddonService extends GetxController
 
   @override
   Future<void> updateListEntry(UpdateListEntryParams params) async {
-    final endpoint = manifest.endpoints.updateEntry;
-    if (endpoint == null || token == null) return;
+    if (token == null) return;
+
+    if (profileData.value.id == null || profileData.value.id!.isEmpty) {
+      await fetchProfile();
+    }
 
     try {
+      final isAnime = params.isAnime;
+      final list = isAnime ? animeList : mangaList;
+      final targetId = params.listId.toString();
+
+      TrackedMedia? existing;
+      try {
+        existing = list.firstWhere(
+          (m) =>
+              m.id?.toString() == targetId ||
+              m.mediaListId?.toString() == targetId ||
+              (m.idMal != null && m.idMal.toString() == targetId),
+        );
+      } catch (_) {
+        existing = null;
+      }
+
+      final isExisting = existing != null &&
+          existing.mediaListId != null &&
+          existing.mediaListId!.isNotEmpty &&
+          existing.mediaListId != '0';
+
+      final endpoint = isExisting
+          ? (manifest.endpoints.updateEntry ?? manifest.endpoints.createEntry)
+          : (manifest.endpoints.createEntry ?? manifest.endpoints.updateEntry);
+
+      if (endpoint == null) {
+        Logger.e('No create or update endpoint configured for ${manifest.name}');
+        return;
+      }
+
       final statusVal = params.status;
       final remoteStatus = manifest.reverseStatusMap[statusVal] ??
+          manifest.reverseStatusMap[statusVal?.toUpperCase()] ??
           statusVal?.toLowerCase() ??
           'current';
 
-      final url = _buildFullUrl(_interpolate(endpoint.url, {
-        'entryId': params.listId,
-        'id': params.listId,
+      final resolvedEntryId = existing?.mediaListId ?? targetId;
+      final userId = (profileData.value.id?.isNotEmpty == true)
+          ? profileData.value.id!
+          : (profileData.value.name ?? 'me');
+      final typeStr = isAnime ? 'anime' : 'manga';
+      final targetTypeStr = isAnime ? 'Anime' : 'Manga';
+
+      final scoreVal = params.score ?? 0;
+      final scoreTwenty = ((scoreVal * 2).round()).toString();
+
+      final vars = <String, String>{
+        'userId': userId,
+        'mediaId': targetId,
+        'entryId': resolvedEntryId,
+        'id': resolvedEntryId,
+        'type': typeStr,
+        'targetType': targetTypeStr,
         'progress': params.progress.toString(),
         'status': remoteStatus,
-        'score': (params.score ?? 0).toString(),
-      }));
+        'score': scoreVal.toString(),
+        'scoreInt': scoreVal.toInt().toString(),
+        'scoreTwenty': scoreTwenty,
+      };
 
+      final url = _buildFullUrl(_interpolate(endpoint.url, vars));
       final method = endpoint.method.toUpperCase();
       final bodyTemplate = endpoint.bodyTemplate;
-
-      Map<String, String> vars = {
-        'entryId': params.listId,
-        'progress': params.progress.toString(),
-        'status': remoteStatus,
-        'score': (params.score ?? 0).toString(),
-      };
 
       String? bodyStr;
       if (bodyTemplate != null) {
@@ -653,20 +694,52 @@ class AddonService extends GetxController
       }
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        fetchLibrary();
+        Logger.i('Successfully ${isExisting ? "updated" : "created"} entry on ${manifest.name}');
+        await fetchLibrary();
+        setCurrentMedia(params.listId, isManga: !isAnime);
+      } else {
+        Logger.e('Failed to ${isExisting ? "update" : "create"} entry on ${manifest.name}: ${resp.statusCode} - ${resp.body}');
+        throw Exception('Failed to update list entry on ${manifest.name} (${resp.statusCode})');
       }
     } catch (e) {
-      Logger.e('Failed to update list entry for ${manifest.name}: $e');
+      Logger.e('Error updating list entry for ${manifest.name}: $e');
+      rethrow;
     }
   }
 
   String _interpolateJson(Map<String, dynamic> template, Map<String, String> vars) {
-    var raw = jsonEncode(template);
-    for (final entry in vars.entries) {
-      raw = raw.replaceAll('"{${entry.key}}"', jsonEncode(entry.value));
-      raw = raw.replaceAll('{${entry.key}}', entry.value);
+    dynamic replaceInObject(dynamic obj) {
+      if (obj is String) {
+        var str = obj;
+        for (final entry in vars.entries) {
+          if (str == '{${entry.key}}') {
+            final intVal = int.tryParse(entry.value);
+            if (intVal != null && (entry.key == 'progress' || entry.key == 'scoreInt')) {
+              return intVal;
+            }
+            return entry.value;
+          }
+          str = str.replaceAll('{${entry.key}}', entry.value);
+        }
+        return str;
+      } else if (obj is Map) {
+        final result = <String, dynamic>{};
+        obj.forEach((k, v) {
+          var keyStr = k.toString();
+          for (final entry in vars.entries) {
+            keyStr = keyStr.replaceAll('{${entry.key}}', entry.value);
+          }
+          result[keyStr] = replaceInObject(v);
+        });
+        return result;
+      } else if (obj is List) {
+        return obj.map(replaceInObject).toList();
+      }
+      return obj;
     }
-    return raw;
+
+    final replaced = replaceInObject(template);
+    return jsonEncode(replaced);
   }
 
   @override
@@ -675,11 +748,35 @@ class AddonService extends GetxController
     if (endpoint == null || token == null) return;
 
     try {
-      final url = _buildFullUrl(_interpolate(endpoint.url, {'entryId': listId, 'id': listId}));
-      await _client.delete(Uri.parse(url), headers: _headers);
-      fetchLibrary();
+      final list = isAnime ? animeList : mangaList;
+      TrackedMedia? existing;
+      try {
+        existing = list.firstWhere(
+          (m) =>
+              m.id?.toString() == listId ||
+              m.mediaListId?.toString() == listId,
+        );
+      } catch (_) {
+        existing = null;
+      }
+
+      final resolvedEntryId = existing?.mediaListId ?? listId;
+      final url = _buildFullUrl(_interpolate(endpoint.url, {
+        'entryId': resolvedEntryId,
+        'id': resolvedEntryId,
+      }));
+
+      final resp = await _client.delete(Uri.parse(url), headers: _headers);
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        Logger.i('Successfully deleted entry from ${manifest.name}');
+        await fetchLibrary();
+      } else {
+        Logger.e('Failed to delete entry from ${manifest.name}: ${resp.statusCode} - ${resp.body}');
+        throw Exception('Failed to delete entry from ${manifest.name} (${resp.statusCode})');
+      }
     } catch (e) {
       Logger.e('Failed to delete list entry: $e');
+      rethrow;
     }
   }
 
