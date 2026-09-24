@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:anymex/controllers/network/network_manager.dart';
 import 'package:anymex/controllers/service_handler/params.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
@@ -132,6 +134,18 @@ class AddonService extends GetxController
     }
   }
 
+  String _generateCodeVerifier() {
+    final random = Random.secure();
+    final values = List<int>.generate(32, (i) => random.nextInt(256));
+    return base64UrlEncode(values).replaceAll('=', '');
+  }
+
+  String _generateCodeChallenge(String verifier) {
+    final bytes = ascii.encode(verifier);
+    final digest = sha256.convert(bytes);
+    return base64UrlEncode(digest.bytes).replaceAll('=', '');
+  }
+
   Future<void> _loginOAuth2(BuildContext context) async {
     final authUrl = manifest.auth.authUrl;
     final defaultCallback =
@@ -146,11 +160,20 @@ class AddonService extends GetxController
       return;
     }
 
-    final formattedUrl = _interpolate(authUrl, {
+    final codeVerifier = _generateCodeVerifier();
+    final codeChallenge = _generateCodeChallenge(codeVerifier);
+
+    var formattedUrl = _interpolate(authUrl, {
       'client_id': manifest.auth.clientId ?? '',
       'redirect_uri': redirectUri,
       'scopes': manifest.auth.scopes ?? '',
     });
+
+    final uri = Uri.parse(formattedUrl);
+    final queryParams = Map<String, String>.from(uri.queryParameters);
+    queryParams.putIfAbsent('code_challenge', () => codeChallenge);
+    queryParams.putIfAbsent('code_challenge_method', () => 'S256');
+    formattedUrl = uri.replace(queryParameters: queryParams).toString();
 
     final result = await OauthHelper.authenticate(
       context: context,
@@ -159,6 +182,16 @@ class AddonService extends GetxController
     );
 
     if (result != null && result.isNotEmpty) {
+      if (result.contains('error=')) {
+        final uri = Uri.parse(result.replaceFirst('#', '?'));
+        final errorDesc = uri.queryParameters['error_description'] ??
+            uri.queryParameters['error'] ??
+            'Authentication failed';
+        Logger.e('OAuth error for ${manifest.name}: $errorDesc');
+        Get.snackbar('Login Failed', errorDesc);
+        return;
+      }
+
       String? extractedToken;
       if (result.contains('access_token=')) {
         final uri = Uri.parse(result.replaceFirst('#', '?'));
@@ -167,7 +200,7 @@ class AddonService extends GetxController
         final uri = Uri.parse(result);
         final code = uri.queryParameters['code'];
         if (code != null) {
-          extractedToken = await _exchangeCodeForToken(code);
+          extractedToken = await _exchangeCodeForToken(code, codeVerifier: codeVerifier);
         }
       }
 
@@ -177,7 +210,7 @@ class AddonService extends GetxController
     }
   }
 
-  Future<String?> _exchangeCodeForToken(String code) async {
+  Future<String?> _exchangeCodeForToken(String code, {String? codeVerifier}) async {
     final tokenUrl = manifest.auth.tokenUrl;
     if (tokenUrl == null || tokenUrl.isEmpty) return null;
 
@@ -202,6 +235,8 @@ class AddonService extends GetxController
             'client_id': manifest.auth.clientId,
           if (manifest.auth.clientSecret != null)
             'client_secret': manifest.auth.clientSecret,
+          if (codeVerifier != null)
+            'code_verifier': codeVerifier,
           'code': code,
           'redirect_uri': redirectUri,
         }),
@@ -211,9 +246,13 @@ class AddonService extends GetxController
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final path = manifest.auth.tokenResponsePath ?? 'access_token';
         return AddonMapper.getPath(data, path)?.toString();
+      } else {
+        Logger.e('OAuth token exchange failed with status ${resp.statusCode}: ${resp.body}');
+        Get.snackbar('Login Error', 'Server returned ${resp.statusCode} during token exchange');
       }
     } catch (e) {
       Logger.e('OAuth code exchange failed: $e');
+      Get.snackbar('Login Error', e.toString());
     }
     return null;
   }
