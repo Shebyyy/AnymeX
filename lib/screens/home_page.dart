@@ -160,6 +160,9 @@ class _HomePageState extends State<HomePage> {
     _workers.add(ever(serviceHandler.serviceType, (_) {
       if (mounted) setState(() {});
     }));
+    _workers.add(ever(serviceHandler.activeAddonId, (_) {
+      if (mounted) setState(() {});
+    }));
     _workers.add(ever(serviceHandler.isLoggedIn, (_) {
       if (mounted) setState(() {});
     }));
@@ -267,14 +270,15 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      Column(
+                      Obx(() => Column(
+                        key: ValueKey('home-widgets-${serviceHandler.serviceType.value}-${serviceHandler.activeAddonId.value}'),
                         children: _buildHomeWidgets(
                           context: context,
                           serviceHandler: serviceHandler,
                           offlineStorageController: offlineStorageController,
                           settings: settings,
                         ),
-                      ),
+                      )),
                       if (novelData.isNotEmpty)
                         ReusableCarousel(
                           title: "Recommended Novels",

@@ -70,6 +70,11 @@ class LibraryController extends GetxController {
         _updateSourceStream();
       }
     });
+    ever(serviceHandler.activeAddonId, (_) {
+      if (!_isSwitchingCategory) {
+        _updateSourceStream();
+      }
+    });
     
     _setupCustomListsSubscription();
   }

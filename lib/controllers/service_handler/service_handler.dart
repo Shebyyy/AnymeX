@@ -243,6 +243,7 @@ class ServiceHandler extends GetxController {
   void changeService(ServicesType type) {
     ServiceKeys.serviceType.set(type.index);
     serviceType.value = type;
+    serviceType.refresh();
     if (!service.isDataLoaded) {
       fetchHomePage();
     }
@@ -253,6 +254,7 @@ class ServiceHandler extends GetxController {
     ServiceKeys.activeAddonId.set(addonId);
     activeAddonId.value = addonId;
     serviceType.value = ServicesType.addon;
+    serviceType.refresh();
     final addon = getOrInitAddonService(addonId);
     addon?.autoLogin();
     if (addon != null && !addon.isDataLoaded) {

@@ -118,6 +118,7 @@ class MediaDetailsController extends GetxController {
   Worker? _simklAnimeWorker;
   Worker? _simklMangaWorker;
   Worker? _serviceTypeWorker;
+  Worker? _addonWorker;
   bool _isInitialFetchDone = false;
 
   bool get isAnime => initialMedia.mediaType == d.ItemType.anime;
@@ -186,6 +187,7 @@ class MediaDetailsController extends GetxController {
     _isAnifyWorker?.dispose();
     _loginWorker?.dispose();
     _serviceTypeWorker?.dispose();
+    _addonWorker?.dispose();
     _alAnimeWorker?.dispose();
     _alMangaWorker?.dispose();
     _malAnimeWorker?.dispose();
@@ -296,6 +298,8 @@ class MediaDetailsController extends GetxController {
         ever(serviceHandler.isLoggedIn, (_) => _initOfflineAndTrackedData());
     _serviceTypeWorker =
         ever(serviceHandler.serviceType, (_) => _initOfflineAndTrackedData());
+    _addonWorker =
+        ever(serviceHandler.activeAddonId, (_) => _initOfflineAndTrackedData());
     _alAnimeWorker = ever(serviceHandler.anilistService.animeList,
         (_) => _initOfflineAndTrackedData());
     _alMangaWorker = ever(serviceHandler.anilistService.mangaList,

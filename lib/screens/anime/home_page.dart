@@ -37,6 +37,8 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
   final ValueNotifier<bool> _isAppBarVisibleExternally =
       ValueNotifier<bool>(true);
   Worker? _mediaModeWorker;
+  Worker? _serviceTypeWorker;
+  Worker? _addonWorker;
 
   @override
   void initState() {
@@ -45,8 +47,15 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
     _mangaScrollController = ScrollController();
     _novelScrollController = ScrollController();
     _extensionsScrollController = ScrollController();
+    final serviceHandler = Get.find<ServiceHandler>();
     _mediaModeWorker = ever(Get.find<MediaModeController>().rxMode, (_) {
       _isAppBarVisibleExternally.value = true;
+    });
+    _serviceTypeWorker = ever(serviceHandler.serviceType, (_) {
+      if (mounted) setState(() {});
+    });
+    _addonWorker = ever(serviceHandler.activeAddonId, (_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -78,6 +87,8 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
   @override
   void dispose() {
     _mediaModeWorker?.dispose();
+    _serviceTypeWorker?.dispose();
+    _addonWorker?.dispose();
     _animeScrollController.dispose();
     _mangaScrollController.dispose();
     _novelScrollController.dispose();
@@ -134,8 +145,9 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
         extendBodyBehindAppBar: true,
         body: Stack(children: [
           Obx(() {
-            final isExtensions =
-                serviceHandler.serviceType.value == ServicesType.extensions;
+            final serviceType = serviceHandler.serviceType.value;
+            final activeAddon = serviceHandler.activeAddonId.value;
+            final isExtensions = serviceType == ServicesType.extensions;
             final currentType = widget.type ?? mediaModeController.mode;
 
             if (isExtensions) {
@@ -168,9 +180,11 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
                 : _typeToIndex(mediaModeController.mode);
 
             return LazyIndexedStack(
+              key: ValueKey('anime-home-stack-$serviceType-$activeAddon'),
               index: index,
               children: [
                 _ContentPage(
+                  key: ValueKey('content-anime-$serviceType-$activeAddon'),
                   scrollController: _animeScrollController,
                   statusBarHeight: statusBarHeight,
                   appBarHeight: appBarHeight,
@@ -178,6 +192,7 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
                   widgetsBuilder: () => serviceHandler.animeWidgets(context),
                 ),
                 _ContentPage(
+                  key: ValueKey('content-manga-$serviceType-$activeAddon'),
                   scrollController: _mangaScrollController,
                   statusBarHeight: statusBarHeight,
                   appBarHeight: appBarHeight,
@@ -185,6 +200,7 @@ class _AnimeHomePageState extends State<AnimeHomePage> {
                   widgetsBuilder: () => serviceHandler.mangaWidgets(context),
                 ),
                 _ContentPage(
+                  key: ValueKey('content-novel-$serviceType-$activeAddon'),
                   scrollController: _novelScrollController,
                   statusBarHeight: statusBarHeight,
                   appBarHeight: appBarHeight,
@@ -258,6 +274,7 @@ class _ContentPage extends StatelessWidget {
   final List<Widget> Function() widgetsBuilder;
 
   const _ContentPage({
+    super.key,
     required this.scrollController,
     required this.statusBarHeight,
     required this.appBarHeight,

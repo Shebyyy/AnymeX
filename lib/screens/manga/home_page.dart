@@ -68,14 +68,16 @@ class _MangaHomePageState extends State<MangaHomePage> {
                 SizedBox(height: statusBarHeight + appBarHeight),
                 const SizedBox(height: 10),
                 Obx(() {
-                  if (serviceHandler.serviceType.value ==
-                      ServicesType.extensions) {
+                  final serviceType = serviceHandler.serviceType.value;
+                  final activeAddon = serviceHandler.activeAddonId.value;
+                  if (serviceType == ServicesType.extensions) {
                     return InstalledExtensionsGridView(
                       sources: sourceController.installedMangaExtensions.value,
                       itemType: ItemType.manga,
                     );
                   }
                   return Column(
+                    key: ValueKey('manga-widgets-$serviceType-$activeAddon'),
                     children: serviceHandler.mangaWidgets(context),
                   );
                 }),
