@@ -223,27 +223,51 @@ class AddonService extends GetxController
     try {
       final userAgent =
           manifest.api.headers?['User-Agent'] ?? 'AnymeX-Client';
-      final resp = await _client.post(
+      final params = <String, String>{
+        'grant_type': 'authorization_code',
+        if (manifest.auth.clientId != null)
+          'client_id': manifest.auth.clientId!,
+        if (manifest.auth.clientSecret != null)
+          'client_secret': manifest.auth.clientSecret!,
+        if (codeVerifier != null)
+          'code_verifier': codeVerifier,
+        'code': code,
+        'redirect_uri': redirectUri,
+      };
+
+      // Standard OAuth 2.0 (RFC 6749) requires application/x-www-form-urlencoded
+      var resp = await _client.post(
         Uri.parse(tokenUrl),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
           'User-Agent': userAgent,
         },
-        body: jsonEncode({
-          'grant_type': 'authorization_code',
-          if (manifest.auth.clientId != null)
-            'client_id': manifest.auth.clientId,
-          if (manifest.auth.clientSecret != null)
-            'client_secret': manifest.auth.clientSecret,
-          if (codeVerifier != null)
-            'code_verifier': codeVerifier,
-          'code': code,
-          'redirect_uri': redirectUri,
-        }),
+        body: params,
       );
 
-      if (resp.statusCode == 200) {
+      // Graceful fallback to application/json if server expects json
+      if (resp.statusCode == 415) {
+        resp = await _client.post(
+          Uri.parse(tokenUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': userAgent,
+          },
+          body: jsonEncode(params),
+        );
+      }
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+        final refreshPath = manifest.auth.refreshTokenPath ?? 'refresh_token';
+        final refreshToken = AddonMapper.getPath(data, refreshPath)?.toString();
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          DynamicKeys.trackerAddonRefreshToken.set(manifest.id, refreshToken);
+        }
+
         final path = manifest.auth.tokenResponsePath ?? 'access_token';
         return AddonMapper.getPath(data, path)?.toString();
       } else {
@@ -1118,6 +1142,9 @@ class AddonService extends GetxController
   RxList<Widget> animeWidgets(BuildContext context) {
     final filtered =
         manifest.endpoints.homeSections.where((s) => s.isAnime).toList();
+    if (filtered.isEmpty && !manifest.supportsAnime && manifest.supportsManga) {
+      return _buildSections(manifest.endpoints.homeSections);
+    }
     return _buildSections(filtered);
   }
 
@@ -1125,7 +1152,7 @@ class AddonService extends GetxController
   RxList<Widget> mangaWidgets(BuildContext context) {
     final filtered =
         manifest.endpoints.homeSections.where((s) => !s.isAnime).toList();
-    return _buildSections(filtered);
+    return _buildSections(filtered.isNotEmpty ? filtered : manifest.endpoints.homeSections);
   }
 
   @override

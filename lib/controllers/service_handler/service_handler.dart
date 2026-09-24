@@ -249,6 +249,22 @@ class ServiceHandler extends GetxController {
     }
   }
 
+  void notifyAddonUpdated(AddonManifest manifest) {
+    _addonServices[manifest.id] = AddonService(manifest: manifest);
+    if (activeAddonId.value == manifest.id) {
+      serviceType.refresh();
+      activeAddonId.refresh();
+      _addonServices[manifest.id]?.fetchHomePage();
+    }
+  }
+
+  void notifyAddonUninstalled(String addonId) {
+    _addonServices.remove(addonId);
+    if (activeAddonId.value == addonId) {
+      changeService(ServicesType.anilist);
+    }
+  }
+
   void changeToAddon(String addonId) {
     ServiceKeys.serviceType.set(ServicesType.addon.index);
     ServiceKeys.activeAddonId.set(addonId);
@@ -257,7 +273,11 @@ class ServiceHandler extends GetxController {
     serviceType.refresh();
     final addon = getOrInitAddonService(addonId);
     addon?.autoLogin();
-    if (addon != null && !addon.isDataLoaded) {
+    final hasNoData = addon != null &&
+        (!addon.isDataLoaded ||
+            addon.sectionData.isEmpty ||
+            addon.sectionData.values.every((l) => l.isEmpty));
+    if (hasNoData) {
       fetchHomePage();
     }
   }

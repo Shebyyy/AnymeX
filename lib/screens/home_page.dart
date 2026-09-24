@@ -12,7 +12,6 @@ import 'package:anymex/widgets/anymex_widgets/anymex_textspan.dart';
 import 'package:anymex/widgets/header/header.dart';
 import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/widgets/history/tap_history_cards.dart';
-import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/widgets/media_items/media_item.dart';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
@@ -202,13 +201,12 @@ class _HomePageState extends State<HomePage> {
     final List<dynamic> novelData = [];
 
     return RefreshIndicator(
-      onRefresh: () {
+      onRefresh: () async {
         if (!serviceHandler.isLoggedIn.value) {
-          snackBar(
-              "W-what are you doing step-bro, login before you do that (●´⌓`●)",
-              duration: 1200);
+          await serviceHandler.fetchHomePage();
+        } else {
+          await serviceHandler.refresh();
         }
-        return serviceHandler.refresh();
       },
       child: Scaffold(
         extendBodyBehindAppBar: true,

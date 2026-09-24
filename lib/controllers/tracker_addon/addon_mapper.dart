@@ -43,8 +43,35 @@ class AddonMapper {
             return null;
           }
         }
-        if (node is List && index != null && index >= 0 && index < node.length) {
-          node = node[index];
+        if (node is List) {
+          if (index != null && index >= 0 && index < node.length) {
+            node = node[index];
+          } else if (idxStr.contains('=')) {
+            final eqIdx = idxStr.indexOf('=');
+            final filterKey = idxStr.substring(0, eqIdx).trim();
+            final filterVal = idxStr.substring(eqIdx + 1).trim();
+            dynamic matched;
+            for (final elem in node) {
+              if (elem is Map) {
+                final v = elem[filterKey];
+                if (v is List) {
+                  if (v.any((item) =>
+                      item.toString().toLowerCase() ==
+                      filterVal.toLowerCase())) {
+                    matched = elem;
+                    break;
+                  }
+                } else if (v?.toString().toLowerCase() ==
+                    filterVal.toLowerCase()) {
+                  matched = elem;
+                  break;
+                }
+              }
+            }
+            node = matched;
+          } else {
+            return null;
+          }
         } else {
           return null;
         }

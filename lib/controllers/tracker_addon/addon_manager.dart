@@ -100,6 +100,12 @@ class AddonManager extends GetxController {
     _loadRepoUrls();
   }
 
+  @override
+  void onReady() {
+    super.onReady();
+    fetchRepositories();
+  }
+
   void _loadInstalledAddons() {
     final raw = ServiceKeys.installedAddons.get<String>('[]');
     try {
@@ -161,6 +167,9 @@ class AddonManager extends GetxController {
       installedAddons.add(manifest);
     }
     _saveInstalledAddons();
+    if (Get.isRegistered<ServiceHandler>()) {
+      Get.find<ServiceHandler>().notifyAddonUpdated(manifest);
+    }
     return true;
   }
 
@@ -173,6 +182,10 @@ class AddonManager extends GetxController {
     DynamicKeys.trackerAddonToken.delete(addonId);
     DynamicKeys.trackerAddonRefreshToken.delete(addonId);
     DynamicKeys.trackerAddonProfile.delete(addonId);
+
+    if (Get.isRegistered<ServiceHandler>()) {
+      Get.find<ServiceHandler>().notifyAddonUninstalled(addonId);
+    }
   }
 
   /// Fetch remote repository index (`addons.json`).
