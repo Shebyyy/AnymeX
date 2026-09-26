@@ -32,17 +32,17 @@ class _SettingsAccountsState extends State<SettingsAccounts> {
 
     final services = [
       {
-        'serviceIcon': 'anilist.png',
+        'serviceIcon': 'anilist-icon.png',
         'service': serviceHandler.anilistService,
         'title': 'Anilist',
       },
       {
-        'serviceIcon': 'mal.png',
+        'serviceIcon': 'mal-icon.png',
         'service': serviceHandler.malService,
         'title': 'MyAnimeList',
       },
       {
-        'serviceIcon': 'simkl.png',
+        'serviceIcon': 'simkl-icon.png',
         'service': serviceHandler.simklService,
         'title': 'Simkl',
       },
@@ -160,7 +160,7 @@ class TrackingServiceCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Row(
                   children: [
-                    _buildServiceIcon(avatar, isLogged),
+                    _buildServiceIcon(context, avatar, isLogged),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -211,7 +211,12 @@ class TrackingServiceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceIcon(String? avatarUrl, bool isLogged) {
+  Widget _buildServiceIcon(
+      BuildContext context, String? avatarUrl, bool isLogged) {
+    final theme = Theme.of(context);
+    final colors = context.colors;
+    final primaryColor = theme.colorScheme.primary;
+
     if (isLogged && avatarUrl != null && avatarUrl.isNotEmpty) {
       return Container(
         width: 44,
@@ -231,35 +236,40 @@ class TrackingServiceCard extends StatelessWidget {
 
     if (isUrlIcon && serviceIcon.isNotEmpty) {
       return Container(
-        width: 44,
-        height: 44,
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: isLogged
+              ? primaryColor.opaque(0.2, iReallyMeanIt: true)
+              : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
         ),
         child: CachedNetworkImage(
           imageUrl: serviceIcon,
+          width: 24,
+          height: 24,
           fit: BoxFit.contain,
-          errorWidget: (c, o, s) => AnymeXText(
-            title.isNotEmpty ? title[0] : 'T',
-            variant: TextVariant.bold,
-            size: 18,
+          errorWidget: (c, o, s) => const Icon(
+            Icons.extension_rounded,
+            size: 24,
           ),
         ),
       );
     }
 
     return Container(
-      width: 44,
-      height: 44,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: isLogged
+            ? primaryColor.opaque(0.2, iReallyMeanIt: true)
+            : colors.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Image.asset(
-        'assets/icons/$serviceIcon',
+        'assets/images/$serviceIcon',
+        width: 24,
+        height: 24,
+        fit: BoxFit.contain,
+        color: isLogged ? primaryColor : theme.iconTheme.color,
         errorBuilder: (c, o, s) => AnymeXText(
           title.isNotEmpty ? title[0] : 'T',
           variant: TextVariant.bold,
