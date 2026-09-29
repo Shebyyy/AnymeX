@@ -42,6 +42,7 @@ import 'package:anymex/widgets/common/home_continue_button.dart';
 import 'package:anymex/controllers/media_mode_controller.dart';
 import 'package:anymex/services/fcm_service.dart';
 import 'package:anymex/services/commentum_service.dart';
+import 'package:anymex/services/app_shortcut_service.dart';
 import 'package:anymex/controllers/watchium/watchium_service.dart';
 import 'package:anymex/utils/logger.dart';
 import 'package:anymex/utils/deeplink.dart';
@@ -281,7 +282,8 @@ void _initializeGetxController() async {
     Get.put(DownloadController(), permanent: true);
     Get.put(StatsTracker());
     Get.lazyPut(() => CacheController());
-    Get.lazyPut(() => MediaModeController());
+    Get.put(MediaModeController());
+    Get.put(AppShortcutService(), permanent: true);
     Get.lazyPut(() => DownloadSearchController());
   }, errorMessage: 'Failed to register GetX controllers');
 
@@ -443,6 +445,9 @@ class _FilterScreenState extends State<FilterScreen> {
       final settings = Get.find<Settings>();
       settings.checkForUpdates(context);
       settings.showWelcomeDialog(context);
+      if (Get.isRegistered<AppShortcutService>()) {
+        Get.find<AppShortcutService>().markAppInitialized();
+      }
     });
   }
 

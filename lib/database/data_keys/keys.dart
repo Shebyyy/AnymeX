@@ -326,3 +326,11 @@ enum DiscordRpcKeys {
   novelDetailsFormat,
   idleFormat,
 }
+
+enum AppShortcutKeys {
+  shortcutsEnabled,
+  shortcutSlotCount,
+  shortcutSlotsJson,
+  selectedPreset,
+  showDynamicTitles,
+}

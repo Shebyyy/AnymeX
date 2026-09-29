@@ -36,9 +36,20 @@ const settingsSearchCategoryIcons = <String, IconData>{
   'Extensions': Icons.extension_rounded,
   'Logs': HugeIcons.strokeRoundedFile01,
   'About': HugeIcons.strokeRoundedInformationCircle,
+  'App Shortcuts': Icons.touch_app_rounded,
 };
 
 const settingsSearchIndex = <String, Map<String?, List<String>>>{
+  'App Shortcuts': {
+    'General': [
+      'Enable App Shortcuts',
+      'Dynamic Media Titles',
+    ],
+    'Slots Configuration': [
+      'Active Shortcut Slots',
+      'Quick Presets',
+    ],
+  },
   'Accounts': {
     null: ['Anilist', 'MyAnimeList', 'Simkl', 'Anilist Settings'],
   },

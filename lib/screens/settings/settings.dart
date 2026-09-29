@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:anymex/screens/settings/search/settings_registry.dart';
 import 'package:anymex/screens/settings/search/settings_search_icons.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_about.dart';
@@ -13,6 +14,7 @@ import 'package:anymex/screens/settings/sub_settings/settings_reader.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_storage_manager.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_theme.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_ui.dart';
+import 'package:anymex/screens/settings/sub_settings/settings_app_shortcuts.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_dialog.dart';
@@ -96,12 +98,14 @@ class _SettingsPageState extends State<SettingsPage> {
               color: context.colors.onSurface.opaque(0.15, iReallyMeanIt: true),
             ),
             const SizedBox(height: 16),
-            AnymeXText('No search results',
+            AnymeXText(
+              'No search results',
               size: 16,
               color: context.colors.onSurface.opaque(0.4, iReallyMeanIt: true),
             ),
             const SizedBox(height: 6),
-            AnymeXText('Try a different keyword',
+            AnymeXText(
+              'Try a different keyword',
               size: 13,
               color: context.colors.onSurface.opaque(0.3, iReallyMeanIt: true),
             ),
@@ -206,6 +210,13 @@ class _SettingsPageState extends State<SettingsPage> {
               description: "Personalize the look and make it yours",
               destination: SettingsTheme.new,
             ),
+            if (Platform.isAndroid || Platform.isIOS)
+              _buildTile(
+                icon: Icons.touch_app_rounded,
+                title: "App Shortcuts",
+                description: "Customize home screen icon quick actions",
+                destination: SettingsAppShortcuts.new,
+              ),
           ],
         ),
         _buildCategorySection(
