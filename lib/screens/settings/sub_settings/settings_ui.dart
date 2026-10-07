@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:anymex/controllers/settings/settings.dart';
+import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/settings/widgets/card_selector.dart';
 import 'package:anymex/screens/settings/widgets/history_card_selector.dart';
 import 'package:anymex/screens/settings/widgets/carousel_style_selector.dart';
@@ -99,6 +100,18 @@ class _SettingsUiState extends State<SettingsUi> {
                               settings.useLegacyHeader = val;
                             },
                           ),
+                          AnymeXTile.toggle(
+                            icon: Icons.amp_stories_rounded,
+                            title: "Friend Stories",
+                            subtitle:
+                                "Show friend activity stories carousel on home screen and profile",
+                            value: settings.enableStories.value,
+                            onChanged: (val) {
+                              settings.enableStories.value = val;
+                              StoryKeys.enableStories.set(val);
+                            },
+                          ),
+
                           if (Platform.isAndroid || Platform.isIOS)
                             AnymeXTile.toggle(
                               icon: Icons.fullscreen_rounded,

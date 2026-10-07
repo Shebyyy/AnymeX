@@ -5,6 +5,9 @@ import 'package:anymex/screens/profile/profile_page.dart';
 import 'package:anymex/controllers/service_handler/service_handler.dart';
 import 'package:anymex/utils/function.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
+import 'package:anymex/controllers/story/story_controller.dart';
+import 'package:anymex/screens/story/story_viewer_page.dart';
+import 'package:anymex/widgets/story/story_avatar_ring.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -313,27 +316,45 @@ class SocialTabState extends State<SocialTab> {
                               ),
                               child: Row(
                                 children: [
-                                  if (user.avatarUrl != null)
-                                    ClipOval(
-                                      child: CachedNetworkImage(
-                                        imageUrl: user.avatarUrl!,
-                                        width: 56,
-                                        height: 56,
-                                        fit: BoxFit.cover,
-                                        errorWidget: (context, url, error) =>
-                                            const CircleAvatar(
-                                          radius: 28,
-                                          backgroundColor: Colors.transparent,
-                                          child: Icon(Icons.person, size: 24),
-                                        ),
-                                      ),
-                                    )
-                                  else
-                                    const CircleAvatar(
-                                      radius: 28,
-                                      backgroundColor: Colors.transparent,
-                                      child: Icon(Icons.person, size: 24),
-                                    ),
+                                  Obx(() {
+                                    final storyController =
+                                        Get.isRegistered<StoryController>()
+                                            ? Get.find<StoryController>()
+                                            : null;
+                                    final story = storyController
+                                        ?.getStoryForUser(user.id);
+                                    final hasStory = story != null &&
+                                        story.activities.isNotEmpty;
+                                    final isUnseen = story != null &&
+                                        storyController!.isStoryUnseen(story);
+
+                                    return StoryAvatarRing(
+                                      avatarUrl: user.avatarUrl,
+                                      radius: 26,
+                                      hasUnseen: isUnseen,
+                                      onTap: () {
+                                        if (hasStory) {
+                                          navigate(
+                                            () => StoryViewerPage(
+                                                stories: [story],
+                                                initialUserIndex: 0),
+                                          );
+                                        } else {
+                                          final currentUserId = int.tryParse(
+                                              serviceHandler
+                                                      .profileData.value.id ??
+                                                  '');
+                                          if (currentUserId == user.id) {
+                                            navigate(
+                                                () => const ProfilePage());
+                                          } else {
+                                            navigate(() => UserProfilePage(
+                                                userId: user.id));
+                                          }
+                                        }
+                                      },
+                                    );
+                                  }),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: AnymeXText(user.name,

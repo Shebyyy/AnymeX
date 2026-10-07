@@ -1467,6 +1467,143 @@ class AnilistAuth extends GetxController {
     return (<AnilistActivity>[], false);
   }
 
+  Future<(List<AnilistActivity>, bool)> fetchFollowingActivities({
+    int page = 1,
+    int perPage = 50,
+    List<String> typeIn = const [
+      'ANIME_LIST',
+      'MANGA_LIST',
+      'TEXT',
+      'MESSAGE',
+    ],
+  }) async {
+    final token = AuthKeys.authToken.get<String?>();
+    if (token == null || token.isEmpty) return (<AnilistActivity>[], false);
+
+    const query = r'''
+  query ($page: Int, $perPage: Int, $typeIn: [ActivityType]) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { hasNextPage }
+      activities(isFollowing: true, sort: ID_DESC, type_in: $typeIn) {
+        ... on ListActivity {
+          id
+          type
+          status
+          progress
+          createdAt
+          likeCount
+          replyCount
+          isLiked
+          isPinned
+          isSubscribed
+          likes {
+            id
+            name
+            avatar { large }
+            bannerImage
+          }
+          media {
+            id
+            title { userPreferred }
+            coverImage { large }
+            bannerImage
+          }
+          user {
+            id
+            name
+            avatar { large }
+          }
+        }
+        ... on TextActivity {
+          id
+          type
+          text(asHtml: true)
+          createdAt
+          likeCount
+          replyCount
+          isLiked
+          isPinned
+          isSubscribed
+          likes {
+            id
+            name
+            avatar { large }
+            bannerImage
+          }
+          user {
+            id
+            name
+            avatar { large }
+          }
+        }
+        ... on MessageActivity {
+          id
+          type
+          message(asHtml: true)
+          createdAt
+          likeCount
+          replyCount
+          isLiked
+          isSubscribed
+          isPrivate
+          likes {
+            id
+            name
+            avatar { large }
+            bannerImage
+          }
+          messenger {
+            id
+            name
+            avatar { large }
+          }
+        }
+      }
+    }
+  }
+  ''';
+
+    try {
+      final response = await _anilistPost(
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: {
+          'query': query,
+          'variables': {
+            'page': page,
+            'perPage': perPage,
+            'typeIn': typeIn,
+          },
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final activitiesJson =
+            data['data']?['Page']?['activities'] as List<dynamic>? ?? [];
+
+        final hasNextPage =
+            data['data']?['Page']?['pageInfo']?['hasNextPage'] == true;
+
+        final activities = activitiesJson
+            .where((e) => e != null && e is Map<String, dynamic>)
+            .map((e) => AnilistActivity.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return (activities, hasNextPage);
+      } else if (response.statusCode == 403) {
+        _handle403(response);
+      } else {
+        Logger.i('Failed to fetch following activities: ${response.statusCode}');
+      }
+    } catch (e) {
+      Logger.i('Error fetching following activities: $e');
+    }
+    return (<AnilistActivity>[], false);
+  }
+
   Future<bool> toggleLike(int id, String type) async {
     final token = AuthKeys.authToken.get<String?>();
     if (token == null) return false;

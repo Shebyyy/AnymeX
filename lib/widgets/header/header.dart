@@ -19,6 +19,8 @@ import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_tile.dart';
 import 'package:anymex/widgets/helper/tv_wrapper.dart';
 import 'package:anymex/widgets/non_widgets/settings_sheet.dart';
+import 'package:anymex/controllers/story/story_controller.dart';
+import 'package:anymex/screens/story/story_viewer_page.dart';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -348,50 +350,96 @@ class HeaderProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profileData = Get.find<ServiceHandler>();
-    return AnymexOnTap(
-      onTap: () => SettingsSheet.show(context),
-      child: GestureDetector(
-        onLongPress: () {
-          if (profileData.isLoggedIn.value) {
-            navigate(() => const ProfilePage());
+    return Obx(() {
+      final count =
+          Get.find<SourceController>().extensionUpdatesCount.value;
+      final storyController = Get.isRegistered<StoryController>()
+          ? Get.find<StoryController>()
+          : null;
+      final myStory = storyController?.myStory.value;
+      final hasStory = myStory != null && myStory.activities.isNotEmpty;
+
+      final avatarCore = CircleAvatar(
+        radius: radius,
+        backgroundColor: context.colors.secondaryContainer.opaque(0.50),
+        child: profileData.isLoggedIn.value
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: AnymeXImage(
+                  width: radius * 2,
+                  height: radius * 2,
+                  fit: BoxFit.cover,
+                  radius: 0,
+                  errorImage: '',
+                  imageUrl: profileData.profileData.value.avatar ?? '',
+                ),
+              )
+            : Icon(
+                IconlyBold.profile,
+                color: context.colors.onSecondaryContainer,
+                size: 18,
+              ),
+      );
+
+      Widget avatarWidget;
+      if (hasStory) {
+        avatarWidget = Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: SweepGradient(
+              colors: [
+                context.colors.primary,
+                context.colors.tertiary,
+                context.colors.secondary,
+                context.colors.primary,
+              ],
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Theme.of(context).scaffoldBackgroundColor,
+            ),
+            padding: const EdgeInsets.all(1.5),
+            child: avatarCore,
+          ),
+        );
+      } else {
+        avatarWidget = avatarCore;
+      }
+
+      if (count > 0) {
+        avatarWidget = AnymeXBadge(
+          label: count.toString(),
+          backgroundColor: context.colors.primary,
+          textColor: context.colors.onPrimary,
+          child: avatarWidget,
+        );
+      }
+
+      return AnymexOnTap(
+        onTap: () {
+          if (hasStory) {
+            navigate(
+              () => StoryViewerPage(stories: [myStory], initialUserIndex: 0),
+            );
+          } else {
+            SettingsSheet.show(context);
           }
         },
-        child: Obx(() {
-          final count =
-              Get.find<SourceController>().extensionUpdatesCount.value;
-          final avatar = CircleAvatar(
-            radius: radius,
-            backgroundColor: context.colors.secondaryContainer.opaque(0.50),
-            child: profileData.isLoggedIn.value
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(50),
-                    child: AnymeXImage(
-                      width: radius * 2,
-                      height: radius * 2,
-                      fit: BoxFit.cover,
-                      radius: 0,
-                      errorImage: '',
-                      imageUrl: profileData.profileData.value.avatar ?? '',
-                    ),
-                  )
-                : Icon(
-                    IconlyBold.profile,
-                    color: context.colors.onSecondaryContainer,
-                    size: 18,
-                  ),
-          );
-          if (count > 0) {
-            return AnymeXBadge(
-              label: count.toString(),
-              backgroundColor: context.colors.primary,
-              textColor: context.colors.onPrimary,
-              child: avatar,
-            );
-          }
-          return avatar;
-        }),
-      ),
-    );
+        child: GestureDetector(
+          onLongPress: () {
+            if (profileData.isLoggedIn.value) {
+              navigate(() => const ProfilePage());
+            } else {
+              SettingsSheet.show(context);
+            }
+          },
+          child: avatarWidget,
+        ),
+      );
+    });
   }
 }
 

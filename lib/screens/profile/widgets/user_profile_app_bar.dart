@@ -11,10 +11,11 @@ import 'package:get/get.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/screens/profile/compatibility/compatibility_input_page.dart';
 import 'package:anymex/utils/function.dart';
+import 'package:anymex/controllers/story/story_controller.dart';
+import 'package:anymex/screens/story/story_viewer_page.dart';
 
 class UserProfileAppBar extends StatefulWidget {
   final Profile user;
@@ -290,50 +291,94 @@ class _UserProfileAppBarState extends State<UserProfileAppBar> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (avatarUrl.isNotEmpty) {
-                          Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute(
-                              builder: (_) => AnymeXFullscreenImageViewer(
-                                imageUrl: avatarUrl,
-                                tag: 'profile_avatar_$name',
+                    Obx(() {
+                      final storyController =
+                          Get.isRegistered<StoryController>()
+                              ? Get.find<StoryController>()
+                              : null;
+                      final uid = int.tryParse(widget.user.id ?? '');
+                      final userStory = uid != null
+                          ? storyController?.getStoryForUser(uid)
+                          : null;
+                      final hasStory = userStory != null &&
+                          userStory.activities.isNotEmpty;
+
+                      return GestureDetector(
+                        onTap: () {
+                          if (hasStory) {
+                            navigate(
+                              () => StoryViewerPage(
+                                  stories: [userStory], initialUserIndex: 0),
+                            );
+                          } else if (avatarUrl.isNotEmpty) {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (_) => AnymeXFullscreenImageViewer(
+                                  imageUrl: avatarUrl,
+                                  tag: 'profile_avatar_$name',
+                                ),
                               ),
+                            );
+                          }
+                        },
+                        onLongPress: () {
+                          if (avatarUrl.isNotEmpty) {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (_) => AnymeXFullscreenImageViewer(
+                                  imageUrl: avatarUrl,
+                                  tag: 'profile_avatar_$name',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Hero(
+                          tag: 'profile_avatar_$name',
+                          child: Container(
+                            width: 92,
+                            constraints: const BoxConstraints(
+                              minHeight: 92,
+                              maxHeight: 150,
                             ),
-                          );
-                        }
-                      },
-                      child: Hero(
-                        tag: 'profile_avatar_$name',
-                        child: Container(
-                          width: 92,
-                          constraints: const BoxConstraints(
-                            minHeight: 92,
-                            maxHeight: 150,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.35),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: hasStory
+                                  ? Border.all(
+                                      color: context.colors.primary,
+                                      width: 2.5,
+                                    )
+                                  : null,
+                              boxShadow: [
+                                if (hasStory)
+                                  BoxShadow(
+                                    color:
+                                        context.colors.primary.withOpacity(0.5),
+                                    blurRadius: 14,
+                                    spreadRadius: 2,
+                                  )
+                                else
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.35),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: CachedNetworkImage(
+                                imageUrl: avatarUrl,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.topCenter,
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.person),
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                              imageUrl: avatarUrl,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.topCenter,
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.person),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

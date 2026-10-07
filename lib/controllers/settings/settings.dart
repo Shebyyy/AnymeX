@@ -41,6 +41,7 @@ class Settings extends GetxController {
   RxBool enableBetaUpdates = false.obs;
   RxBool writeLogToFile = false.obs;
   RxBool showHomeContinueWatching = true.obs;
+  RxBool enableStories = true.obs;
   Rxn<DisplayMode> preferredDisplayMode = Rxn<DisplayMode>();
   Rxn<DisplayMode> activeDisplayMode = Rxn<DisplayMode>();
   RxList<DisplayMode> supportedModes = <DisplayMode>[].obs;
@@ -104,6 +105,7 @@ class Settings extends GetxController {
     writeLogToFile.value = General.writeLogToFile.get<bool>(false);
     showHomeContinueWatching.value =
         General.showHomeContinueWatching.get<bool>(true);
+    enableStories.value = StoryKeys.enableStories.get<bool>(true);
     customLogDirectory.value = General.customLogDirectory.get<String>("");
 
     downloadPath.value = DownloadKeys.downloadPath.get<String>("");

@@ -15,6 +15,8 @@ import 'package:anymex/widgets/history/tap_history_cards.dart';
 import 'package:anymex/widgets/non_widgets/snackbar.dart';
 import 'package:anymex/models/Media/media.dart';
 import 'package:anymex/widgets/media_items/media_item.dart';
+import 'package:anymex/controllers/story/story_controller.dart';
+import 'package:anymex/widgets/story/story_tray.dart';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -204,6 +206,8 @@ class _HomePageState extends State<HomePage> {
           snackBar(
               "W-what are you doing step-bro, login before you do that (●´⌓`●)",
               duration: 1200);
+        } else {
+          Get.find<StoryController>().fetchStories(refresh: true);
         }
         return serviceHandler.refresh();
       },
@@ -247,6 +251,8 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  const StoryTray(),
                   Column(
                     crossAxisAlignment: isMobile
                         ? CrossAxisAlignment.center

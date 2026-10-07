@@ -17,6 +17,8 @@ import 'package:anymex/widgets/helper/platform_builder.dart';
 import 'package:anymex/screens/settings/sub_settings/settings_anilist_api.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_text.dart';
 import 'package:anymex/screens/profile/compatibility/compatibility_input_page.dart';
+import 'package:anymex/controllers/story/story_controller.dart';
+import 'package:anymex/screens/story/story_viewer_page.dart';
 
 Widget _buildBottomSheetOption(
   BuildContext context, {
@@ -793,50 +795,92 @@ class MobileProfileHeaderSliver extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (avatarUrl.isNotEmpty) {
-                          Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute(
-                              builder: (_) => AnymeXFullscreenImageViewer(
-                                imageUrl: avatarUrl,
-                                tag: 'profile_avatar_$name',
+                    Obx(() {
+                      final storyController =
+                          Get.isRegistered<StoryController>()
+                              ? Get.find<StoryController>()
+                              : null;
+                      final myStory = storyController?.myStory.value;
+                      final hasStory =
+                          myStory != null && myStory.activities.isNotEmpty;
+
+                      return GestureDetector(
+                        onTap: () {
+                          if (hasStory) {
+                            navigate(
+                              () => StoryViewerPage(
+                                  stories: [myStory], initialUserIndex: 0),
+                            );
+                          } else if (avatarUrl.isNotEmpty) {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (_) => AnymeXFullscreenImageViewer(
+                                  imageUrl: avatarUrl,
+                                  tag: 'profile_avatar_$name',
+                                ),
                               ),
+                            );
+                          }
+                        },
+                        onLongPress: () {
+                          if (avatarUrl.isNotEmpty) {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (_) => AnymeXFullscreenImageViewer(
+                                  imageUrl: avatarUrl,
+                                  tag: 'profile_avatar_$name',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Hero(
+                          tag: 'profile_avatar_$name',
+                          child: Container(
+                            width: 110,
+                            constraints: const BoxConstraints(
+                              minHeight: 110,
+                              maxHeight: 160,
                             ),
-                          );
-                        }
-                      },
-                      child: Hero(
-                        tag: 'profile_avatar_$name',
-                        child: Container(
-                          width: 110,
-                          constraints: const BoxConstraints(
-                            minHeight: 110,
-                            maxHeight: 160,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.35),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              border: hasStory
+                                  ? Border.all(
+                                      color: context.colors.primary,
+                                      width: 2.5,
+                                    )
+                                  : null,
+                              boxShadow: [
+                                if (hasStory)
+                                  BoxShadow(
+                                    color:
+                                        context.colors.primary.withOpacity(0.5),
+                                    blurRadius: 16,
+                                    spreadRadius: 2,
+                                  )
+                                else
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.35),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: CachedNetworkImage(
+                                imageUrl: avatarUrl,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.topCenter,
+                                errorWidget: (context, url, error) =>
+                                    const Icon(Icons.person),
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: CachedNetworkImage(
-                              imageUrl: avatarUrl,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.topCenter,
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.person),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
+
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

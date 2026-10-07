@@ -326,3 +326,8 @@ enum DiscordRpcKeys {
   novelDetailsFormat,
   idleFormat,
 }
+
+enum StoryKeys {
+  lastSeenMap,
+  enableStories,
+}
