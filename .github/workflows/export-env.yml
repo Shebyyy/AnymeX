@@ -7,8 +7,6 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - name: Write secrets to .envnew
         shell: bash
         env:
@@ -48,43 +46,17 @@ jobs:
           WATCHIUM_API_TOKEN: ${{ secrets.WATCHIUM_API_TOKEN }}
           WATCHIUM_SERVER_URL: ${{ secrets.WATCHIUM_SERVER_URL }}
         run: |
-          set -e
-          rm -f .envnew
-          echo "AL_CLIENT_ID=$AL_CLIENT_ID" >> .envnew
-          echo "AL_CLIENT_SECRET=$AL_CLIENT_SECRET" >> .envnew
-          echo "ANNOUNCEMENT_API_KEY=$ANNOUNCEMENT_API_KEY" >> .envnew
-          echo "AUR_SSH_PRIVATE_KEY=$AUR_SSH_PRIVATE_KEY" >> .envnew
-          echo "BOT_API_SECRET=$BOT_API_SECRET" >> .envnew
-          echo "BOT_BASE_URL=$BOT_BASE_URL" >> .envnew
-          echo "CALLBACK_SCHEME=$CALLBACK_SCHEME" >> .envnew
-          echo "CHOCO_API_KEY=$CHOCO_API_KEY" >> .envnew
-          echo "COMMENTS_BASE_URL=$COMMENTS_BASE_URL" >> .envnew
-          echo "DISCORD_WEBHOOK=$DISCORD_WEBHOOK" >> .envnew
-          echo "DISCORD_WEBHOOK_ALPHA=$DISCORD_WEBHOOK_ALPHA" >> .envnew
-          echo "DISCORD_WEBHOOK_BETA=$DISCORD_WEBHOOK_BETA" >> .envnew
-          echo "GIT_CALLBACK_SCHEME=$GIT_CALLBACK_SCHEME" >> .envnew
-          echo "GIT_CLIENT_ID=$GIT_CLIENT_ID" >> .envnew
-          echo "GIT_CLIENT_SECRET=$GIT_CLIENT_SECRET" >> .envnew
-          echo "GOOGLE_BOOKS_API_KEY=$GOOGLE_BOOKS_API_KEY" >> .envnew
-          echo "GOOGLE_KEY=$GOOGLE_KEY" >> .envnew
-          echo "KEYSTORE_BASE64=$KEYSTORE_BASE64" >> .envnew
-          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> .envnew
-          echo "KEY_ALIAS=$KEY_ALIAS" >> .envnew
-          echo "KEY_PASSWORD=$KEY_PASSWORD" >> .envnew
-          echo "MAL_CLIENT_ID=$MAL_CLIENT_ID" >> .envnew
-          echo "MAL_CLIENT_SECRET=$MAL_CLIENT_SECRET" >> .envnew
-          echo "P12_CERTIFICATE=$P12_CERTIFICATE" >> .envnew
-          echo "P12_PASSWORD=$P12_PASSWORD" >> .envnew
-          echo "PROVISIONING_PROFILE=$PROVISIONING_PROFILE" >> .envnew
-          echo "SIMKL_CLIENT_ID=$SIMKL_CLIENT_ID" >> .envnew
-          echo "SIMKL_CLIENT_SECRET=$SIMKL_CLIENT_SECRET" >> .envnew
-          echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" >> .envnew
-          echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID" >> .envnew
-          echo "TELEGRAM_CHAT_ID_BETA=$TELEGRAM_CHAT_ID_BETA" >> .envnew
-          echo "TELEGRAM_THREAD_ID=$TELEGRAM_THREAD_ID" >> .envnew
-          echo "TMDB_API_KEY=$TMDB_API_KEY" >> .envnew
-          echo "WATCHIUM_API_TOKEN=$WATCHIUM_API_TOKEN" >> .envnew
-          echo "WATCHIUM_SERVER_URL=$WATCHIUM_SERVER_URL" >> .envnew
+          : > .envnew
+          for v in AL_CLIENT_ID AL_CLIENT_SECRET ANNOUNCEMENT_API_KEY AUR_SSH_PRIVATE_KEY \
+                   BOT_API_SECRET BOT_BASE_URL CALLBACK_SCHEME CHOCO_API_KEY COMMENTS_BASE_URL \
+                   DISCORD_WEBHOOK DISCORD_WEBHOOK_ALPHA DISCORD_WEBHOOK_BETA GIT_CALLBACK_SCHEME \
+                   GIT_CLIENT_ID GIT_CLIENT_SECRET GOOGLE_BOOKS_API_KEY GOOGLE_KEY KEYSTORE_BASE64 \
+                   KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD MAL_CLIENT_ID MAL_CLIENT_SECRET \
+                   P12_CERTIFICATE P12_PASSWORD PROVISIONING_PROFILE SIMKL_CLIENT_ID \
+                   SIMKL_CLIENT_SECRET TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID TELEGRAM_CHAT_ID_BETA \
+                   TELEGRAM_THREAD_ID TMDB_API_KEY WATCHIUM_API_TOKEN WATCHIUM_SERVER_URL; do
+            printf '%s="%s"\n' "$v" "${!v}" >> .envnew
+          done
           ls -la .envnew
 
       - name: Upload as artifact
@@ -93,3 +65,4 @@ jobs:
           name: envnew
           path: .envnew
           retention-days: 1
+          include-hidden-files: true
