@@ -7,6 +7,8 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Write secrets to .envnew
         shell: bash
         env:
