@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:anymex_extension_runtime_bridge/anymex_extension_runtime_bridge.dart';
 import 'package:anymex_extension_runtime_bridge/Services/Aniyomi/Models/Source.dart';
 
+import 'package:anymex/addons/addons_hub.dart';
 import 'package:anymex/controllers/discord/discord_rpc.dart';
 import 'package:anymex/controllers/offline/offline_storage_controller.dart';
 import 'package:anymex/controllers/stats/stats_tracker.dart';
@@ -419,6 +420,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   @override
   void onInit() {
+    AddonsHub.manager(); // registers add-ons so the clip button state is known
     super.onInit();
     if (isPreview) {
       _initDatabaseVars();
@@ -497,7 +499,8 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           'speed',
           'orientation',
           'aspect_ratio',
-          'external_player'
+          'external_player',
+          'clip'
         ],
         'hiddenButtonIds': [],
         'buttonConfigs': {
@@ -513,6 +516,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
           'orientation': {'visible': true},
           'aspect_ratio': {'visible': true},
           'external_player': {'visible': true},
+          'clip': {'visible': true},
         },
       };
       PlayerUiKeys.bottomControlsSettings.set(json.encode(defaultConfig));
@@ -551,6 +555,20 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
       final buttonConfigs =
           (decodedConfig['buttonConfigs'] as Map<String, dynamic>?) ?? {};
+      if (!rightIds.contains('clip') &&
+          !hiddenIds.contains('clip') &&
+          !leftIds.contains('clip')) {
+        rightIds.add('clip');
+        decodedConfig['rightButtonIds'] = rightIds;
+        updated = true;
+      }
+
+      if (!buttonConfigs.containsKey('clip')) {
+        buttonConfigs['clip'] = {'visible': true};
+        decodedConfig['buttonConfigs'] = buttonConfigs;
+        updated = true;
+      }
+
       if (!buttonConfigs.containsKey('cast')) {
         buttonConfigs['cast'] = {'visible': true};
         decodedConfig['buttonConfigs'] = buttonConfigs;
@@ -1062,7 +1080,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     if (isOffline.value && offlineVideoPath != null) {
       final stamp =
           DynamicKeys.offlineVideoProgress.get<int?>(offlineVideoPath, null);
-      await _basePlayer.open(
+      await _open(
         offlineVideoPath!,
         startPosition:
             startPositionOverride ?? Duration(milliseconds: stamp ?? 0),
@@ -1175,7 +1193,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentTorrentFile.value = null;
     }
 
-    await _basePlayer.open(url, headers: headers, startPosition: startPosition);
+    await _open(url, headers: headers, startPosition: startPosition);
     await _basePlayer.setRate(_sessionSpeed);
   }
 
@@ -1757,7 +1775,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentEpisode.value = episode;
       _hasTrackedCompletedOnline = false;
       final stamp = DynamicKeys.offlineVideoProgress.get<int?>(videoPath, null);
-      await _basePlayer.open(
+      await _open(
         videoPath,
         startPosition: Duration(milliseconds: stamp ?? 0),
       );
@@ -2043,6 +2061,22 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     });
   }
 
+  /// The URL (or local path) and headers the player was last given, after any
+  /// torrent resolution. Add-ons such as Clip must use these, not
+  /// `selectedVideo`, because for torrents the two differ.
+  String? playingUrl;
+  Map<String, String>? playingHeaders;
+
+  Future<void> _open(
+    String url, {
+    Map<String, String>? headers,
+    Duration? startPosition,
+  }) {
+    playingUrl = url;
+    playingHeaders = headers;
+    return _basePlayer.open(url, headers: headers, startPosition: startPosition);
+  }
+
   Future<void> _switchMedia(String url, Map<String, String>? headers,
       {Duration? startPosition}) async {
     if (PlayerKeys.useExternalPlayer.get<bool>(false)) {
@@ -2087,7 +2121,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       currentTorrentFile.value = null;
     }
 
-    await _basePlayer.open(url, headers: headers, startPosition: startPosition);
+    await _open(url, headers: headers, startPosition: startPosition);
     await _basePlayer.setRate(_sessionSpeed);
     _autoSelectAudioTrack();
   }
@@ -2102,7 +2136,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       if (_basePlayer is MediaKitPlayer) {
         await _basePlayer.open("");
       }
-      await _basePlayer.open(newUrl, startPosition: Duration.zero);
+      await _open(newUrl, startPosition: Duration.zero);
       await _basePlayer.setRate(_sessionSpeed);
       _autoSelectAudioTrack();
       AnymeXToast.show(

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:anymex/addons/addons_hub.dart';
+import 'package:anymex/addons/clip/clip_sheet.dart';
 import 'package:anymex/controllers/watchium/watchium_service.dart';
 import 'package:anymex/database/data_keys/keys.dart';
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
@@ -120,6 +122,12 @@ const List<PlayerControlItemMeta> playerControlCatalog = [
     icon: Icons.cast_rounded,
     defaultSlot: 'right',
   ),
+  PlayerControlItemMeta(
+    id: 'clip',
+    name: 'Clip',
+    icon: Icons.content_cut_rounded,
+    defaultSlot: 'right',
+  ),
 ];
 
 Map<String, dynamic> readPlayerControlConfig() {
@@ -192,6 +200,12 @@ Map<String, Widget> buildPlayerControlButtonMap(
             !controller.isAudioPaneOpened.value;
       },
       tooltip: 'Audio',
+      compact: true,
+    ),
+    'clip': ControlButton(
+      icon: Icons.content_cut_rounded,
+      onPressed: () => showClipSheet(context, controller),
+      tooltip: 'Clip',
       compact: true,
     ),
     'sync_subs': ControlButton(
@@ -330,6 +344,10 @@ bool shouldDisplayPlayerControl(String id, PlayerController controller) {
     return false;
   }
   if (id == 'torrent' && !controller.isTorrentStream.value) {
+    return false;
+  }
+  // Only offered once the Clip Recorder add-on is installed.
+  if (id == 'clip' && !AddonsHub.clip.installed.value) {
     return false;
   }
   return true;

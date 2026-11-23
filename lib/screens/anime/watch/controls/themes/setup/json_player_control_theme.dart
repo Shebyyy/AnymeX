@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:anymex/addons/clip/clip_sheet.dart';
+
 import 'package:anymex/screens/anime/watch/controller/player_controller.dart';
 import 'package:anymex/screens/anime/watch/controls/themes/setup/player_control_theme.dart';
 import 'package:anymex/screens/anime/watch/controls/widgets/bottom_sheet.dart';
@@ -1243,6 +1245,9 @@ class ThemeRenderer {
           PlayerBottomSheets.showVideoQuality(context, controller);
         }
         break;
+      case 'clip':
+        showClipSheet(context, controller);
+        break;
       case 'speed':
         controller.isSpeedPaneOpened.value =
             !controller.isSpeedPaneOpened.value;
@@ -1561,6 +1566,8 @@ class ThemeRenderer {
         return 'Server';
       case 'quality':
         return 'Quality';
+      case 'clip':
+        return 'Clip';
       case 'speed':
         return 'Speed';
       case 'audio_track':
@@ -2350,6 +2357,7 @@ const Map<String, IconData> _iconMap = {
   'server': Icons.cloud_rounded,
   'quality': Icons.high_quality_rounded,
   'speed': Icons.speed_rounded,
+  'clip': Icons.content_cut_rounded,
   'audio_track': Icons.music_note_rounded,
   'orientation': Icons.screen_rotation_rounded,
   'aspect_ratio': Icons.fit_screen,

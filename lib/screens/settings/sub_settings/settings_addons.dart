@@ -1,3 +1,4 @@
+import 'package:anymex/addons/addons_hub.dart';
 import 'package:anymex/l10n/l10n_extension.dart';
 import 'package:anymex/utils/theme_extensions.dart';
 import 'package:anymex/widgets/anymex_widgets/anymex_dialog.dart';
@@ -29,9 +30,7 @@ class _SettingsAddonsState extends State<SettingsAddons> {
   @override
   void initState() {
     super.initState();
-    _addonManager = Get.isRegistered<AddonManager>()
-        ? Get.find<AddonManager>()
-        : Get.put(AddonManager());
+    _addonManager = AddonsHub.manager();
     _refreshStatus();
   }
 
