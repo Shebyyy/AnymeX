@@ -1046,7 +1046,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     final betterCore = PlayerCoreVisualSettings.getBetterPlayerCoreSettings();
     final decoderHwdec = _resolveDecoderHwdec();
     final bufferSizeMb = (useMediaKit
-            ? (mpvCore['demuxerMaxBytesMb'] as num? ?? 64)
+            ? (mpvCore['demuxerMaxBytesMb'] as num? ?? 32)
             : (betterCore['bufferSizeMb'] as num? ?? 32))
         .toInt();
 
